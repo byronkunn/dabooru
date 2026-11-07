@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ModerationAction;
 use App\Models\Post;
 use App\Support\Moderation;
+use App\Support\MessageAttachments;
 use App\Models\Report;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -91,6 +92,9 @@ class ReportController extends Controller
                 Moderation::ban($request->user(), $target, $data['reason'] ?? null);
             } else {
                 $target->delete();
+                if ($target instanceof \App\Models\Message) {
+                    MessageAttachments::purgeAfterCommit($target->media_id);
+                }
                 if ($target instanceof \App\Models\Comment) {
                     $target->post?->decrement('comments_count');
                 }

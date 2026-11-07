@@ -73,7 +73,7 @@ export default function MessagesShow({ conversation, conversations = [] }) {
         endRef.current?.scrollIntoView({ block: 'end' });
     }, [conversation.messages.length]);
 
-    const canSend = (form.data.body.trim().length > 0 || attachment !== null) && !form.processing;
+    const canSend = conversation.canSend && (form.data.body.trim().length > 0 || attachment !== null) && !form.processing;
 
     const send = (e) => {
         e.preventDefault();
@@ -114,10 +114,12 @@ export default function MessagesShow({ conversation, conversations = [] }) {
 
                     <img src={conversation.with?.avatar} alt="" className="h-9 w-9 shrink-0 rounded-full bg-ink-raised object-cover" />
                     <div className="min-w-0">
-                        <Link href={route('profile.show', conversation.with?.username)} className="block truncate text-[14.5px] font-bold hover:underline">
-                            {conversation.with?.name}
-                        </Link>
-                        <p className="truncate text-[12.5px] text-ink-muted">@{conversation.with?.username}</p>
+                        {conversation.with ? <>
+                            <Link href={route('profile.show', conversation.with.username)} className="block truncate text-[14.5px] font-bold hover:underline">
+                                {conversation.with.name}
+                            </Link>
+                            <p className="truncate text-[12.5px] text-ink-muted">@{conversation.with.username}</p>
+                        </> : <p className="text-sm font-bold">Deleted account</p>}
                     </div>
 
                     <div className="ml-auto flex shrink-0 items-center gap-1.5">
@@ -160,7 +162,7 @@ export default function MessagesShow({ conversation, conversations = [] }) {
                             )}
                         </div>
 
-                        <button
+                        {conversation.with && <button
                             type="button"
                             onClick={() => setReporting(true)}
                             className="btn-icon-flat h-9 w-9 text-ink-muted hover:text-ink-text"
@@ -168,8 +170,8 @@ export default function MessagesShow({ conversation, conversations = [] }) {
                             aria-label="Report user"
                         >
                             <Icon name="flag" className="h-4 w-4" />
-                        </button>
-                        <button
+                        </button>}
+                        {conversation.canSend && <button
                             type="button"
                             onClick={() => {
                                 if (window.confirm(`Block @${conversation.with.username}? They won't be able to message you or see your posts.`)) {
@@ -180,7 +182,7 @@ export default function MessagesShow({ conversation, conversations = [] }) {
                             aria-label="Block user"
                         >
                             Block
-                        </button>
+                        </button>}
                     </div>
                 </header>
 
@@ -200,7 +202,7 @@ export default function MessagesShow({ conversation, conversations = [] }) {
                     <div ref={endRef} />
                 </div>
 
-                <form onSubmit={send} className="shrink-0 border-t border-ink-line px-3 py-3">
+                {conversation.canSend ? <form onSubmit={send} className="shrink-0 border-t border-ink-line px-3 py-3">
                     {attachment && (
                         <div className="mb-2 flex items-center gap-2.5 rounded-xl border border-ink-line bg-ink-raised px-2.5 py-2">
                             {attachment.type.startsWith('image/') ? (
@@ -256,7 +258,9 @@ export default function MessagesShow({ conversation, conversations = [] }) {
                         </button>
                     </div>
                     <p className="mt-1.5 px-1 text-[11px] text-ink-faint">Images and videos up to 40MB. Photos are re-encoded to strip location data.</p>
-                </form>
+                </form> : <p className="shrink-0 border-t border-ink-line p-4 text-sm text-ink-muted">
+                    Sending is unavailable for this conversation.
+                </p>}
             </div>
 
             {lightbox && <Lightbox media={lightbox} onClose={() => setLightbox(null)} />}

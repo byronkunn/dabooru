@@ -46,6 +46,11 @@ class Media extends Model
             return '';
         }
 
+        // Private DM URLs are generated from the message, where membership is checked.
+        if ($this->disk === 'local' && Str::startsWith($path, 'dm/')) {
+            return '';
+        }
+
         if ($this->disk === 'local' && Str::startsWith($path, 'drafts/')) {
             return route('studio.media', ['media' => $this->id, 'variant' => $path === $this->path ? 'original' : 'thumb'], false);
         }

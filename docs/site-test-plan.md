@@ -79,6 +79,8 @@ Run **A01, G01, U01, P01, C01, D02, D05, D07, K02, M01, M02, and X01** first for
 | [ ] P06 | As a third account, paste the conversation URL and try to post, remove, or report a message you cannot access. | The third account cannot read or act on the private conversation. No message body leaks in an error response. |
 | [ ] P07 | Block an account while both accounts follow each other. Inspect gallery, Following, search, the blocked list, and unblock. | The block breaks both follows and filters discovery as designed. Unblocking restores eligibility without silently following again. |
 | [ ] P08 | Refresh notifications and messages while signed out, then revisit using browser Back after logout. | Private data cannot be reopened by a new request. Note any stale rendering left in browser history for privacy review. |
+| [ ] P09 | Send image-only, video-only, and text-plus-image DMs. Open the image viewer, play the video, and switch conversations on a narrow screen. | Eligible files render with a usable preview. Closing the viewer and switching threads preserve access to navigation. The inbox and switcher preview the latest message or indicate an attachment. |
+| [ ] P10 | As the recipient, copy a test attachment's original and thumbnail URLs. Try both links signed out and as an unrelated member, then repeat after the sender removes the message. | A private attachment should be accessible only to eligible participants and should stop resolving after removal. The current public storage path does not enforce this. |
 
 ## Comics and chapter inbox
 
@@ -168,6 +170,6 @@ Use `php artisan test --filter=ClassName` to rerun a specific group.
 | Saved searches, collections, shelves, and credit | `ReaderAndCreatorFeaturesTest` | Findability in the UI, mobile flows, share-link behavior on staging |
 | Community wiki and tags | `KnowledgeTest` | Editorial workflows in browser, keyboard controls, mobile diff rendering |
 | Reports, roles, DMCA, and operations | `AdminPanelTest`, `AdminWorkspaceTest`, `LegalPagesTest` | Staff navigation by role, real queue/mail behavior, origin and CDN media revocation |
-| Private messaging | `OwnershipTest` covers sender removal | End-to-end participant access, unread badges, and messaging after blocks |
+| Private messaging | `MessagingTest`, `MessageMediaTest`, `OwnershipTest`, `SampleContentTest` | Browser playback and switching, direct attachment access, unread timing, and messaging after blocks |
 
 For a release, record the build or commit, environment, browser versions, automated result, and failed or blocked case IDs. Resolve unexpected access leaks, broken authentication, data loss, and broken core publishing or moderation flows before calling the release ready.

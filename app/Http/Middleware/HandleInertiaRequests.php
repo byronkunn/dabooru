@@ -46,15 +46,19 @@ class HandleInertiaRequests extends Middleware
                     ->whereNull('read_at')
                     ->when(! in_array('moderator', $staffPermissions, true), fn ($query) => $query->where('type', '!=', 'urgent_report'))
                     ->count() : 0,
-                'unread_messages' => $user ? (int) \DB::table('messages')
+                'unread_messages' => fn () => $user ? (int) \DB::table('messages')
                     ->join('conversation_participants', function ($j) use ($user) {
                         $j->on('conversation_participants.conversation_id', '=', 'messages.conversation_id')
                             ->where('conversation_participants.user_id', $user->id);
                     })
                     ->where('messages.user_id', '!=', $user->id)
                     ->where(function ($q) {
-                        $q->whereNull('conversation_participants.last_read_at')
-                            ->orWhereColumn('messages.created_at', '>', 'conversation_participants.last_read_at');
+                        $q->whereColumn('messages.id', '>', 'conversation_participants.last_read_message_id')
+                            ->orWhere(function ($legacy) {
+                                $legacy->whereNull('conversation_participants.last_read_message_id')
+                                    ->where(fn ($time) => $time->whereNull('conversation_participants.last_read_at')
+                                        ->orWhereColumn('messages.created_at', '>', 'conversation_participants.last_read_at'));
+                            });
                     })
                     ->count() : 0,
             ],

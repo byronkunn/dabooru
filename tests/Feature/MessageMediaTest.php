@@ -19,6 +19,7 @@ class MessageMediaTest extends TestCase
     {
         parent::setUp();
         Storage::fake('public', ['url' => '/storage']);
+        Storage::fake('local');
     }
 
     private function pair(): array
@@ -103,7 +104,7 @@ class MessageMediaTest extends TestCase
                 ->where('conversations.0.id', $conversation->id));
     }
 
-    public function test_attachments_are_only_visible_to_participants(): void
+    public function test_only_participants_can_open_or_send_to_a_thread_with_attachments(): void
     {
         [$a, , $conversation] = $this->pair();
         $this->actingAs($a)->post(route('messages.store'), [
@@ -117,5 +118,64 @@ class MessageMediaTest extends TestCase
             'conversation_id' => $conversation->id,
             'body' => 'let me in',
         ])->assertForbidden();
+    }
+
+    public function test_attachment_urls_check_membership_and_stop_working_after_removal(): void
+    {
+        [$sender, $recipient, $thread] = $this->pair();
+        $outsider = User::factory()->create();
+        $this->actingAs($sender)->post(route('messages.store'), [
+            'conversation_id' => $thread->id,
+            'file' => $this->pngUpload('private.png', 300, 200),
+        ])->assertRedirect();
+        $message = Message::sole();
+        $media = $message->media;
+        $url = route('messages.attachment', [$message, 'original'], false);
+        $thumb = route('messages.attachment', [$message, 'thumb'], false);
+
+        $this->assertSame('local', $media->disk);
+        Storage::disk('local')->assertExists([$media->path, $media->thumb_path]);
+        Storage::disk('public')->assertMissing($media->path);
+        $this->actingAs($recipient)->get(route('messages.show', $thread))->assertInertia(fn ($page) => $page
+            ->where('conversation.messages.0.media.url', $url)->where('conversation.messages.0.media.thumb', $thumb)
+            ->where('conversations.0.preview', 'Sent an attachment'));
+        $this->get($url)->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff');
+        $this->get($thumb)->assertOk();
+        $this->get($url, ['Range' => 'bytes=0-7'])->assertStatus(206);
+        $this->actingAs($outsider)->get($url)->assertForbidden();
+        $this->get($thumb)->assertForbidden();
+
+        $this->actingAs($sender)->delete(route('messages.destroy', $message))->assertRedirect();
+        $this->actingAs($recipient)->get($url)->assertNotFound();
+        $this->get($thumb)->assertNotFound();
+        Storage::disk('local')->assertMissing([$media->path, $media->thumb_path]);
+        $this->assertDatabaseMissing('media', ['id' => $media->id]);
+    }
+
+    public function test_backfill_moves_referenced_files_and_removes_detached_public_files(): void
+    {
+        [$sender, $recipient, $thread] = $this->pair();
+        $path = "uploads/{$sender->id}/dm/legacy.jpg";
+        $thumb = "uploads/{$sender->id}/dm/thumbs/legacy.jpg";
+        $orphan = "uploads/{$sender->id}/dm/detached.jpg";
+        Storage::disk('public')->put($path, 'original bytes');
+        Storage::disk('public')->put($thumb, 'thumb bytes');
+        Storage::disk('public')->put($orphan, 'detached bytes');
+        $media = Media::create(['disk' => 'public', 'path' => $path, 'thumb_path' => $thumb, 'kind' => 'image']);
+        $detached = Media::create(['disk' => 'public', 'path' => $orphan, 'kind' => 'image']);
+        $message = $thread->messages()->create(['user_id' => $sender->id, 'media_id' => $media->id]);
+
+        $this->artisan('messages:privatize-attachments --dry-run')->assertSuccessful();
+        Storage::disk('public')->assertExists([$path, $thumb, $orphan]);
+        $this->artisan('messages:privatize-attachments')->assertSuccessful();
+        $this->artisan('messages:privatize-attachments')->assertSuccessful();
+        $media->refresh();
+
+        Storage::disk('public')->assertMissing([$path, $thumb, $orphan]);
+        $this->assertDatabaseMissing('media', ['id' => $detached->id]);
+        $this->assertSame('local', $media->disk);
+        $this->assertSame('original bytes', Storage::disk('local')->get($media->path));
+        $this->assertSame('thumb bytes', Storage::disk('local')->get($media->thumb_path));
+        $this->actingAs($recipient)->get(route('messages.attachment', [$message, 'original']))->assertOk();
     }
 }

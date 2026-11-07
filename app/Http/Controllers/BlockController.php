@@ -8,6 +8,7 @@ use App\Models\Follow;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -37,19 +38,21 @@ class BlockController extends Controller
     {
         abort_if($user->id === $request->user()->id, 422, 'You cannot block yourself.');
 
-        Block::firstOrCreate([
-            'blocker_id' => $request->user()->id,
-            'blocked_id' => $user->id,
-        ]);
+        DB::transaction(function () use ($request, $user) {
+            $actor = $request->user();
+            // Lock the same accounts as the send endpoint so a block and a send are ordered.
+            User::whereKey([$actor->id, $user->id])->orderBy('id')->lockForUpdate()->get();
 
-        // blocking ends the follow either way and closes any DM thread
-        Follow::where('follower_id', $request->user()->id)->where('following_id', $user->id)->delete();
-        Follow::where('follower_id', $user->id)->where('following_id', $request->user()->id)->delete();
+            Block::firstOrCreate(['blocker_id' => $actor->id, 'blocked_id' => $user->id]);
 
-        $conversation = Conversation::between($request->user()->id, $user->id);
-        if ($conversation->messages()->count() === 0) {
-            $conversation->delete();
-        }
+            Follow::where('follower_id', $actor->id)->where('following_id', $user->id)->delete();
+            Follow::where('follower_id', $user->id)->where('following_id', $actor->id)->delete();
+
+            $conversation = Conversation::existingBetween($actor->id, $user->id);
+            if ($conversation && ! $conversation->messages()->exists()) {
+                $conversation->delete();
+            }
+        });
 
         return back()->with('success', "Blocked @{$user->username}.");
     }

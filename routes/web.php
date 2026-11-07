@@ -153,6 +153,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
     Route::get('/messages/{conversation}', [MessageController::class, 'show'])->name('messages.show');
+    Route::get('/messages/attachments/{message}/{variant}', [MessageController::class, 'attachment'])
+        ->whereIn('variant', ['original', 'thumb'])->name('messages.attachment');
     Route::post('/messages', [MessageController::class, 'store'])->middleware('throttle:30,1')->name('messages.store');
 
     // settings

@@ -6,6 +6,8 @@ use App\Models\Comment;
 use App\Models\Message;
 use App\Models\Post;
 use App\Models\Tag;
+use App\Support\MessageAttachments;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -117,11 +119,13 @@ class ContentController extends Controller
 
     public function destroyMessage(Request $request, Message $message): RedirectResponse
     {
-        $this->authorizeOwner($request, $message->user_id);
-
-        // Messages have no soft-delete column; blank the body so the thread
-        // keeps its shape instead of showing a hole.
-        $message->forceFill(['body' => '[deleted]', 'media_id' => null])->save();
+        DB::transaction(function () use ($request, $message) {
+            $current = Message::lockForUpdate()->findOrFail($message->id);
+            $this->authorizeOwner($request, $current->user_id);
+            $mediaId = $current->media_id;
+            $current->forceFill(['body' => '[deleted]', 'media_id' => null])->save();
+            MessageAttachments::purgeAfterCommit($mediaId);
+        });
 
         return back();
     }
