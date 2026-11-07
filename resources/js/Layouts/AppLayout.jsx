@@ -384,7 +384,7 @@ function DemoSwitcher() {
 }
 
 /* ---------------------------------------------------------------- layout */
-export default function AppLayout({ children, rightRail = true, bare = false, admin = false }) {
+export default function AppLayout({ children, rightRail = true, bare = false, admin = false, footer = true }) {
     const shellName = rightRail ? 'shell-full' : 'shell-solo';
     const [adminRailOpen, setAdminRailOpen] = useState(false);
 
@@ -393,7 +393,7 @@ export default function AppLayout({ children, rightRail = true, bare = false, ad
             <div className={`mx-auto grid min-h-screen max-w-shell grid-cols-1 items-start gap-0 ${bare ? '' : shellName}`}>
                 {!bare && <Rail admin={admin} />}
                 <main
-                    className={`min-h-screen border-r border-ink-line ${admin ? 'pb-6 lg:pb-16' : 'pb-20 md:min-w-0 lg:pb-16'} ${
+                    className={`min-h-screen border-r border-ink-line ${!footer ? 'pb-0 lg:pb-0' : admin ? 'pb-6 lg:pb-16' : 'pb-20 md:min-w-0 lg:pb-16'} ${
                         rightRail ? '' : 'border-r-0'
                     }`}
                 >
@@ -405,7 +405,7 @@ export default function AppLayout({ children, rightRail = true, bare = false, ad
                 {!bare && !admin && <BottomNav />}
                 {!bare && admin && <AdminMobileRail open={adminRailOpen} onClose={() => setAdminRailOpen(false)} />}
                 {!bare && !admin && <DemoSwitcher />}
-                <footer className={`${rightRail ? 'lg:col-span-3' : 'lg:col-span-2'} col-span-1 border-t border-ink-line px-5 py-4 pb-24 text-[12px] text-ink-faint md:pb-4`}>
+                {footer && <footer className={`${rightRail ? 'lg:col-span-3' : 'lg:col-span-2'} col-span-1 border-t border-ink-line px-5 py-4 pb-24 text-[12px] text-ink-faint md:pb-4`}>
                     <nav className="flex flex-wrap gap-x-4 gap-y-1" aria-label="Legal">
                         <Link href={route('legal.terms')} className="hover:text-ink-text">Terms</Link>
                         <Link href={route('legal.privacy')} className="hover:text-ink-text">Privacy</Link>
@@ -413,7 +413,7 @@ export default function AppLayout({ children, rightRail = true, bare = false, ad
                         <Link href={route('dmca')} className="hover:text-ink-text">Copyright / DMCA</Link>
                         <span className="w-full md:ml-auto md:w-auto">18+ only. Work is rated by its artist.</span>
                     </nav>
-                </footer>
+                </footer>}
             </div>
         </ToastProvider>
     );

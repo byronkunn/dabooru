@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Conversation;
+use App\Models\Media;
 use App\Models\Message;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -27,6 +28,10 @@ class SampleMessagesSeeder extends Seeder
 
             return;
         }
+
+        $manifest = json_decode((string) file_get_contents(database_path('data/sfw/manifest.json')), true);
+        $images = $manifest['image'] ?? [];
+        $videos = array_values(array_filter($manifest['video'] ?? [], fn ($v) => ($v['duration'] ?? 0) > 0));
 
         $others = User::query()
             ->whereKeyNot($admin->id)
@@ -79,6 +84,58 @@ class SampleMessagesSeeder extends Seeder
                     'body' => $body,
                     'rating' => 'sfw',
                     'created_at' => now()->subMinutes(($index + 1) * 37 - $n * 5),
+                ]);
+            }
+
+            // every other thread also gets an image attachment from sfw/
+            if ($index % 2 === 0) {
+                $image = $images[$index % count($images)] ?? null;
+                if ($image) {
+                    $media = Media::create([
+                        'user_id' => $user->id,
+                        'disk' => 'public',
+                        'path' => '/sfw/content/image/'.rawurlencode($image['file']),
+                        'kind' => 'image',
+                        'width' => $image['w'],
+                        'height' => $image['h'],
+                        'status' => 'ready',
+                        'mime_type' => 'image/jpeg',
+                    ]);
+
+                    $conversation->messages()->create([
+                        'user_id' => $user->id,
+                        'body' => 'This is the post I mean — screenshot attached.',
+                        'media_id' => $media->id,
+                        'rating' => 'sfw',
+                        'created_at' => now()->subMinutes(($index + 1) * 37 - 8),
+                    ]);
+                }
+            }
+
+            // one thread gets a video attachment too
+            if ($index === 2 && $videos !== []) {
+                $video = $videos[0];
+                $media = Media::create([
+                    'user_id' => $user->id,
+                    'disk' => 'public',
+                    'path' => '/sfw/content/video/'.rawurlencode($video['file']),
+                    'thumb_path' => is_file(base_path('sfw/thumbs/'.preg_replace('/\.mp4$/i', '.jpg', $video['file'])))
+                        ? '/sfw/content/thumbs/'.rawurlencode(preg_replace('/\.mp4$/i', '.jpg', $video['file']))
+                        : null,
+                    'kind' => 'video',
+                    'width' => $video['w'] ?? null,
+                    'height' => $video['h'] ?? null,
+                    'duration_seconds' => $video['duration'] ?? null,
+                    'status' => 'ready',
+                    'mime_type' => 'video/mp4',
+                ]);
+
+                $conversation->messages()->create([
+                    'user_id' => $user->id,
+                    'body' => 'And here is the clip that would not play.',
+                    'media_id' => $media->id,
+                    'rating' => 'sfw',
+                    'created_at' => now()->subMinutes(($index + 1) * 37 - 9),
                 ]);
             }
 

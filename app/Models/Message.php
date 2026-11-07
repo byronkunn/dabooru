@@ -18,4 +18,10 @@ class Message extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /** Optional image or video attached to the message. */
+    public function media(): BelongsTo
+    {
+        return $this->belongsTo(Media::class);
+    }
 }
