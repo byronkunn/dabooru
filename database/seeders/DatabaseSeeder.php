@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\AppNotification;
 use App\Models\Bookmark;
 use App\Models\Comic;
 use App\Models\ComicChapter;
@@ -15,96 +16,170 @@ use App\Models\Media;
 use App\Models\Message;
 use App\Models\Post;
 use App\Models\PostMedia;
+use App\Models\ReadingProgress;
 use App\Models\User;
-use App\Support\DummyImage;
+use App\Support\SampleContent;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        /* ---------------- accounts ---------------- */
+        $this->seedUsers();
+        $this->seedFollows();
+        $this->seedWorks();
+        $this->seedComics();
+        $this->seedViewerActivity();
+        $this->seedMessages();
+        $this->seedNotifications();
 
-        $mira = User::firstOrCreate(['email' => 'demo@inkwell.test'], [
-            'name' => 'mira.ink',
-            'username' => 'mira_ink',
-            'password' => Hash::make('password'),
-            'avatar_path' => 'https://i.pravatar.cc/300?img=47',
-            'bio' => 'Comics & character studies. Mostly ink, sometimes colour. NSFW sometimes, marked per post.',
-            'location' => 'Portland',
-            'website' => 'miraink.studio',
-        ]);
+        $this->command?->info('Seeded '.User::count().' accounts, '.Post::count().' posts, '.Comic::count().' comics.');
+        $this->command?->info('Sign in on /login, or click a demo account: mira_ink, rin_senpai, viewer.');
+    }
 
-        $crowd = collect([
-            ['Rin Senpai', 'rin_senpai', 12, 'Making manga about cities at 2am. Explicit chapters are marked. 18+.'],
-            ['Val', 'valdraws', 32, 'Digital painter. GIFs and loops. Commissions closed.'],
-            ['Kuro', 'kurostudies', 5, 'Studies, sketch dumps, process videos. SFW only.'],
-            ['Aya', 'aya_lines', 26, 'Lineart gremlin. OCs. 18+.'],
-        ])->map(function (array $u, int $i) {
-            return User::firstOrCreate(['username' => $u[1]], [
-                'name' => $u[0],
-                'email' => "{$u[1]}@inkwell.test",
-                'password' => Hash::make('password'),
-                'avatar_path' => 'https://i.pravatar.cc/300?img='.$u[2],
-                'bio' => $u[3],
-            ]);
-        });
+    /* ------------------------------------------------------------------ */
 
-        $everyone = collect([$mira])->concat($crowd);
-        $everyone->each(fn (User $u) => $u->forceFill(['email_verified_at' => now(), 'age_confirmed_at' => now()])->save());
+    private function avatar(int $i): string
+    {
+        $entry = SampleContent::pick(SampleContent::avatars(), $i);
 
-        /* ---------------- follows ---------------- */
+        return $entry ? SampleContent::url('avatar', $entry) : '/avatar.svg';
+    }
 
-        foreach ($crowd as $a) {
-            foreach ($everyone as $b) {
-                if ($a->id !== $b->id) {
-                    Follow::firstOrCreate(['follower_id' => $mira->id, 'following_id' => $a->id]);
-                    Follow::firstOrCreate(['follower_id' => $b->id, 'following_id' => $a->id]);
-                    Follow::firstOrCreate(['follower_id' => $a->id, 'following_id' => $mira->id]);
-                }
-            }
-        }
+    private function banner(int $i): ?string
+    {
+        $entry = SampleContent::pick(SampleContent::banners(), $i);
 
-        /* ---------------- works ---------------- */
+        return $entry ? SampleContent::url('banner-image', $entry) : null;
+    }
 
-        $works = [
-            [$mira, 'image', 'sfw', 'Tea house', 'Watercolour, scanned at 600dpi.', 1039, 980, 7100],
-            [$mira, 'image', 'suggestive', 'Late study', 'Lighting study, oil filter, too many layers.', 1027, 840, 6400],
-            [$crowd[0], 'image', 'sfw', 'Mountain quiet', 'Did a plein-air study up near the lake. Never doing 6am again.', 1015, 2100, 18000],
-            [$crowd[1], 'gif', 'explicit', 'loop study', 'Adjusted the loop timing — flagging explicit because of the second half.', 1005, 1400, 22000],
-            [$crowd[2], 'video', 'sfw', 'timelapse — 4h in 40s', 'Full process video, with the embarrassing parts left in.', 1018, 920, 11000],
-            [$crowd[0], 'album', 'suggestive', 'Autumn set · 7 pieces', 'Seven pieces from this month. Swipe through in the post.', 1035, 630, 5200],
-            [$crowd[1], 'image', 'sfw', 'Morning market', 'Trying to draw fewer details, actually failing.', 1059, 1100, 9000],
-            [$mira, 'image', 'explicit', 'After hours', 'Wanted it moodier than the last one. Explicit.', 1062, 2800, 31000],
-            [$crowd[2], 'gif', 'suggestive', 'blink test', '12 frames, blink cycle. Took 3 hours to shade.', 1067, 410, 3100],
-            [$crowd[0], 'image', 'sfw', 'Canopy', 'Ceiling of a temple garden.', 1074, 1900, 14000],
-            [$crowd[1], 'video', 'explicit', 'process · 60s', 'Process for the piece from last week. Explicit edit.', 1080, 880, 7700],
-            [$crowd[2], 'image', 'sfw', 'Quiet room', 'Reference from my own bedroom. Yes it looks like that.', 1084, 1300, 10000],
-            [$crowd[3], 'image', 'sfw', 'Line weight tests', 'Testing brush textures. Probably keep two.', 1076, 610, 4800],
-            [$crowd[3], 'gif', 'suggestive', 'hair wind loop', 'Wind loop, second pass.', 1069, 720, 5500],
-            [$crowd[1], 'image', 'explicit', 'Study 14', 'Study 14 in the series. Explicit.', 1052, 2400, 27000],
-            [$crowd[0], 'image', 'suggestive', 'Rooftop', 'Warm light, late summer.', 1040, 1000, 8200],
-            [$crowd[2], 'album', 'sfw', 'Sketch dump · 12', 'Twelve pages of junk, some of it good.', 1047, 540, 4400],
+    private function seedUsers(): void
+    {
+        $accounts = [
+            [
+                'username' => 'mira_ink', 'name' => 'mira.ink', 'email' => 'demo@inkwell.test',
+                'bio' => 'Comics & character studies. Mostly ink, sometimes colour. NSFW marked per post.',
+                'location' => 'Portland', 'website' => 'miraink.studio', 'i' => 0,
+            ],
+            [
+                'username' => 'rin_senpai', 'name' => 'Rin Senpai', 'email' => 'rin_senpai@inkwell.test',
+                'bio' => 'Making manga about cities at 2am. Explicit chapters are marked. 18+.',
+                'location' => 'Osaka', 'website' => null, 'i' => 3,
+            ],
+            [
+                'username' => 'viewer', 'name' => 'Sam Viewer', 'email' => 'viewer@inkwell.test',
+                'bio' => 'Just here to look at art and read comics.',
+                'location' => null, 'website' => null, 'i' => 7,
+            ],
         ];
 
-        $posts = collect();
-        foreach ($works as $i => [$user, $type, $rating, $title, $caption, $seed, $likes, $views]) {
+        foreach ($accounts as $a) {
+            $user = User::firstOrCreate(['username' => $a['username']], [
+                'name' => $a['name'],
+                'email' => $a['email'],
+                'password' => Hash::make('password'),
+                'avatar_path' => $this->avatar($a['i']),
+                'banner_path' => $this->banner($a['i']),
+                'bio' => $a['bio'],
+                'location' => $a['location'],
+                'website' => $a['website'],
+            ]);
+
+            $user->forceFill([
+                'email_verified_at' => now(),
+                'age_confirmed_at' => now(),
+                'show_explicit' => true,
+            ])->save();
+        }
+    }
+
+    private function seedFollows(): void
+    {
+        $mira = User::where('username', 'mira_ink')->firstOrFail();
+        $rin = User::where('username', 'rin_senpai')->firstOrFail();
+        $viewer = User::where('username', 'viewer')->firstOrFail();
+
+        $pairs = [
+            [$mira->id, $rin->id], [$rin->id, $mira->id],
+            [$viewer->id, $mira->id], [$viewer->id, $rin->id],
+        ];
+
+        foreach ($pairs as [$follower, $following]) {
+            Follow::firstOrCreate(['follower_id' => $follower, 'following_id' => $following]);
+        }
+    }
+
+    /**
+     * @param  array<int, array{0:string,1:string,2:string,3:string,4:int,5:int}>  $items
+     *         [artist username, type, rating, title, likes, views]
+     */
+    private function makeWorks(string $username, array $items): void
+    {
+        if (Post::whereHas('user', fn ($q) => $q->where('username', $username))->exists()) {
+            return;
+        }
+
+        $artist = User::where('username', $username)->firstOrFail();
+        $imageIndex = 0;
+        $videoIndex = 0;
+        $order = 0;
+
+        foreach ($items as [$artistUser, $type, $rating, $title, $likes, $views]) {
             $post = Post::create([
-                'user_id' => $user->id,
+                'user_id' => $artistUser->id,
                 'type' => $type,
                 'rating' => $rating,
                 'title' => $title,
-                'caption' => $caption,
+                'caption' => $this->captionFor($type),
                 'views' => $views,
-                'created_at' => now()->subMinutes(17 * ($i + 1)),
-                'updated_at' => now()->subMinutes(17 * ($i + 1)),
+                'likes_count' => $likes,
+                'created_at' => now()->subMinutes(37 * (++$order)),
+                'updated_at' => now()->subMinutes(37 * $order),
             ]);
 
-            $count = $type === 'album' ? 7 : 1;
+            if ($type === 'video') {
+                $video = SampleContent::pick(SampleContent::videos(), $videoIndex++);
+                if ($video) {
+                    $media = Media::create([
+                        'user_id' => $artist->id,
+                        'disk' => 'public',
+                        'path' => SampleContent::url('video', $video),
+                        'thumb_path' => SampleContent::url('thumbs', ['file' => str_replace('.mp4', '.jpg', $video['file'])]),
+                        'kind' => 'video',
+                        'width' => $video['w'],
+                        'height' => $video['h'],
+                        'duration_seconds' => $video['duration'] ?? null,
+                        'status' => 'ready',
+                        'mime_type' => 'video/mp4',
+                    ]);
+                    PostMedia::create(['post_id' => $post->id, 'media_id' => $media->id, 'position' => 0]);
+                }
+
+                continue;
+            }
+
+            // image / gif / album share the image folder
+            $count = $type === 'album' ? 4 : 1;
             for ($n = 0; $n < $count; $n++) {
-                $media = $this->media($user, $type === 'video' ? 'video' : ($type === 'gif' ? 'gif' : 'image'), $seed + $n * 7, $n);
+                $image = SampleContent::pick(SampleContent::images(), $imageIndex++);
+                if (! $image) {
+                    continue;
+                }
+
+                $media = Media::create([
+                    'user_id' => $artist->id,
+                    'disk' => 'public',
+                    'path' => SampleContent::url('image', $image),
+                    // the sample set has no real GIF files, so "gif" posts use
+                    // a still image; the GIF viewer is exercised by uploads
+                    'kind' => 'image',
+                    'width' => $image['w'],
+                    'height' => $image['h'],
+                    'status' => 'ready',
+                    'mime_type' => 'image/jpeg',
+                ]);
+
                 PostMedia::create([
                     'post_id' => $post->id,
                     'media_id' => $media->id,
@@ -112,77 +187,98 @@ class DatabaseSeeder extends Seeder
                     'caption' => $type === 'album' ? 'Piece '.($n + 1) : null,
                 ]);
             }
-
-            // seeded engagement
-            $engaged = $everyone->filter(fn ($u) => $u->id !== $user->id)->shuffle()->take(random_int(1, 4));
-            foreach ($engaged as $fan) {
-                Like::firstOrCreate(['user_id' => $fan->id, 'post_id' => $post->id]);
-                if (random_int(0, 2) === 0) {
-                    Comment::create([
-                        'post_id' => $post->id,
-                        'user_id' => $fan->id,
-                        'body' => collect([
-                            'The lighting on this one is unfair. How long did the backdrop take?',
-                            'Saving this for the colour notes. The shadow shift is so clean.',
-                            'Jealous of this whole page, honestly.',
-                            'That linework is so confident.',
-                        ])->random(),
-                    ]);
-                }
-            }
-            $post->forceFill([
-                'likes_count' => Like::where('post_id', $post->id)->count(),
-                'comments_count' => Comment::where('post_id', $post->id)->count(),
-            ])->save();
-
-            $posts->push($post);
         }
+    }
 
-        /* ---------------- comics ---------------- */
+    private function seedWorks(): void
+    {
+        $mira = User::where('username', 'mira_ink')->firstOrFail();
+        $rin = User::where('username', 'rin_senpai')->firstOrFail();
 
-        $comics = [
-            [$crowd[0], 'neon-after-dark', 'Neon After Dark', 'A barfly manga about two rivals who keep meeting at 2am. Slow burn, then not slow at all. Explicit content from chapter 9.', 'explicit', 12, 1043],
-            [$mira, 'paper-lanterns', 'Paper Lanterns', 'A lantern festival, a quiet town, and two people who keep missing each other by one street.', 'suggestive', 4, 1036],
-            [$crowd[3], 'wired', 'Wired', 'A city that runs on other people\'s dreams.', 'sfw', 1, 1041],
+        $this->makeWorks('mira_ink', [
+            [$mira, 'image', 'sfw', 'Tea house', 980, 7100],
+            [$mira, 'image', 'suggestive', 'Late study', 840, 6400],
+            [$mira, 'album', 'sfw', 'Autumn set', 630, 5200],
+            [$mira, 'image', 'explicit', 'After hours', 2800, 31000],
+            
+            [$mira, 'image', 'sfw', 'Line weight tests', 610, 4800],
+            [$mira, 'image', 'sfw', 'Quiet corner', 430, 3900],
+            [$mira, 'gif', 'sfw', 'Colour block', 455, 4100],
+        ]);
+
+        $this->makeWorks('rin_senpai', [
+            [$rin, 'image', 'sfw', 'Mountain quiet', 2100, 18000],
+            [$rin, 'video', 'sfw', 'timelapse — 4h in 40s', 920, 11000],
+            [$rin, 'image', 'suggestive', 'Rooftop', 1000, 8200],
+            [$rin, 'image', 'sfw', 'Canopy', 1900, 14000],
+            [$rin, 'video', 'suggestive', 'process cut', 880, 7700],
+            [$rin, 'album', 'suggestive', 'Night studies', 540, 4400],
+            [$rin, 'image', 'explicit', 'Study 14', 2400, 27000],
+        ]);
+    }
+
+    private function seedComics(): void
+    {
+        $rin = User::where('username', 'rin_senpai')->firstOrFail();
+        $mira = User::where('username', 'mira_ink')->firstOrFail();
+
+        $series = [
+            [$rin, 'neon-after-dark', 'Neon After Dark', 'Two rivals who keep meeting at 2am. Slow burn, then not slow at all. Explicit from chapter 9.', 'explicit', 3],
+            [$mira, 'paper-lanterns', 'Paper Lanterns', 'A lantern festival, a quiet town, and two people who keep missing each other by one street.', 'suggestive', 2],
         ];
 
-        foreach ($comics as [$user, $slug, $title, $desc, $rating, $chapters, $seed]) {
+        $imageIndex = 20;
+
+        foreach ($series as [$artist, $slug, $title, $description, $rating, $chapters]) {
             $comic = Comic::firstOrCreate(['slug' => $slug], [
-                'user_id' => $user->id,
+                'user_id' => $artist->id,
                 'title' => $title,
-                'description' => $desc,
+                'description' => $description,
                 'rating' => $rating,
                 'status' => 'ongoing',
                 'last_chapter_at' => now()->subHours(2),
             ]);
 
-            for ($n = $chapters; $n >= 1; $n--) {
+            for ($n = 1; $n <= $chapters; $n++) {
                 $chapter = ComicChapter::firstOrCreate(['comic_id' => $comic->id, 'number' => $n], [
                     'title' => $n === $chapters ? 'After hours' : 'Chapter '.$n,
-                    'rating' => $n > 8 ? 'explicit' : 'sfw',
+                    'rating' => $rating === 'explicit' && $n > 1 ? 'explicit' : 'sfw',
                     'published_at' => now()->subDays(($chapters - $n) * 3),
-                    'views' => random_int(300, 9000),
+                    'views' => random_int(300, 4000),
                 ]);
 
                 if ($chapter->pages()->count() === 0) {
-                    for ($p = 1; $p <= 8; $p++) {
-                        $media = $this->media($user, 'image', $seed + $p * 11 + $n, $p + $n);
+                    for ($p = 1; $p <= 5; $p++) {
+                        $image = SampleContent::pick(SampleContent::images(), $imageIndex++);
+                        if (! $image) {
+                            continue;
+                        }
+
+                        $media = Media::create([
+                            'user_id' => $artist->id,
+                            'disk' => 'public',
+                            'path' => SampleContent::url('image', $image),
+                            'kind' => 'image',
+                            'width' => $image['w'],
+                            'height' => $image['h'],
+                            'status' => 'ready',
+                            'mime_type' => 'image/jpeg',
+                        ]);
+
                         ComicPage::create(['comic_chapter_id' => $chapter->id, 'media_id' => $media->id, 'position' => $p]);
                     }
                 }
 
-                $chapterPost = Post::firstOrCreate(
-                    ['comic_chapter_id' => $chapter->id],
-                    [
-                        'user_id' => $user->id,
-                        'type' => 'comic',
-                        'rating' => $chapter->rating === 'explicit' ? 'explicit' : $comic->rating,
-                        'title' => $title.' · Ch. '.$n,
-                        'caption' => $n === $chapters ? 'New chapter is up.' : 'Chapter '.$n,
-                        'views' => $chapter->views,
-                        'created_at' => $chapter->published_at,
-                    ]
-                );
+                // one feed post per published chapter, with the first page as its cover
+                $chapterPost = Post::firstOrCreate(['comic_chapter_id' => $chapter->id], [
+                    'user_id' => $artist->id,
+                    'type' => 'comic',
+                    'rating' => $chapter->rating,
+                    'title' => $title.' · Ch. '.$n,
+                    'caption' => $n === $chapters ? 'New chapter is up.' : 'Chapter '.$n,
+                    'views' => $chapter->views,
+                    'created_at' => $chapter->published_at,
+                ]);
 
                 if ($chapterPost->media()->count() === 0) {
                     $cover = $chapter->pages()->with('media')->first()?->media;
@@ -192,82 +288,117 @@ class DatabaseSeeder extends Seeder
                 }
             }
 
-            ComicFollow::firstOrCreate(['user_id' => $mira->id, 'comic_id' => $comic->id]);
+            ComicFollow::firstOrCreate(['user_id' => User::where('username', 'viewer')->value('id'), 'comic_id' => $comic->id]);
+        }
+    }
+
+    /** The viewer account has a history: likes, comments, saves, reading progress. */
+    private function seedViewerActivity(): void
+    {
+        $viewer = User::where('username', 'viewer')->firstOrFail();
+        $posts = Post::whereNotIn('user_id', [$viewer->id])->orderByDesc('views')->take(8)->get();
+
+        foreach ($posts as $i => $post) {
+            Like::firstOrCreate(['user_id' => $viewer->id, 'post_id' => $post->id]);
+
+            if ($i % 3 === 0) {
+                Comment::firstOrCreate(
+                    ['user_id' => $viewer->id, 'post_id' => $post->id],
+                    ['body' => collect([
+                        'The lighting on this one is unfair.',
+                        'Saving this for the colour notes.',
+                        'That linework is so confident.',
+                        'This is my favourite thing you have posted.',
+                    ])->random()]
+                );
+            }
+
+            if ($i % 4 === 0) {
+                Bookmark::firstOrCreate(['user_id' => $viewer->id, 'post_id' => $post->id]);
+            }
+
+            $post->forceFill([
+                'likes_count' => Like::where('post_id', $post->id)->count(),
+                'comments_count' => Comment::where('post_id', $post->id)->count(),
+            ])->save();
         }
 
-        /* ---------------- demo direct message ---------------- */
+        // start the viewer a few pages into the latest chapter
+        $comic = Comic::where('slug', 'neon-after-dark')->first();
+        if ($comic && $chapter = $comic->chapters()->first()) {
+            ReadingProgress::firstOrCreate(
+                ['user_id' => $viewer->id, 'comic_id' => $comic->id],
+                ['comic_chapter_id' => $chapter->id, 'page' => 2]
+            );
+        }
+    }
 
-        $conversation = Conversation::between($mira->id, $crowd[0]->id);
+    private function seedMessages(): void
+    {
+        $mira = User::where('username', 'mira_ink')->firstOrFail();
+        $rin = User::where('username', 'rin_senpai')->firstOrFail();
+        $viewer = User::where('username', 'viewer')->firstOrFail();
+
+        $conversation = Conversation::between($mira->id, $rin->id);
         if ($conversation->messages()->count() === 0) {
             $conversation->messages()->createMany([
-                ['user_id' => $crowd[0]->id, 'body' => 'hey — working on ch. 12 panel cleanup'],
-                ['user_id' => $crowd[0]->id, 'body' => "want to look at it before it goes up? explicit, so don't open on a train"],
+                ['user_id' => $rin->id, 'body' => 'hey — working on the next chapter cleanup'],
+                ['user_id' => $rin->id, 'body' => 'want to look at it before it goes up? explicit, so don\'t open on a train'],
                 ['user_id' => $mira->id, 'body' => 'yes please, been waiting for this one'],
-                ['user_id' => $crowd[0]->id, 'body' => 'that is it. thank you'],
+                ['user_id' => $rin->id, 'body' => 'that is it. thank you'],
             ]);
             $conversation->forceFill(['last_message_at' => now()->subMinutes(4)])->save();
         }
 
-        /* ---------------- demo notifications ---------------- */
-        if (\App\Models\AppNotification::count() === 0) {
-            $miraPosts = Post::where('user_id', $mira->id)->take(3)->get();
-            foreach ($miraPosts as $i => $mp) {
-                foreach ($crowd->take(2) as $actor) {
-                    \App\Models\AppNotification::create([
-                        'user_id' => $mira->id,
-                        'actor_id' => $actor->id,
-                        'type' => $i === 1 ? 'comment' : 'like',
-                        'subject_type' => Post::class,
-                        'subject_id' => $mp->id,
-                        'data' => ['post_id' => $mp->id],
-                        'created_at' => now()->subMinutes(20 * ($i + 1)),
-                    ]);
-                }
-            }
-            foreach ($crowd as $actor) {
-                \App\Models\AppNotification::create([
-                    'user_id' => $mira->id,
-                    'actor_id' => $actor->id,
-                    'type' => 'follow',
-                    'data' => [],
-                    'created_at' => now()->subHours(3),
-                ]);
-            }
+        $viewerTalk = Conversation::between($viewer->id, $mira->id);
+        if ($viewerTalk->messages()->count() === 0) {
+            $viewerTalk->messages()->createMany([
+                ['user_id' => $viewer->id, 'body' => 'Love the autumn set — is the second piece a print?'],
+                ['user_id' => $mira->id, 'body' => 'it is, up on the shop next week'],
+            ]);
+            $viewerTalk->forceFill(['last_message_at' => now()->subHours(6)])->save();
+        }
+    }
+
+    private function seedNotifications(): void
+    {
+        if (AppNotification::count() > 0) {
+            return;
         }
 
-        $this->command?->info('Seeded: '.$everyone->count().' artists, '.$posts->count().' works, '.Comic::count().' comics.');
-        $this->command?->info('Demo login: demo@inkwell.test / password');
+        $mira = User::where('username', 'mira_ink')->firstOrFail();
+        $rin = User::where('username', 'rin_senpai')->firstOrFail();
+        $viewer = User::where('username', 'viewer')->firstOrFail();
+
+        foreach (Post::where('user_id', $mira->id)->take(3)->get() as $i => $post) {
+            AppNotification::create([
+                'user_id' => $mira->id,
+                'actor_id' => $viewer->id,
+                'type' => $i === 1 ? 'comment' : 'like',
+                'subject_type' => Post::class,
+                'subject_id' => $post->id,
+                'data' => ['post_id' => $post->id],
+                'created_at' => now()->subMinutes(20 * ($i + 1)),
+            ]);
+        }
+
+        AppNotification::create([
+            'user_id' => $mira->id,
+            'actor_id' => $rin->id,
+            'type' => 'follow',
+            'data' => [],
+            'created_at' => now()->subHours(3),
+        ]);
     }
 
-    private function media(User $user, string $kind, int $seed, int $position): Media
+    private function captionFor(string $type): string
     {
-        $w = $kind === 'video' ? 1280 : 800;
-        $h = $kind === 'video' ? 720 : (int) (800 / (1.2 + ($seed % 7) / 10));
-
-        return Media::firstOrCreate(
-            ['user_id' => $user->id, 'path' => $this->seedPath($seed)],
-            [
-                'disk' => 'public',
-                'thumb_path' => $this->seedPath($seed + 5000),
-                'kind' => $kind,
-                'width' => $w,
-                'height' => max(320, $h),
-                'size_bytes' => 1_200_000,
-                'status' => 'ready',
-                'mime_type' => $kind === 'video' ? 'video/mp4' : 'image/jpeg',
-            ]
-        );
-    }
-
-    /**
-     * Seed media points at remote placeholder URLs. The filesystems adapter
-     * (see Media::url in the front end) renders absolute URLs untouched, so the
-     * demo looks populated without shipping 100MB of sample images.
-     */
-    private function seedPath(int $seed): string
-    {
-        // picsum /seed/ returns a 302 to fastly. Use the id endpoint so the
-        // browser receives the image in one hop, no redirect chain.
-        return DummyImage::url($seed, 800, 1000);
+        return match ($type) {
+            'video' => 'Full process cut — the embarrassing parts left in.',
+            'album' => 'A few pieces from this month. Swipe through.',
+            'gif' => 'Loop study, second pass.',
+            'comic' => 'New chapter is up.',
+            default => 'Study from this week.',
+        };
     }
 }

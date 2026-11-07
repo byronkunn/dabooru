@@ -311,3 +311,20 @@ A few `.env.example` defaults are also worth reviewing for production, if not st
 ---
 
 *Written against this checkout. Not legal advice — have a lawyer review the terms, content policy, DMCA process, age-verification approach, and CSAM reporting obligations for your jurisdiction before launch.*
+
+---
+
+## Appendix: the demo accounts are local-only
+
+The "Jump in as…" buttons on `/login` sign you in with one click by hitting
+`GET /demo-login/{username}` (`DemoLoginController`). The route is registered
+inside an `app()->environment(['local', 'testing'])` guard in `routes/auth.php`,
+so it **does not exist** when `APP_ENV=production`. Two rules:
+
+- [ ] Never set `APP_ENV` to anything other than `production` on a public box.
+- [ ] Before launch, either delete `app/Http/Controllers/DemoLoginController.php`
+      and `app/Support/DemoAccounts.php` or leave them — they are dead code on a
+      production environment, but the demo users (`@inkwell.test`) must still be
+      gone from the database.
+
+Demo accounts and their passwords (`password`) are for local development only.

@@ -216,6 +216,65 @@ function RightRail() {
     );
 }
 
+/* ---------------------------------------------------------------- demo switcher */
+/* Local development only: the server only sends demoAccounts when the
+   demo-login route exists (it does not exist in production). */
+function DemoSwitcher() {
+    const { demoAccounts, auth } = usePage().props;
+    const [open, setOpen] = useState(false);
+
+    if (!demoAccounts?.length) return null;
+
+    const current = auth?.user?.username;
+
+    return (
+        <div className="fixed bottom-[76px] left-3 z-50 md:bottom-4 md:left-3">
+            {open && (
+                <div className="mb-2 w-[248px] rounded-2xl border border-ink-line bg-ink-surface p-2 shadow-2xl">
+                    <p className="px-2 pb-1 pt-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-ink-faint">
+                        Sign in as
+                    </p>
+                    {demoAccounts.map((account) => (
+                        <a
+                            key={account.username}
+                            href={account.url}
+                            className={`flex items-center gap-2.5 rounded-xl px-2 py-2 hover:bg-ink-raised ${
+                                current === account.username ? 'bg-ink-raised' : ''
+                            }`}
+                        >
+                            <img src={account.avatar} alt="" className="h-8 w-8 shrink-0 rounded-full bg-ink-raised object-cover" />
+                            <span className="min-w-0 flex-1">
+                                <span className="block truncate text-[13px] font-bold">{account.name}</span>
+                                <span className="block truncate text-[11px] text-ink-muted">{account.role}</span>
+                            </span>
+                            {current === account.username && <span className="text-[11px] text-ink-brand">here</span>}
+                        </a>
+                    ))}
+                    <a
+                        href={route('login')}
+                        className="mt-1 block rounded-xl px-2 py-2 text-[12px] font-semibold text-ink-muted hover:bg-ink-raised hover:text-ink-text"
+                    >
+                        Use the login form instead
+                    </a>
+                </div>
+            )}
+            <button
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                aria-expanded={open}
+                aria-label="Switch demo account"
+                className="flex items-center gap-2 rounded-full border border-ink-line bg-ink-surface px-3 py-2 text-[12px] font-bold shadow-xl hover:bg-ink-raised"
+            >
+                <span className="grid h-5 w-5 place-items-center rounded-full bg-ink-brand text-[10px] font-black text-[#1c1017]">
+                    ⇄
+                </span>
+                <span className="hidden sm:inline">Demo accounts</span>
+                <span className="sm:hidden">Demo</span>
+            </button>
+        </div>
+    );
+}
+
 /* ---------------------------------------------------------------- layout */
 export default function AppLayout({ children, rightRail = true, bare = false }) {
     const shellName = rightRail ? 'shell-full' : 'shell-solo';
@@ -233,6 +292,7 @@ export default function AppLayout({ children, rightRail = true, bare = false }) 
                 </main>
                 {!bare && rightRail && <RightRail />}
                 {!bare && <BottomNav />}
+                {!bare && <DemoSwitcher />}
             </div>
         </ToastProvider>
     );

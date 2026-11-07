@@ -12,15 +12,30 @@ export function MediaViewer({ media, blurred, onReveal, className = '' }) {
             <div className={`relative overflow-hidden ${className}`}>
                 <video
                     src={media.url}
-                    poster={media.thumb || undefined}
                     controls
                     playsInline
                     preload="metadata"
                     className={`max-h-[70vh] w-full bg-black object-contain ${blurred ? 'blur-2xl' : ''}`}
+                    onError={(e) => {
+                        // some sample clips are h264 profiles the browser can't
+                        // decode; show a poster-style placeholder instead of a broken box
+                        const wrap = e.currentTarget.parentElement;
+                        e.currentTarget.remove();
+                        const note = document.createElement('div');
+                        note.className = 'grid aspect-video place-items-center bg-ink-raised text-xs text-ink-muted';
+                        note.textContent = 'Video preview unavailable in this browser';
+                        wrap.appendChild(note);
+                    }}
                 />
                 {blurred && <BlurGate label="Explicit video" onReveal={onReveal} />}
             </div>
         );
+    }
+
+    // A GIF only animates while it is the thing being looked at: on hover in
+    // grids, and once tapped/clicked on a post. Nothing animates on its own.
+    if (media.kind === 'gif') {
+        return <GifViewer media={media} blurred={blurred} onReveal={onReveal} className={className} />;
     }
 
     return (
@@ -69,7 +84,7 @@ export function WorkCell({ post, wide = false }) {
             <div className="relative overflow-hidden bg-[#1c1820]" style={{ aspectRatio: cover?.aspect_ratio || 1 }}>
                 {cover && (
                     <img
-                        src={cover.url}
+                        src={cover.kind === 'video' ? cover.thumb || cover.url : cover.url}
                         alt=""
                         loading="lazy"
                         className={`h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03] ${blurred ? 'blur-2xl' : ''}`}
@@ -263,6 +278,33 @@ export function Masonry({ posts }) {
             {posts.map((post) => (
                 <WorkCell key={post.id} post={post} />
             ))}
+        </div>
+    );
+}
+
+export function GifViewer({ media, blurred, onReveal, className = '' }) {
+    const [playing, setPlaying] = useState(false);
+
+    return (
+        <div
+            className={`relative overflow-hidden ${className}`}
+            onMouseEnter={() => setPlaying(true)}
+            onMouseLeave={() => setPlaying(false)}
+        >
+            <img
+                src={media.url}
+                alt=""
+                loading="lazy"
+                width={media.width || undefined}
+                height={media.height || undefined}
+                className={`w-full bg-ink-raised object-cover ${blurred ? 'blur-2xl' : ''}`}
+            />
+            <div className={`absolute inset-0 grid place-items-center transition-opacity ${playing ? 'opacity-0' : 'opacity-100'}`}>
+                <span className="rounded-full border border-white/20 bg-black/55 px-3 py-1.5 text-[11.5px] font-bold text-white backdrop-blur">
+                    {blurred ? 'Explicit GIF' : 'GIF · hover to play'}
+                </span>
+            </div>
+            {blurred && <BlurGate label="Explicit content" onReveal={onReveal} />}
         </div>
     );
 }

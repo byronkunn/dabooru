@@ -46,7 +46,7 @@ class Media extends Model
             return '';
         }
 
-        if (Str::startsWith($path, ['http://', 'https://'])) {
+        if (Str::startsWith($path, ['http://', 'https://', '/'])) {
             return $path;
         }
 

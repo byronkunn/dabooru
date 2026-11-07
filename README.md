@@ -35,22 +35,28 @@ Then open **http://127.0.0.1:8001** and log in with the demo account.
 
 ## Demo accounts
 
-All demo users use the password **`password`**.
+Three accounts ship with the seed data. **You do not need their passwords** — open
+[http://127.0.0.1:8001/login](http://127.0.0.1:8001/login) and click one under
+"Jump in as…". (The buttons only exist when `APP_ENV` is `local` or `testing`.)
 
-| Handle       | Email                        | Notes                                              |
-| ------------ | ---------------------------- | -------------------------------------------------- |
-| `mira.ink`   | `demo@inkwell.test`          | Main demo login. Mixed SFW / suggestive / explicit. |
-| `rin_senpai` | `rin_senpai@inkwell.test`    | Owns the explicit *Neon After Dark* series.         |
-| `valdraws`   | `valdraws@inkwell.test`      | GIFs and loops.                                     |
-| `kurostudies`| `kurostudies@inkwell.test`   | SFW-only studies and process videos.                |
-| `aya_lines`  | `aya_lines@inkwell.test`     | Lineart / OCs, owns *Wired*.                        |
+| Account | Email | Password | Role | What it can do |
+| --- | --- | --- | --- | --- |
+| **mira.ink** (`mira_ink`) | demo@inkwell.test | `password` | Artist · owner | 8 works incl. albums and media, 2 comic series. Uploading, comics, settings all apply to this account. |
+| **Rin Senpai** (`rin_senpai`) | rin_senpai@inkwell.test | `password` | Artist · manga | 7 works incl. two videos, runs *Neon After Dark*. |
+| **Sam Viewer** (`viewer`) | viewer@inkwell.test | `password` | Viewer | Follows both artists, likes, comments, saved posts and reading progress — but has **no posts** and is not expected to upload. |
 
-Seeded data (verified against the database after `--seed`):
+Signing in with the form works too: any of the emails above with `password`.
 
-- **5 artists**, all email-verified and age-confirmed
-- **34 posts**: 17 standalone works + 17 comic chapter posts
-- **3 comic series**: `neon-after-dark` (explicit, 12 chapters), `paper-lanterns` (suggestive, 4 chapters), `wired` (SFW, 1 chapter) — 8 pages per chapter
-- Likes, comments, follows, bookmarks, one DM conversation and notifications
+### Content comes from `sfw/`
+
+The demo gallery is built from the real files in `sfw/` (images, videos, avatars,
+banners). `public/sfw/content` is a symlink to that folder, so the files are
+served straight from where they are — nothing is copied into storage and there
+are no external image hosts. Video posters are the JPEGs in `sfw/thumbs`,
+generated with `ffmpeg`. If you add files to `sfw/`, re-run
+`php artisan db:seed` after regenerating `database/data/sfw/manifest.json`
+(the seeder reads dimensions from it).
+
 
 ## Routes
 
@@ -155,14 +161,10 @@ To exercise the age gate in tests, set `INKWELL_AGE_GATE_TEST_BYPASS=false`.
 
 ## Design docs
 
-The design doc and static HTML mockups (15 screens at 3 breakpoints) were authored in commit `3e495a3` (`Inkwell design doc + responsive mockup screens`) and then deleted from the working tree. They are still recoverable from history:
-
-```bash
-git show 3e495a3:docs/superpowers/specs/2026-11-06-inkwell-nsfw-artist-site-design.md
-git checkout 3e495a3 -- docs/superpowers/specs/mockup
-```
-
-The HTML screens are static mockups; `resources/js/Pages` is the implementation.
+The design doc and the static HTML mockups (15 screens at 3 breakpoints) are in
+[docs/superpowers/specs/](docs/superpowers/specs/): the design doc plus the
+`mockup/` folder. The HTML screens are static mockups; `resources/js/Pages` is
+the implementation.
 
 ## Moving to MySQL or S3
 
@@ -196,3 +198,13 @@ AWS_BUCKET=inkwell-media
 ```
 
 The `s3` disk reads those variables from `config/filesystems.php`. Existing rows keep their own `disk` column, so old local uploads still resolve after the switch and new uploads go to the bucket. For production, also consider switching `BROADCAST_CONNECTION`, `QUEUE_CONNECTION` and `CACHE_STORE` off `database` once those services exist.
+
+## Switching between demo accounts
+
+A **Demo accounts** button floats in the bottom-left of every page. Click it and
+pick one of the three accounts to switch instantly — handy for seeing the same
+gallery as an artist (with upload) and then as the viewer (without).
+
+It only renders when the server sends `demoAccounts` in shared Inertia props,
+which happens only when the `demo.login` route exists (i.e. `APP_ENV=local` or
+`testing`). On a production environment it disappears along with the route.

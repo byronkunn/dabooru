@@ -11,6 +11,13 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
+// Local development only: one-click sign-in for the demo accounts.
+if (app()->environment(['local', 'testing'])) {
+    Route::get('demo-login/{username}', [\App\Http\Controllers\DemoLoginController::class, 'login'])
+        ->middleware('throttle:30,1')
+        ->name('demo.login');
+}
+
 Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');

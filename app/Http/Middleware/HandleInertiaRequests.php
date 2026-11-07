@@ -24,6 +24,10 @@ class HandleInertiaRequests extends Middleware
 
         return array_merge(parent::share($request), [
             'ageConfirmed' => AgeGate::confirmed(),
+            // local development only: the one-click demo switcher
+            'demoAccounts' => \Illuminate\Support\Facades\Route::has('demo.login')
+                ? \App\Support\DemoAccounts::users()
+                : [],
             'auth' => [
                 'user' => $user ? [
                     'id' => $user->id,

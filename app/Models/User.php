@@ -94,7 +94,7 @@ class User extends Authenticatable
 
     private function storedUrl(string $path): string
     {
-        return Str::startsWith($path, ['http://', 'https://'])
+        return Str::startsWith($path, ['http://', 'https://', '/'])
             ? $path
             : Storage::disk(config('filesystems.upload_disk', 'public'))->url($path);
     }

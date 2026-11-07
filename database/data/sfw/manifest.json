@@ -1,0 +1,528 @@
+{
+  "image": [
+    {
+      "file": "148a0f0eae39998a954d56c2290dc65e.png",
+      "w": 600,
+      "h": 698
+    },
+    {
+      "file": "401429168df44a34b0acf9ee0da34369.png",
+      "w": 785,
+      "h": 745
+    },
+    {
+      "file": "901ffd6b7e896544a6de89b314828787.jpg",
+      "w": 696,
+      "h": 983
+    },
+    {
+      "file": "avetetsuya-studios-271773445-103012065615905-9196945532505041529-n.jpg",
+      "w": 1181,
+      "h": 1754
+    },
+    {
+      "file": "b77813157c9f6e1ee90ac783fadf868a.png",
+      "w": 600,
+      "h": 641
+    },
+    {
+      "file": "c3f2b27eee02ca1545026e818caa9873.jpg",
+      "w": 1010,
+      "h": 1024
+    },
+    {
+      "file": "c78dc13197ac708d3b6726cff49785eb.jpg",
+      "w": 1000,
+      "h": 1104
+    },
+    {
+      "file": "i-m-potatoes-yana-gaisina-photo-2026-09-11-12-38-56.jpg",
+      "w": 929,
+      "h": 1280
+    },
+    {
+      "file": "john-staub-marvel-loki-western-bar-color-jstaub.jpg",
+      "w": 1920,
+      "h": 804
+    },
+    {
+      "file": "john-staub-marvel-loki-western-color-jstaub.jpg",
+      "w": 1920,
+      "h": 803
+    },
+    {
+      "file": "pavel-yankovich-01.jpg",
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "pavel-yankovich-08.jpg",
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "sample_110e5127c38f53042f29a4dc3b2acdc1.jpg",
+      "w": 850,
+      "h": 1202
+    },
+    {
+      "file": "sample_121c05247147e27e187ec21d4903d42e.jpg",
+      "w": 850,
+      "h": 910
+    },
+    {
+      "file": "sample_29416423e2bad115abcd148625416902.jpg",
+      "w": 850,
+      "h": 1063
+    },
+    {
+      "file": "sample_2ccb3796c550e474c5162e781392f1aa.jpg",
+      "w": 850,
+      "h": 1217
+    },
+    {
+      "file": "sample_37ae46bfbb6ab04233f8b225aeee56db.jpg",
+      "w": 850,
+      "h": 1511
+    },
+    {
+      "file": "sample_395efbc9b59fea87768a4a2e73eea947.jpg",
+      "w": 850,
+      "h": 1061
+    },
+    {
+      "file": "sample_3a1cef0a2f73e70cd3d2165a88ab9d78.jpg",
+      "w": 850,
+      "h": 1063
+    },
+    {
+      "file": "sample_3a88abbc0412737c013a94573ad4b70b.jpg",
+      "w": 850,
+      "h": 850
+    },
+    {
+      "file": "sample_42940c99aa9def7fb257c9bd94071b85.jpg",
+      "w": 850,
+      "h": 1209
+    },
+    {
+      "file": "sample_4c9fc7b8bd126c0947d9a9846087527f.jpg",
+      "w": 850,
+      "h": 850
+    },
+    {
+      "file": "sample_55236e8ec0f656eccb9e796bb39e77fb.jpg",
+      "w": 850,
+      "h": 1023
+    },
+    {
+      "file": "sample_5d3ed6f1171150a80e49d7bb6c7f1196.jpg",
+      "w": 850,
+      "h": 850
+    },
+    {
+      "file": "sample_64512bd8d97e03ba8cb219e8f59d2c43.jpg",
+      "w": 850,
+      "h": 1203
+    },
+    {
+      "file": "sample_64e1012a1c7d7acf4f0d78b22248ff00.jpg",
+      "w": 850,
+      "h": 650
+    },
+    {
+      "file": "sample_71987dc61241813e1fe10683a2d2e6ed.jpg",
+      "w": 850,
+      "h": 850
+    },
+    {
+      "file": "sample_7b4970931c5fea47a8cd6ab5e7a422f5.jpg",
+      "w": 850,
+      "h": 1133
+    },
+    {
+      "file": "sample_8160ef5b8f5e879837a76940cbf36e93.jpg",
+      "w": 850,
+      "h": 1133
+    },
+    {
+      "file": "sample_85c454b3e608423e9dcb3cc4237d0055.jpg",
+      "w": 850,
+      "h": 1133
+    },
+    {
+      "file": "sample_85ea7778a8ef27adc53a8af6101d19ac.jpg",
+      "w": 850,
+      "h": 1141
+    },
+    {
+      "file": "sample_86d50f2706661b4cb3e4d2558232d4f8.jpg",
+      "w": 850,
+      "h": 1202
+    },
+    {
+      "file": "sample_9a25245cb71b342de0c410501ff3be51.jpg",
+      "w": 850,
+      "h": 1103
+    },
+    {
+      "file": "sample_9c0b109cb6753b4a2335ecf664b3d080.jpg",
+      "w": 850,
+      "h": 1133
+    },
+    {
+      "file": "sample_a687be4cdaa5b661d3e4e343d39cce59.jpg",
+      "w": 850,
+      "h": 850
+    },
+    {
+      "file": "sample_a751377aaf675242a651fef9c7e2f5a6.jpg",
+      "w": 850,
+      "h": 1200
+    },
+    {
+      "file": "sample_b9447ee6cb7d747001d554c6c9461ed6.jpg",
+      "w": 850,
+      "h": 1317
+    },
+    {
+      "file": "sample_cafa4045112430807ce107892947ae5f.jpg",
+      "w": 850,
+      "h": 1063
+    },
+    {
+      "file": "sample_ce912cfa8723b039152de9dcf6570667.jpg",
+      "w": 850,
+      "h": 638
+    },
+    {
+      "file": "sample_d1760f647e9e6489ee7e974f411c48fe.jpg",
+      "w": 850,
+      "h": 1202
+    },
+    {
+      "file": "sample_d297c6b40f5880a0e3afada84f5f149e.jpg",
+      "w": 850,
+      "h": 1184
+    },
+    {
+      "file": "sample_dc069b59e1c652a8c4bbe98970ea865e.jpg",
+      "w": 850,
+      "h": 893
+    },
+    {
+      "file": "sample_dee82bdfa545d5e492b85829db98d754.jpg",
+      "w": 850,
+      "h": 1202
+    },
+    {
+      "file": "sample_e2b524fcf4cd0c803d0d940ff342a84c.jpg",
+      "w": 850,
+      "h": 1290
+    },
+    {
+      "file": "sample_ee1e3193d033982dbed189e690883ae8.jpg",
+      "w": 850,
+      "h": 1522
+    },
+    {
+      "file": "sample_fd6cf1c5b5dda7658bf8b050ebb8240f.jpg",
+      "w": 850,
+      "h": 722
+    },
+    {
+      "file": "santiago-betancur-cell-v02.jpg",
+      "w": 1280,
+      "h": 1280
+    },
+    {
+      "file": "vadim-marchenkov-legendary-final-preview.jpg",
+      "w": 1920,
+      "h": 2588
+    },
+    {
+      "file": "victoria-n-1.jpg",
+      "w": 1850,
+      "h": 2300
+    }
+  ],
+  "video": [
+    {
+      "file": "18a140f0b65bb1dfa2b7aeaff6fc366e.mp4",
+      "w": 800,
+      "h": 800,
+      "duration": 4
+    },
+    {
+      "file": "1a2cc8c5106c12d4280e633a1a45e1b0.mp4",
+      "w": 1920,
+      "h": 1080,
+      "duration": 0
+    },
+    {
+      "file": "1c8313c25672bc727f4985fcd7b488a3.mp4",
+      "w": 854,
+      "h": 480,
+      "duration": 77
+    },
+    {
+      "file": "1face9fa56fedfdaf2a600710e3ab977.mp4",
+      "w": 900,
+      "h": 900,
+      "duration": 4
+    },
+    {
+      "file": "229b9b57de824b80107afe4080a5882f.mp4",
+      "w": 720,
+      "h": 1280,
+      "duration": 11
+    },
+    {
+      "file": "23da039027daef428f3f49a5e68a3d98.mp4",
+      "w": 1920,
+      "h": 1080,
+      "duration": 33
+    },
+    {
+      "file": "3c7f5798371b3f60a356bc1a50f5edbd.mp4",
+      "w": 240,
+      "h": 426,
+      "duration": 15
+    },
+    {
+      "file": "44d9e05ae428e68f96afc440d2cf269b.mp4",
+      "w": 1206,
+      "h": 1608,
+      "duration": 4
+    },
+    {
+      "file": "4b13f5dd56bd0f40471eb22ab910c920.mp4",
+      "w": 1136,
+      "h": 640,
+      "duration": 18
+    },
+    {
+      "file": "4c545c6638d9ebf76ae782da891b3d42.mp4",
+      "w": 720,
+      "h": 1280,
+      "duration": 26
+    },
+    {
+      "file": "580759bea5a1df684753c16ca3fe1101.mp4",
+      "w": 1280,
+      "h": 1076,
+      "duration": 4
+    },
+    {
+      "file": "5c761c72e4d54f2bae028df47eb19e73.mp4",
+      "w": 1000,
+      "h": 1000,
+      "duration": 5
+    },
+    {
+      "file": "62c0b79f18e6a409dda2b7e86a9a8cad.mp4",
+      "w": 1280,
+      "h": 720,
+      "duration": 21
+    },
+    {
+      "file": "651d82ffd336e5abd654c9d036d2cd45.mp4",
+      "w": 1920,
+      "h": 1080,
+      "duration": 2
+    },
+    {
+      "file": "696b8214b05eb15522bb5d9557e3774b.mp4",
+      "w": 720,
+      "h": 1280,
+      "duration": 2
+    },
+    {
+      "file": "77cbedd520e8ab8c6be9fd90ec5de7fe.mp4",
+      "w": 1280,
+      "h": 720,
+      "duration": 44
+    },
+    {
+      "file": "79d290e4a211adb898b16b3359009603.mp4",
+      "w": 720,
+      "h": 1280,
+      "duration": 11
+    },
+    {
+      "file": "808269f5654410d252a522bb61debbe0.mp4",
+      "w": 1800,
+      "h": 2000,
+      "duration": 6
+    },
+    {
+      "file": "b96fe23a99285c25417fa4b4e86cfdfc.mp4",
+      "w": 720,
+      "h": 1280,
+      "duration": 2
+    },
+    {
+      "file": "c4b1a00c76fc51cb6f1e713e4ba1a2c0.mp4",
+      "w": 720,
+      "h": 1280,
+      "duration": 14
+    },
+    {
+      "file": "d4c6749031f8659de8d9024a64f6a0ee.mp4",
+      "w": 720,
+      "h": 1280,
+      "duration": 6
+    },
+    {
+      "file": "f5e02aee2e8257e1924ea06e343f27e4.mp4",
+      "w": 1080,
+      "h": 1620,
+      "duration": 5
+    },
+    {
+      "file": "heman-work-orig.mp4",
+      "w": 1080,
+      "h": 1080,
+      "duration": 10
+    }
+  ],
+  "avatar": [
+    {
+      "file": "0738955ca929985f39921b4876053170.png",
+      "w": 640,
+      "h": 640
+    },
+    {
+      "file": "fa238b1ca4a1cc8f2f0fe1625a4dd295.png",
+      "w": 1035,
+      "h": 1035
+    },
+    {
+      "file": "sample_07acb23be6e4bea15d091117693849b2.jpg",
+      "w": 850,
+      "h": 808
+    },
+    {
+      "file": "sample_1cc3b7361bda35f6bf0f78d8cb47640f.jpg",
+      "w": 850,
+      "h": 850
+    },
+    {
+      "file": "sample_1d89358dfa9ac7896708f2da00fd6a3e.jpg",
+      "w": 850,
+      "h": 1050
+    },
+    {
+      "file": "sample_412993eb4b402e04f3f15b03b23bf071.jpg",
+      "w": 850,
+      "h": 1015
+    },
+    {
+      "file": "sample_5398bb4e963cc8f40fa1a29f61f55506.jpg",
+      "w": 850,
+      "h": 850
+    },
+    {
+      "file": "sample_613a71a020a8b5096a1b69e9bc3bff09.jpg",
+      "w": 850,
+      "h": 850
+    },
+    {
+      "file": "sample_90901647202714d51fbe4807fc584fce.jpg",
+      "w": 850,
+      "h": 1206
+    },
+    {
+      "file": "sample_cdb49a83871de4102ea356d830776c6e.jpg",
+      "w": 850,
+      "h": 850
+    }
+  ],
+  "banner-image": [
+    {
+      "file": "sample_0a026d6456f6806f67a9d67f856e8862.jpg",
+      "w": 850,
+      "h": 213
+    },
+    {
+      "file": "sample_1186719173244242bce471e4476a266e.jpg",
+      "w": 850,
+      "h": 197
+    },
+    {
+      "file": "sample_1ebf418432111a9530b3287dc96b9410.jpg",
+      "w": 850,
+      "h": 209
+    },
+    {
+      "file": "sample_25eb2815b78288a5b6b97431e6086882.jpg",
+      "w": 850,
+      "h": 196
+    },
+    {
+      "file": "sample_3959dc7966140b37da96b7b98aeaa0d0.jpg",
+      "w": 850,
+      "h": 202
+    },
+    {
+      "file": "sample_6f45a125f5c7cb49920601de4051ab06.jpg",
+      "w": 850,
+      "h": 209
+    },
+    {
+      "file": "sample_804a245417b8ab0dec9a2d5d16d23ab0.jpg",
+      "w": 850,
+      "h": 161
+    },
+    {
+      "file": "sample_85c8bf66f1212c6f0ed763678363a022.jpg",
+      "w": 850,
+      "h": 187
+    },
+    {
+      "file": "sample_8b0d2073fc8313d8cc56caabc1799f8f.jpg",
+      "w": 850,
+      "h": 180
+    },
+    {
+      "file": "sample_8fc194cd4b7ef3b2f89e9fc7d448b836.jpg",
+      "w": 850,
+      "h": 190
+    },
+    {
+      "file": "sample_a4fe4aecba96816f406d62ad2398a79e.jpg",
+      "w": 850,
+      "h": 204
+    },
+    {
+      "file": "sample_a5713467982c63157731e84328f715be.jpg",
+      "w": 850,
+      "h": 153
+    },
+    {
+      "file": "sample_b6cbdce49e8c5d302ffee90977008212.jpg",
+      "w": 850,
+      "h": 121
+    },
+    {
+      "file": "sample_c15bf02c4a3dff1d3726561f1586533e.jpg",
+      "w": 850,
+      "h": 178
+    },
+    {
+      "file": "sample_ccfe7b10f2f2482549a2c970d62d677c.jpg",
+      "w": 850,
+      "h": 196
+    },
+    {
+      "file": "sample_e6c6f9333b962cab7c682fadb76c74c5.jpg",
+      "w": 850,
+      "h": 203
+    },
+    {
+      "file": "sample_e72f6774020e536a9fd4ca185d61a220.jpg",
+      "w": 850,
+      "h": 189
+    }
+  ]
+}
