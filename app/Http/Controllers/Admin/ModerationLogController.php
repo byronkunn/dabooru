@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\DmcaNotice;
 use App\Models\ModerationAction;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,36 +12,33 @@ class ModerationLogController extends Controller
 {
     public function index(Request $request): Response
     {
-        $actions = ModerationAction::with('moderator')
-            ->latest()
-            ->paginate(100);
-
-        $dmca = DmcaNotice::with('handler')->latest()->paginate(50, ['*'], 'dmca_page');
+        $filters = $request->validate([
+            'action' => ['nullable', 'string', 'max:80'],
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'to' => ['nullable', 'date_format:Y-m-d'],
+        ]);
+        $actions = ModerationAction::with('moderator:id,username')
+            ->when(isset($filters['action']), fn ($q) => $q->where('action', $filters['action']))
+            ->when(isset($filters['from']), fn ($q) => $q->whereDate('created_at', '>=', $filters['from']))
+            ->when(isset($filters['to']), fn ($q) => $q->whereDate('created_at', '<=', $filters['to']))
+            ->latest()->orderByDesc('id')->paginate(50)->withQueryString();
 
         return Inertia::render('Admin/Log', [
-            'actions' => collect($actions->items())->map(fn (ModerationAction $a) => [
-                'id' => $a->id,
-                'action' => $a->action,
-                'target_type' => class_basename((string) $a->target_type),
-                'target_id' => $a->target_id,
-                'reason' => $a->reason,
-                'meta' => $a->meta,
-                'moderator' => $a->moderator?->username ?? 'system',
-                'when' => $a->created_at?->toIso8601String(),
-                'when_human' => $a->created_at?->diffForHumans(short: true),
-            ])->all(),
-            'dmca' => collect($dmca->items())->map(fn (DmcaNotice $n) => [
-                'id' => $n->id,
-                'reporter_name' => $n->reporter_name,
-                'reporter_email' => $n->reporter_email,
-                'url' => $n->url,
-                'description' => $n->description,
-                'status' => $n->status,
-                'when_human' => $n->created_at?->diffForHumans(short: true),
-                'handler' => $n->handler?->username,
-            ])->all(),
-            'totalActions' => ModerationAction::count(),
-            'openDmca' => DmcaNotice::where('status', 'open')->count(),
+            'actions' => $actions->getCollection()->map(fn (ModerationAction $action) => [
+                'id' => $action->id,
+                'action' => $action->action,
+                'target_type' => class_basename((string) $action->target_type),
+                'target_id' => $action->target_id,
+                'reason' => $action->reason,
+                'role_change' => $action->action === 'change_staff_roles' ? $action->meta : null,
+                'moderator' => $action->moderator?->username,
+                'when' => $action->created_at->toIso8601String(),
+            ]),
+            'filters' => $filters,
+            'actionOptions' => ModerationAction::distinct()->orderBy('action')->pluck('action'),
+            'totalActions' => $actions->total(),
+            'previousPage' => $actions->previousPageUrl(),
+            'nextPage' => $actions->nextPageUrl(),
         ]);
     }
 }

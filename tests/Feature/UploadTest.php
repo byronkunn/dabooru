@@ -143,4 +143,38 @@ class UploadTest extends TestCase
         $this->assertStringNotContainsString('Exif', $bytes);
         $this->assertStringNotContainsString('<x:xmpmeta', $bytes);
     }
+
+    public function test_user_can_upload_work_with_external_artist_attribution(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->post(route('upload.store'), [
+            'type' => 'image',
+            'title' => 'Ghost In Rain',
+            'caption' => 'Reposting with permission',
+            'rating' => 'sfw',
+            'is_original' => false,
+            'artist_name' => 'Sakimichan',
+            'source_url' => 'https://artstation.com/artwork/demo',
+            'files' => FakeImage::upload('ghost.png', 800, 600),
+        ]);
+
+        $post = Post::firstOrFail();
+        $response->assertRedirect(route('posts.show', $post));
+
+        $this->assertFalse($post->is_original);
+        $this->assertSame('Sakimichan', $post->artist_name);
+        $this->assertSame('https://artstation.com/artwork/demo', $post->source_url);
+        $this->assertTrue($post->isExternalArtist());
+
+        // detail page reflects the external artist
+        $this->get(route('posts.show', $post))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Posts/Show')
+                ->where('post.is_original', false)
+                ->where('post.artist_name', 'Sakimichan')
+                ->where('post.source_url', 'https://artstation.com/artwork/demo')
+                ->has('post.external_artist'));
+    }
 }

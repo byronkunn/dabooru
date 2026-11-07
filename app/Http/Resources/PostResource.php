@@ -11,13 +11,25 @@ class PostResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $credited = $this->relationLoaded('creditedArtist') ? $this->creditedArtist : null;
+
         return [
             'id' => $this->id,
             'type' => $this->type,
             'rating' => $this->rating,
             'rating_label' => \App\Support\Rating::label($this->rating),
             'title' => $this->title,
+            'tags' => $this->relationLoaded('tags') ? $this->tags->pluck('name')->all() : [],
             'caption' => $this->caption,
+            'is_original' => (bool) $this->is_original,
+            'artist_name' => $this->artist_name,
+            'source_url' => $this->source_url,
+            'credited_artist' => $credited && ! $credited->isBanned() && $credited->email_verified_at
+                ? $credited->only(['username', 'name']) : null,
+            'external_artist' => ($this->artist_name || ! $this->is_original) ? [
+                'name' => $this->artist_name ?: 'External Artist',
+                'url' => $this->source_url,
+            ] : null,
             'views' => $this->views,
             'likes' => $this->likes_count,
             'comments' => $this->comments_count,

@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 import { Masonry, SeriesCard } from '@/Components/Work';
 import SearchBox from '@/Components/SearchBox';
@@ -10,7 +10,9 @@ const TABS = [
     ['people', 'People'],
 ];
 
-export default function SearchIndex({ term, tab, searchable, counts, works, comics, people, artist, type, artistOptions, minLength }) {
+export default function SearchIndex({ term, tab, searchable, counts, works, comics, people, artist, type, artistOptions, parsed, minLength, workFilters }) {
+    const { auth } = usePage().props;
+    const follow = useForm({ name: '' });
     const go = (params) => {
         router.get(route('search'), { q: term, ...params }, { preserveScroll: true, preserveState: true, replace: true });
     };
@@ -41,18 +43,74 @@ export default function SearchIndex({ term, tab, searchable, counts, works, comi
 
             <div className="border-b border-ink-line px-3.5 py-3 md:px-5">
                 <SearchBox initial={term} autoFocus={!hasTerm} />
-                {(artist || type) && (
-                    <div className="mt-2 flex flex-wrap gap-1.5 text-[12.5px] text-ink-muted">
+                {(artist || type || parsed?.tags?.length || parsed?.exclude_tags?.length || parsed?.rating) && (
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12.5px] text-ink-muted">
+                        <span className="text-xs text-ink-faint">Active filters:</span>
                         {artist && <span className="chip-plain">Artist: {artist.name ?? artist.username}</span>}
-                        {type && <span className="chip-plain capitalize">Type: {type}</span>}
+                        {type && <span className="chip-plain capitalize">Format: {type}</span>}
+                        {parsed?.rating && <span className="chip-plain uppercase">Rating: {parsed.rating}</span>}
+                        {parsed?.tags?.map((t) => (
+                            <span key={t} className="chip-plain text-ink-brand">#{t}</span>
+                        ))}
+                        {parsed?.exclude_tags?.map((t) => (
+                            <span key={t} className="chip-plain text-[#ff98a9]">Excluding: #{t}</span>
+                        ))}
+                        <Link href={route('search')} className="text-xs text-ink-muted hover:text-ink-text ml-1">
+                            Clear all
+                        </Link>
                     </div>
                 )}
             </div>
 
+            {auth.user && <div className="border-b border-ink-line p-3.5 md:px-5">
+                <Link href={route('saved-searches.index')} className="link-brand text-sm">Saved searches</Link>
+                {searchable && tab === 'works' && <details className="mt-2">
+                    <summary className="cursor-pointer text-sm font-semibold">Follow this search</summary>
+                    <form className="mt-2 space-y-2" onSubmit={(event) => {
+                        event.preventDefault();
+                        follow.transform((data) => ({ ...data, ...workFilters }));
+follow.post(route('saved-searches.store'));
+                    }}>
+                        <label className="block text-sm">Feed name
+                            <input className="field-input mt-1" value={follow.data.name} onChange={(event) => follow.setData('name', event.target.value)} maxLength={80} required />
+                        </label>
+                        {Object.values(follow.errors).map((error) => <p key={error} role="alert" className="field-hint text-ink-expl">{error}</p>)}
+                        <p className="text-xs text-ink-muted">Using an existing feed name replaces its search.</p>
+                        <button className="btn-primary" disabled={follow.processing}>Save search</button>
+                    </form>
+                </details>}
+            </div>}
+
             {!hasTerm ? (
-                <div className="px-5 py-16 text-center">
-                    <p className="text-[15px] text-ink-muted">Search for works, artists or comics.</p>
-                    <p className="mt-1 text-[13px] text-ink-faint">Press / from anywhere to jump to the search box.</p>
+                <div className="mx-auto max-w-lg px-5 py-14 text-center">
+                    <p className="text-[17px] font-bold text-ink-text">Search works, artists, or comics</p>
+                    <p className="mt-1 text-[13.5px] text-ink-muted">Press <kbd className="rounded border border-ink-line bg-ink-raised px-1.5 py-0.5 text-xs font-mono text-ink-text">/</kbd> from anywhere to focus the search bar.</p>
+
+                    <div className="mt-6 rounded-2xl border border-ink-line bg-ink-raised/50 p-4 text-left">
+                        <p className="text-[11px] font-extrabold uppercase tracking-wider text-ink-faint">Power Search Shortcuts</p>
+                        <div className="mt-2.5 space-y-2 text-xs">
+                            <div className="flex items-center justify-between">
+                                <Link href={route('search', { q: 'type:comic' })} className="chip-plain hover:border-ink-brand hover:text-ink-brand">type:comic</Link>
+                                <span className="text-ink-muted">Find comic series & chapters</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <Link href={route('search', { q: 'type:video' })} className="chip-plain hover:border-ink-brand hover:text-ink-brand">type:video</Link>
+                                <span className="text-ink-muted">Filter by video clips</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <Link href={route('search', { q: 'rating:sfw' })} className="chip-plain hover:border-ink-brand hover:text-ink-brand">rating:sfw</Link>
+                                <span className="text-ink-muted">Only all-ages clean art</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <Link href={route('search', { q: '#lineart' })} className="chip-plain hover:border-ink-brand hover:text-ink-brand">#lineart</Link>
+                                <span className="text-ink-muted">Search works with specific tag</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <Link href={route('search', { q: '-sketch' })} className="chip-plain hover:border-ink-brand hover:text-ink-brand">-sketch</Link>
+                                <span className="text-ink-muted">Exclude works matching a tag</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             ) : !searchable ? (
                 <div className="px-5 py-16 text-center">

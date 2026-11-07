@@ -69,6 +69,7 @@ export function Icon({ name, className = 'w-5 h-5' }) {
                 <circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none" />
             </>
         ),
+        analytics: <path d="M4 20h16M6 16v-4m6 4V5m6 11V9" />,
         flag: <path d="M5 21V4h9l-1 3h6l-2 5 2 5h-7l-1-3H5" />,
         play: <path d="M8 5v14l11-7z" fill="currentColor" stroke="none" />,
         check: <path d="M5 13l4 4L19 7" />,
@@ -77,6 +78,9 @@ export function Icon({ name, className = 'w-5 h-5' }) {
                 <path d="M12 16V4M8 8l4-4 4 4" />
                 <path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" />
             </>
+        ),
+        fullscreen: (
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
         ),
     };
 

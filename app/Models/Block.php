@@ -19,6 +19,13 @@ class Block extends Model
         return $this->belongsTo(User::class, 'blocked_id');
     }
 
+    public static function counterpartIds(int $userId): \Illuminate\Database\Eloquent\Builder
+    {
+        return static::query()
+            ->selectRaw('CASE WHEN blocker_id = ? THEN blocked_id ELSE blocker_id END', [$userId])
+            ->where(fn ($q) => $q->where('blocker_id', $userId)->orWhere('blocked_id', $userId));
+    }
+
     /** True if $a and $b have a block between them in either direction. */
     public static function existsBetween(int $a, int $b): bool
     {

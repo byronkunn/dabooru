@@ -6,8 +6,8 @@ use App\Models\Comic;
 use App\Models\ComicChapter;
 use App\Models\ComicPage;
 use App\Models\Media;
-use App\Models\Post;
-use App\Models\PostMedia;
+use App\Models\Tag;
+use App\Support\ChapterPublishing;
 use App\Support\ImageProcessor;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,12 +33,39 @@ class ComicChapterController extends Controller
             'description' => ['nullable', 'string', 'max:2000'],
             'rating' => ['required', 'in:sfw,suggestive,explicit'],
             'status' => ['required', 'in:ongoing,completed,hiatus'],
+            'cover' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,avif', 'max:15360'],
         ]);
+
+        $coverMediaId = null;
+        if ($request->hasFile('cover')) {
+            $coverFile = $request->file('cover');
+            $disk = config('filesystems.upload_disk', 'public');
+            $user = $request->user();
+            $path = ImageProcessor::storeClean($coverFile->getRealPath(), "uploads/{$user->id}/comics", $disk);
+            $thumbPath = ImageProcessor::storeThumbnail($coverFile->getRealPath(), "uploads/{$user->id}/comics/thumbs", $disk);
+            [$width, $height] = ImageProcessor::dimensions($coverFile->getRealPath());
+
+            $coverMedia = Media::create([
+                'user_id' => $user->id,
+                'disk' => $disk,
+                'path' => $path,
+                'thumb_path' => $thumbPath,
+                'kind' => 'image',
+                'width' => $width,
+                'height' => $height,
+                'size_bytes' => $coverFile->getSize(),
+                'status' => 'ready',
+                'mime_type' => $coverFile->getMimeType(),
+            ]);
+
+            $coverMediaId = $coverMedia->id;
+        }
 
         $comic = Comic::create([
             'user_id' => $request->user()->id,
             'title' => $data['title'],
             'slug' => $this->uniqueSlug($data['title']),
+            'cover_media_id' => $coverMediaId,
             'description' => $data['description'] ?? null,
             'rating' => $data['rating'],
             'status' => $data['status'],
@@ -56,29 +83,35 @@ class ComicChapterController extends Controller
             'number' => ['required', 'integer', 'min:1', 'max:100000'],
             'title' => ['nullable', 'string', 'max:160'],
             'rating' => ['required', 'in:sfw,suggestive,explicit'],
+            'tags' => ['nullable', 'string', 'max:500'],
             'pages' => ['required', 'array', 'min:1', 'max:60'],
             'pages.*' => ['image', 'mimes:jpg,jpeg,png,webp,avif', 'max:15360'],
             'publish' => ['boolean'],
         ]);
 
-        $chapter = DB::transaction(function () use ($request, $comic) {
+        $tags = Tag::parse($request->input('tags'));
+
+        $publish = $request->boolean('publish', true);
+        DB::transaction(function () use ($request, $comic, $tags, $publish) {
+            $comic = Comic::lockForUpdate()->findOrFail($comic->id);
             $chapter = ComicChapter::create([
                 'comic_id' => $comic->id,
                 'number' => $request->integer('number'),
                 'title' => $request->input('title'),
                 'rating' => $request->input('rating'),
-                'published_at' => $request->boolean('publish', true) ? now() : null,
+                'draft_tags' => $tags,
             ]);
 
+            $disk = $publish ? config('filesystems.upload_disk', 'public') : 'local';
+            $directory = ($publish ? 'uploads/' : 'drafts/').$request->user()->id.'/comics';
             foreach (array_values($request->file('pages')) as $i => $file) {
-                $disk = config('filesystems.upload_disk', 'public');
                 // strip EXIF/GPS from every comic page before it is stored
-                $path = ImageProcessor::storeClean($file->getRealPath(), "uploads/{$request->user()->id}/comics", $disk);
+                $path = ImageProcessor::storeClean($file->getRealPath(), $directory, $disk);
                 [$w, $h] = ImageProcessor::dimensions($file->getRealPath());
 
                 $media = Media::create([
                     'user_id' => $request->user()->id,
-                    'disk' => config('filesystems.upload_disk', 'public'),
+                    'disk' => $disk,
                     'path' => $path,
                     'kind' => 'image',
                     'width' => $w,
@@ -91,26 +124,14 @@ class ComicChapterController extends Controller
                 ComicPage::create(['comic_chapter_id' => $chapter->id, 'media_id' => $media->id, 'position' => $i + 1]);
             }
 
-            $comic->forceFill(['last_chapter_at' => now()])->save();
-
-            // every published chapter gets exactly one feed post
-            if ($chapter->published_at) {
-                $post = Post::create([
-                    'user_id' => $request->user()->id,
-                    'type' => 'comic',
-                    'rating' => $chapter->rating,
-                    'title' => $comic->title.' · Ch. '.$chapter->number,
-                    'caption' => $request->input('title'),
-                    'comic_chapter_id' => $chapter->id,
-                ]);
-                $cover = $chapter->pages()->with('media')->first()?->media;
-                if ($cover) {
-                    PostMedia::create(['post_id' => $post->id, 'media_id' => $cover->id, 'position' => 0]);
-                }
+            if ($publish) {
+                ChapterPublishing::publish($comic, $chapter, $tags);
             }
-
-            return $chapter;
         });
+
+        if (! $publish) {
+            return redirect()->route('studio.index')->with('success', 'Private chapter draft saved.');
+        }
 
         return redirect()->route('comics.show', $comic->slug)
             ->with('success', 'Chapter published.');

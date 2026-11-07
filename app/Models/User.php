@@ -34,6 +34,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'staff_roles',
     ];
 
     protected function casts(): array
@@ -41,10 +42,12 @@ class User extends Authenticatable
         return [
             'is_unsorted' => 'boolean',
             'is_admin' => 'boolean',
+            'staff_roles' => 'array',
             'email_verified_at' => 'datetime',
             'age_confirmed_at' => 'datetime',
             'banned_at' => 'datetime',
             'show_explicit' => 'boolean',
+            'contributions_restricted' => 'boolean',
             'password' => 'hashed',
         ];
     }

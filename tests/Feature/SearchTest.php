@@ -155,6 +155,45 @@ class SearchTest extends TestCase
             ->assertJson(['people' => [], 'works' => [], 'comics' => []]);
     }
 
+    public function test_finds_works_by_external_artist_name(): void
+    {
+        $uploader = User::factory()->create();
+        $post = Post::create([
+            'user_id' => $uploader->id,
+            'type' => 'image',
+            'rating' => 'sfw',
+            'is_original' => false,
+            'artist_name' => 'Krenz Cushart',
+            'title' => 'Light and Angle',
+        ]);
+
+        $this->get('/search?q=Krenz')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('counts.works', 1)
+                ->where('works.0.id', $post->id)
+                ->where('works.0.artist_name', 'Krenz Cushart'));
+    }
+
+    public function test_search_supports_inline_operators_for_type_and_artist(): void
+    {
+        $this->library();
+
+        $this->get('/search?q=by:rin_senpai type:image')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('searchable', true)
+                ->where('counts.works', 1)
+                ->where('works.0.title', 'Mountain quiet'));
+    }
+
+    public function test_trending_tags_endpoint_returns_json(): void
+    {
+        $this->getJson(route('search.trending'))
+            ->assertOk()
+            ->assertJsonStructure(['tags']);
+    }
+
     public function test_gallery_accepts_a_q_parameter(): void
     {
         ['other' => $other] = $this->library();

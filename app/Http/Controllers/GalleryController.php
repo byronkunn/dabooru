@@ -4,10 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\PostResource;
 use App\Models\Post;
+use App\Models\Tag;
 use App\Support\Rating;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Inertia\Response;
+use Illuminate\Support\Str;
 
 class GalleryController extends Controller
 {
@@ -17,33 +18,27 @@ class GalleryController extends Controller
 
     private const WINDOWS = ['today', 'week', 'month', 'all'];
 
-    public function index(Request $request): Response
+    public function index(Request $request)
     {
         $format = in_array($request->query('format'), self::FORMATS, true) ? $request->query('format') : 'all';
         $sort = in_array($request->query('sort'), self::SORTS, true) ? $request->query('sort') : 'top';
         $window = in_array($request->query('window'), self::WINDOWS, true) ? $request->query('window') : 'week';
 
         $user = $request->user();
-        $showExplicit = $user ? (bool) $user->show_explicit : $request->boolean('explicit', false);
+        $showExplicit = $request->has('explicit')
+            ? $request->boolean('explicit')
+            : ($user ? (bool) $user->show_explicit : false);
         $term = trim((string) $request->query('q'));
 
-        $posts = Post::query()
-            ->with(['user', 'media.media', 'chapter.comic'])
-            // hide work from anyone I blocked, and from anyone who blocked me
-            ->when($user, function ($q) use ($user) {
-                $ids = \App\Models\Block::query()
-                    ->where(fn ($b) => $b->where('blocker_id', $user->id)->orWhere('blocked_id', $user->id))
-                    ->get()
-                    ->flatMap(fn ($b) => [$b->blocker_id, $b->blocked_id])
-                    ->unique()
-                    ->reject(fn ($id) => $id === $user->id)
-                    ->values()
-                    ->all();
+        $tagInput = $request->query('tag');
+        $tag = is_string($tagInput) ? Str::lower(Str::squish($tagInput)) : '';
+        $tag = Str::length($tag) <= 40 ? $tag : '';
+        $tag = $tag !== '' ? Tag::canonicalName($tag) : '';
 
-                if ($ids !== []) {
-                    $q->where(fn ($w) => $w->whereNull('user_id')->orWhereNotIn('user_id', $ids));
-                }
-            })
+        $posts = Post::query()
+            ->with(['user', 'media.media', 'chapter.comic', 'tags'])
+            ->visibleTo($user)
+            ->when($tag !== '', fn ($q) => $q->whereHas('tags', fn ($tags) => $tags->where('name', $tag)))
             ->ofType($format)
             ->visibleRating($showExplicit)
             ->withinWindow($window)
@@ -57,6 +52,14 @@ class GalleryController extends Controller
             ->paginate(36)
             ->withQueryString();
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'posts' => PostResource::collection($posts->items())->resolve(),
+                'page' => $posts->currentPage(),
+                'hasMore' => $posts->hasMorePages(),
+            ]);
+        }
+
         return Inertia::render('Gallery/Index', [
             'posts' => PostResource::collection($posts->items())->resolve(),
             'page' => $posts->currentPage(),
@@ -67,6 +70,7 @@ class GalleryController extends Controller
                 'window' => $window,
                 'explicit' => $showExplicit,
                 'q' => $term,
+                'tag' => $tag,
             ],
             'stats' => [
                 'works' => Post::count(),

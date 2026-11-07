@@ -46,6 +46,10 @@ class Media extends Model
             return '';
         }
 
+        if ($this->disk === 'local' && Str::startsWith($path, 'drafts/')) {
+            return route('studio.media', ['media' => $this->id, 'variant' => $path === $this->path ? 'original' : 'thumb'], false);
+        }
+
         if (Str::startsWith($path, ['http://', 'https://', '/'])) {
             return $path;
         }

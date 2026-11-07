@@ -2,7 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 import { Icon } from '@/Components/Icons';
 
-const ICONS = { like: '♥', comment: '💬', follow: '＋', chapter: '📖' };
+const ICONS = { like: '♥', comment: '💬', follow: '＋', chapter: '📖', urgent_report: '⚑' };
 const TEXT = {
     like: 'liked your work',
     comment: 'commented on your work',
@@ -58,10 +58,14 @@ export default function NotificationsIndex({ notifications, tab }) {
                             </span>
                         </div>
                         <div className="min-w-0 flex-1 text-[14.5px] leading-snug">
-                            <Link href={route('profile.show', n.actor?.username)} className="font-bold hover:underline">
-                                {n.actor?.name ?? 'Someone'}
-                            </Link>{' '}
-                            {TEXT[n.type] ?? n.type}
+                            {n.actor ? (
+                                <Link href={route('profile.show', n.actor.username)} className="font-bold hover:underline">{n.actor.name}</Link>
+                            ) : <span>Community</span>}{' '}
+                            {n.type === 'urgent_report' ? (
+                                <Link href={route('admin.reports', { report: n.data.report_id })} className="font-bold text-ink-expl hover:underline">Urgent report awaiting review</Link>
+                            ) : n.type === 'knowledge' ? (
+                                <Link href={n.data.url} className="text-ink-brand hover:underline">{n.data.message}</Link>
+                            ) : (TEXT[n.type] ?? n.type)}
                             {n.data?.post_id && (
                                 <Link href={route('posts.show', n.data.post_id)} className="ml-1 font-bold hover:underline">
                                     #{n.data.post_id}

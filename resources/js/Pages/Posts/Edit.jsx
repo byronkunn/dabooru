@@ -1,3 +1,4 @@
+import TagField from '@/Components/TagField';
 import { Head, Link, useForm } from '@inertiajs/react';
 import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 import { useState } from 'react';
@@ -13,7 +14,12 @@ export default function PostEdit({ post }) {
     const form = useForm({
         title: post.title ?? '',
         caption: post.caption ?? '',
+        tags: (post.tags ?? []).join(', '),
+        base_tag_version: post.tag_version,
         rating: post.rating,
+        is_original: post.is_original ?? true,
+        artist_name: post.artist_name ?? '',
+        source_url: post.source_url ?? '',
     });
     const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -55,6 +61,42 @@ export default function PostEdit({ post }) {
                         <textarea id="caption" rows={4} value={form.data.caption} onChange={(e) => form.setData('caption', e.target.value)} className="field-input resize-none" maxLength={1000} />
                         <p className="field-hint">{form.data.caption.length} / 1000</p>
                     </div>
+                    <TagField form={form} maxTags={50} />
+
+                    <div className="rounded-2xl border border-ink-line bg-ink-raised/50 p-4">
+                        <h2 className="text-sm font-semibold text-ink-text">Artist & Creator</h2>
+                        <div className="mt-3 flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => form.setData({ ...form.data, is_original: true, artist_name: '', source_url: '' })}
+                                className={`flex-1 rounded-xl border p-2.5 text-left text-xs font-semibold ${form.data.is_original ? 'border-ink-brand bg-ink-brand/10 text-ink-text' : 'border-ink-line bg-ink-surface text-ink-muted'}`}
+                            >
+                                My original work
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => form.setData({ ...form.data, is_original: false })}
+                                className={`flex-1 rounded-xl border p-2.5 text-left text-xs font-semibold ${!form.data.is_original ? 'border-ink-brand bg-ink-brand/10 text-ink-text' : 'border-ink-line bg-ink-surface text-ink-muted'}`}
+                            >
+                                Artist not on site
+                            </button>
+                        </div>
+                        {!form.data.is_original && (
+                            <div className="mt-3.5 space-y-3 border-t border-ink-line/60 pt-3">
+                                <div>
+                                    <label htmlFor="artist_name" className="field-label">Artist name / handle *</label>
+                                    <input id="artist_name" value={form.data.artist_name} onChange={(e) => form.setData('artist_name', e.target.value)} className="field-input" maxLength={120} required={!form.data.is_original} />
+                                    {form.errors.artist_name && <p className="field-hint text-ink-expl">{form.errors.artist_name}</p>}
+                                </div>
+                                <div>
+                                    <label htmlFor="source_url" className="field-label">Original source or portfolio link</label>
+                                    <input id="source_url" type="url" value={form.data.source_url} onChange={(e) => form.setData('source_url', e.target.value)} className="field-input" maxLength={500} />
+                                    {form.errors.source_url && <p className="field-hint text-ink-expl">{form.errors.source_url}</p>}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     <div>
                         <span className="field-label">Rating</span>
                         <div className="flex flex-wrap gap-2">

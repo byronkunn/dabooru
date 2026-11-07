@@ -22,5 +22,5 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->report(fn (\Throwable $error) => \App\Support\SiteEvents::exception($error));
     })->create();

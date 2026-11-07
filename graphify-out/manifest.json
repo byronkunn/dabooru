@@ -1,0 +1,74 @@
+{
+  "/private/tmp/inkwell-feature-graph.XWXIiI/models/ReadingProgress.php": {
+    "mtime": 1794062096.2193472,
+    "hash": "640137e348be7e4572d890ba92f3a8c0"
+  },
+  "/private/tmp/inkwell-feature-graph.XWXIiI/models/KnowledgeRevision.php": {
+    "mtime": 1794062096.2197928,
+    "hash": "756af04cf540b69dd9087a30740859bc"
+  },
+  "/private/tmp/inkwell-feature-graph.XWXIiI/models/SavedCollection.php": {
+    "mtime": 1794062096.2195542,
+    "hash": "5683dc16461eea23bb3022ce5c3863ba"
+  },
+  "/private/tmp/inkwell-feature-graph.XWXIiI/models/Post.php": {
+    "mtime": 1794062096.2184434,
+    "hash": "24764a1d3faff1469486f618e40405f7"
+  },
+  "/private/tmp/inkwell-feature-graph.XWXIiI/models/Tag.php": {
+    "mtime": 1794062096.218248,
+    "hash": "c571b4675270e2ba12ee7ce803a61d17"
+  },
+  "/private/tmp/inkwell-feature-graph.XWXIiI/models/Comic.php": {
+    "mtime": 1794062096.2186246,
+    "hash": "93cea841cebab0f774846a829f04ff8e"
+  },
+  "/private/tmp/inkwell-feature-graph.XWXIiI/models/ComicFollow.php": {
+    "mtime": 1794062096.219111,
+    "hash": "6499f85c21e8e4c6f583fb63290a79ba"
+  },
+  "/private/tmp/inkwell-feature-graph.XWXIiI/models/PostView.php": {
+    "mtime": 1794062096.220127,
+    "hash": "6a9759f4ca559d0c432ce104efb890a2"
+  },
+  "/private/tmp/inkwell-feature-graph.XWXIiI/controllers/ComicController.php": {
+    "mtime": 1794062096.215293,
+    "hash": "02e773b14d260a46390740ec239f93ca"
+  },
+  "/private/tmp/inkwell-feature-graph.XWXIiI/controllers/NotificationController.php": {
+    "mtime": 1794062096.2162197,
+    "hash": "8c88976b48b03797dcd50092a70b762a"
+  },
+  "/private/tmp/inkwell-feature-graph.XWXIiI/controllers/SearchController.php": {
+    "mtime": 1794062096.2148812,
+    "hash": "198907a2a008a213c7b3ecbb53f7e667"
+  },
+  "/private/tmp/inkwell-feature-graph.XWXIiI/controllers/FollowingController.php": {
+    "mtime": 1794062096.215876,
+    "hash": "e56d72b6ea2ba3ce58ec29a2a2191893"
+  },
+  "/private/tmp/inkwell-feature-graph.XWXIiI/controllers/ProfileController.php": {
+    "mtime": 1794062096.2160397,
+    "hash": "80f27f6235813b10089c4de798bee8d5"
+  },
+  "/private/tmp/inkwell-feature-graph.XWXIiI/controllers/SavedCollectionController.php": {
+    "mtime": 1794062096.2157,
+    "hash": "fcb4e984c8ee249bc10dc07c83ae17ab"
+  },
+  "/private/tmp/inkwell-feature-graph.XWXIiI/controllers/UploadController.php": {
+    "mtime": 1794062096.2150865,
+    "hash": "6d1cdc611cd3ff04921f302b5774a84d"
+  },
+  "/private/tmp/inkwell-feature-graph.XWXIiI/controllers/GalleryController.php": {
+    "mtime": 1794062096.2146227,
+    "hash": "fe346fa982e7b41112c774f769c839f8"
+  },
+  "/private/tmp/inkwell-feature-graph.XWXIiI/controllers/KnowledgeController.php": {
+    "mtime": 1794062096.2164252,
+    "hash": "ea8ee3fb7df0b6a757464212bc844637"
+  },
+  "/private/tmp/inkwell-feature-graph.XWXIiI/controllers/ComicChapterController.php": {
+    "mtime": 1794062096.2154899,
+    "hash": "b4e0f8c25cea30d798544c472394b3ba"
+  }
+}

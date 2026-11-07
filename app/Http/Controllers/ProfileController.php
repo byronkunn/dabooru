@@ -16,11 +16,13 @@ class ProfileController extends Controller
     {
         $profile = User::where('username', $username)->firstOrFail();
         $viewer = $request->user();
-        $tab = in_array($request->query('tab'), ['works', 'albums', 'comics'], true) ? $request->query('tab') : 'works';
+        $tab = in_array($request->query('tab'), ['works', 'albums', 'comics', 'credited'], true) ? $request->query('tab') : 'works';
 
         $profile->loadCount(['followers', 'following', 'posts']);
 
         $posts = match ($tab) {
+            'credited' => Post::visibleTo($viewer)->where('credited_artist_id', $profile->id)
+                ->whereHas('creditedArtist', fn ($query) => $query->whereNull('banned_at')->whereNotNull('email_verified_at')),
             'albums' => $profile->posts()->where('type', 'album'),
             'comics' => $profile->posts()->where('type', 'comic'),
             default => $profile->posts(),
@@ -36,12 +38,17 @@ class ProfileController extends Controller
         return Inertia::render('Profile/Show', [
             'profile' => (new UserResource($profile))->resolve(),
             'posts' => PostResource::collection($posts)->resolve(),
-            'comics' => $profile->comics()->latest()->get()->map(fn ($c) => [
+            'comics' => $profile->comics()
+                ->withCount('chapters')
+                ->with(['chapters' => fn ($q) => $q->limit(1)->with(['pages' => fn ($p) => $p->limit(1)->with('media')])])
+                ->latest()
+                ->get()
+                ->map(fn ($c) => [
                 'id' => $c->id,
                 'slug' => $c->slug,
                 'title' => $c->title,
                 'rating' => $c->rating,
-                'chapters' => $c->chapters()->count(),
+                'chapters' => $c->chapters_count,
                 'cover' => $c->cover()?->thumbUrl(),
                 'url' => route('comics.show', $c->slug, false),
             ]),

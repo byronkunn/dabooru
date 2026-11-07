@@ -16,17 +16,36 @@ class Post extends Model
     public const TYPES = ['image', 'gif', 'video', 'album', 'comic'];
 
     protected $fillable = [
-        'user_id', 'type', 'rating', 'title', 'caption', 'views',
-        'likes_count', 'comments_count', 'comic_chapter_id',
+        'user_id', 'type', 'rating', 'is_original', 'artist_name', 'source_url',
+        'title', 'caption', 'is_draft', 'draft_tags', 'views', 'likes_count', 'comments_count', 'comic_chapter_id',
     ];
 
     protected function casts(): array
     {
         return [
+            'is_original' => 'boolean',
+            'is_draft' => 'boolean',
+            'draft_tags' => 'array',
+            'tag_version' => 'integer',
             'views' => 'integer',
             'likes_count' => 'integer',
             'comments_count' => 'integer',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope('published', fn (Builder $query) => $query->where('posts.is_draft', false));
+    }
+
+    public function creditedArtist(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'credited_artist_id');
+    }
+
+    public function isExternalArtist(): bool
+    {
+        return ! $this->is_original || ! empty($this->artist_name);
     }
 
     /* ---------------- relations ---------------- */
@@ -56,12 +75,29 @@ class Post extends Model
         return $this->hasMany(Comment::class);
     }
 
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class)->orderBy('name');
+    }
+
+    public function bookmarks(): HasMany
+    {
+        return $this->hasMany(Bookmark::class);
+    }
+
     public function bookmarkedBy(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'bookmarks');
     }
 
     /* ---------------- scopes ---------------- */
+
+    public function scopeVisibleTo(Builder $q, ?User $viewer): Builder
+    {
+        return $q->when($viewer, fn ($q) => $q->where(fn ($authors) => $authors
+            ->whereNull('posts.user_id')
+            ->orWhereNotIn('posts.user_id', Block::counterpartIds($viewer->id))));
+    }
 
     public function scopeOfType(Builder $q, ?string $type): Builder
     {

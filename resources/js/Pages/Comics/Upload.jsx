@@ -1,3 +1,4 @@
+import TagField from '@/Components/TagField';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 import { Icon } from '@/Components/Icons';
@@ -14,14 +15,23 @@ export default function ComicUpload({ comics }) {
     const [mode, setMode] = useState(comics.length ? 'chapter' : 'series');
     const [selected, setSelected] = useState(comics[0]?.slug ?? null);
     const [pages, setPages] = useState([]);
+    const [coverPreview, setCoverPreview] = useState(null);
     const pageInput = useRef(null);
+    const coverInput = useRef(null);
 
-    const seriesForm = useForm({ title: '', description: '', rating: 'sfw', status: 'ongoing' });
-    const chapterForm = useForm({ number: 1, title: '', rating: 'sfw', pages: [], publish: true });
+    const seriesForm = useForm({ title: '', description: '', rating: 'sfw', status: 'ongoing', cover: null });
+    const chapterForm = useForm({ number: 1, title: '', tags: '', rating: 'sfw', pages: [], publish: true });
 
     const submitSeries = (e) => {
         e.preventDefault();
-        seriesForm.post(route('comics.series.store'));
+        seriesForm.post(route('comics.series.store'), { forceFormData: true });
+    };
+
+    const onCover = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setCoverPreview(URL.createObjectURL(file));
+        seriesForm.setData('cover', file);
     };
 
     const onPages = (e) => {
@@ -32,7 +42,7 @@ export default function ComicUpload({ comics }) {
 
     const submitChapter = (e) => {
         e.preventDefault();
-        chapterForm.post(route('comics.chapters.store', selected), { forceFormData: true });
+        chapterForm.post(route('comics.chapters.store', activeComic.id), { forceFormData: true });
     };
 
     const activeComic = comics.find((c) => c.slug === selected);
@@ -62,6 +72,24 @@ export default function ComicUpload({ comics }) {
                         <div>
                             <label htmlFor="description" className="field-label">Description</label>
                             <textarea id="description" rows={3} value={seriesForm.data.description} onChange={(e) => seriesForm.setData('description', e.target.value)} className="field-input resize-none" maxLength={2000} />
+                        </div>
+                        <div>
+                            <span className="field-label">Series cover</span>
+                            <input ref={coverInput} type="file" accept="image/*" onChange={onCover} className="sr-only" id="series-cover" />
+                            <label htmlFor="series-cover" className="flex cursor-pointer items-center gap-4 rounded-xl border border-dashed border-[#4a3c58] p-3 hover:border-ink-brand">
+                                {coverPreview ? (
+                                    <img src={coverPreview} alt="Cover preview" className="h-20 w-16 rounded-lg object-cover" />
+                                ) : (
+                                    <div className="grid h-20 w-16 place-items-center rounded-lg bg-ink-raised text-ink-muted">
+                                        <Icon name="upload" className="h-6 w-6" />
+                                    </div>
+                                )}
+                                <div className="text-left text-xs text-ink-muted">
+                                    <p className="text-sm font-semibold text-ink-text">{coverPreview ? 'Change series cover' : 'Upload series cover'}</p>
+                                    <p className="mt-0.5">3:4 aspect ratio recommended · up to 15MB</p>
+                                </div>
+                            </label>
+                            {seriesForm.errors.cover && <p className="field-hint text-ink-expl">{seriesForm.errors.cover}</p>}
                         </div>
                         <div className="grid gap-3.5 sm:grid-cols-2">
                             <div>
@@ -130,6 +158,8 @@ export default function ComicUpload({ comics }) {
                             </div>
                         </div>
 
+                        <TagField form={chapterForm} />
+
                         <div>
                             <label className="field-label">Rating</label>
                             <div className="flex flex-wrap gap-2">
@@ -143,15 +173,15 @@ export default function ComicUpload({ comics }) {
 
                         <label className="flex items-center gap-2.5 text-[13px] text-ink-muted">
                             <input type="checkbox" checked={chapterForm.data.publish} onChange={(e) => chapterForm.setData('publish', e.target.checked)} className="rounded border-ink-line bg-ink-raised text-ink-brand focus:ring-ink-brand" />
-                            Publish to the feed now
+                            Publish now. Uncheck to save a private draft in Creator Studio.
                         </label>
 
                         <div className="flex items-center justify-between gap-3 border-t border-ink-line pt-3.5">
                             <Link href={activeComic ? route('comics.show', activeComic.slug) : route('comics.index')} className="text-[13px] text-ink-muted hover:text-ink-text">
                                 View series
                             </Link>
-                            <button type="submit" disabled={chapterForm.processing || !pages.length} className="btn-primary px-6">
-                                {chapterForm.processing ? 'Publishing…' : 'Publish chapter'}
+                            <button type="submit" disabled={chapterForm.processing || !activeComic || !pages.length} className="btn-primary px-6">
+                                {chapterForm.processing ? 'Saving…' : chapterForm.data.publish ? 'Publish chapter' : 'Save private draft'}
                             </button>
                         </div>
                     </form>

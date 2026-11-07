@@ -1,33 +1,22 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import AppLayout, { TopBar } from '@/Layouts/AppLayout';
+import { useState } from 'react';
 
 const SECTIONS = [
     ['profile', 'Profile'],
     ['content', 'Content & feed'],
-    ['media', 'Media'],
     ['notifications', 'Notifications'],
-    ['privacy', 'Privacy'],
+    ['account', 'Account & security'],
 ];
 
 const TOGGLES = {
     content: [
         ['show_explicit', 'Show explicit work', 'When off, explicit posts are hidden from your gallery and feed.'],
-        ['mature_preview', 'Mature preview', 'Show a small preview on gated content instead of a blur.'],
-    ],
-    media: [
-        ['autoplay_videos', 'Autoplay videos in feeds', 'Off saves data on mobile connections.'],
-        ['animate_gifs', 'Animate GIFs', 'GIFs play on hover, never automatically in the grid.'],
-        ['reduce_motion', 'Reduce motion', 'Disables hover lifts and transitions.'],
     ],
     notifications: [
         ['notification_likes', 'Likes', null],
         ['notification_comments', 'Comments', null],
         ['notification_follows', 'New followers', null],
-        ['email_notifications', 'Email notifications', 'A weekly digest, nothing more.'],
-    ],
-    privacy: [
-        ['dm_requests', 'Message requests', "People you don't follow can send a request."],
-        ['read_receipts', 'Read receipts', 'Show when you have read a message.'],
     ],
 };
 
@@ -63,6 +52,30 @@ export default function SettingsIndex({ user, settings, demoAccounts = [] }) {
         banner: null,
     });
     const settingsForm = useForm({ settings });
+    const passwordForm = useForm({
+        current_password: '',
+        password: '',
+        password_confirmation: '',
+    });
+    const deleteForm = useForm({
+        password: '',
+    });
+    const [confirmingDeletion, setConfirmingDeletion] = useState(false);
+
+    const updatePassword = (e) => {
+        e.preventDefault();
+        passwordForm.put(route('password.update'), {
+            preserveScroll: true,
+            onSuccess: () => passwordForm.reset(),
+        });
+    };
+
+    const deleteAccount = (e) => {
+        e.preventDefault();
+        deleteForm.delete(route('settings.account.destroy'), {
+            preserveScroll: true,
+        });
+    };
 
     const saveProfile = (e) => {
         e.preventDefault();
@@ -190,11 +203,119 @@ export default function SettingsIndex({ user, settings, demoAccounts = [] }) {
                         </section>
                     )}
 
-                    <section className="panel">
-                        <h2 className="text-[17px] font-bold">Account</h2>
+                    <section id="account" className="panel">
+                        <h2 className="text-[17px] font-bold">Account & security</h2>
                         <p className="mt-1 text-[13px] text-ink-muted">
-                            Signed in as <span className="text-ink-text">{user.email}</span>.
+                            Signed in as <span className="font-semibold text-ink-text">{user.email}</span>.
                         </p>
+
+                        <div className="mt-6 border-t border-ink-line pt-5">
+                            <h3 className="text-sm font-semibold">Change password</h3>
+                            <p className="mb-3.5 mt-0.5 text-[12.5px] text-ink-muted">
+                                Use a strong password with at least 8 characters.
+                            </p>
+                            <form onSubmit={updatePassword} className="max-w-md space-y-3">
+                                <div>
+                                    <label htmlFor="current_password" className="field-label">Current password</label>
+                                    <input
+                                        id="current_password"
+                                        type="password"
+                                        value={passwordForm.data.current_password}
+                                        onChange={(e) => passwordForm.setData('current_password', e.target.value)}
+                                        className="field-input"
+                                        autoComplete="current-password"
+                                        required
+                                    />
+                                    {passwordForm.errors.current_password && (
+                                        <p className="field-hint text-ink-expl">{passwordForm.errors.current_password}</p>
+                                    )}
+                                </div>
+                                <div>
+                                    <label htmlFor="password" className="field-label">New password</label>
+                                    <input
+                                        id="password"
+                                        type="password"
+                                        value={passwordForm.data.password}
+                                        onChange={(e) => passwordForm.setData('password', e.target.value)}
+                                        className="field-input"
+                                        autoComplete="new-password"
+                                        required
+                                    />
+                                    {passwordForm.errors.password && (
+                                        <p className="field-hint text-ink-expl">{passwordForm.errors.password}</p>
+                                    )}
+                                </div>
+                                <div>
+                                    <label htmlFor="password_confirmation" className="field-label">Confirm new password</label>
+                                    <input
+                                        id="password_confirmation"
+                                        type="password"
+                                        value={passwordForm.data.password_confirmation}
+                                        onChange={(e) => passwordForm.setData('password_confirmation', e.target.value)}
+                                        className="field-input"
+                                        autoComplete="new-password"
+                                        required
+                                    />
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <button type="submit" disabled={passwordForm.processing} className="btn-primary">
+                                        Update password
+                                    </button>
+                                    {passwordForm.recentlySuccessful && (
+                                        <span className="text-xs text-ink-sfw">Saved.</span>
+                                    )}
+                                </div>
+                            </form>
+                        </div>
+
+                        <div className="mt-8 border-t border-ink-line pt-5">
+                            <h3 className="text-sm font-semibold text-[#ff98a9]">Delete account</h3>
+                            <p className="mb-3.5 mt-0.5 text-[12.5px] text-ink-muted">
+                                Once deleted, all of your works, comics, and comments will be permanently removed.
+                            </p>
+                            {!confirmingDeletion ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setConfirmingDeletion(true)}
+                                    className="btn-ghost border-[#6b2c3a] text-[#ff98a9] hover:bg-[#ff98a9]/10"
+                                >
+                                    Delete my account
+                                </button>
+                            ) : (
+                                <form onSubmit={deleteAccount} className="max-w-md rounded-xl border border-[#6b2c3a]/60 bg-[#201015] p-4 space-y-3">
+                                    <p className="text-xs font-semibold text-[#ff98a9]">
+                                        Please enter your password to confirm account deletion:
+                                    </p>
+                                    <input
+                                        type="password"
+                                        value={deleteForm.data.password}
+                                        onChange={(e) => deleteForm.setData('password', e.target.value)}
+                                        placeholder="Your password"
+                                        className="field-input"
+                                        required
+                                    />
+                                    {deleteForm.errors.password && (
+                                        <p className="field-hint text-ink-expl">{deleteForm.errors.password}</p>
+                                    )}
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="submit"
+                                            disabled={deleteForm.processing}
+                                            className="btn bg-[#ff536e] text-white hover:bg-[#ff3b59]"
+                                        >
+                                            Confirm permanent delete
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setConfirmingDeletion(false)}
+                                            className="btn-ghost"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+                        </div>
                     </section>
                 </div>
             </div>

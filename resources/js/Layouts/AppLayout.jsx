@@ -1,10 +1,13 @@
 import { Link, usePage } from '@inertiajs/react';
+import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Icon } from '@/Components/Icons';
 import SearchBox from '@/Components/SearchBox';
 import { RATING_CLASS } from '@/Lib/format';
+import { adminLinks, AdminMobileRail, AdminRailButton } from '@/Components/AdminNavigation';
 
 const FlashContext = createContext(null);
+const AdminRailToggleContext = createContext(() => {});
 
 /* ---------------------------------------------------------------- toast */
 function Toast({ message, tone, onDone }) {
@@ -42,30 +45,35 @@ export function ToastProvider({ children }) {
 
 /* ---------------------------------------------------------------- nav */
 const NAV = [
+    { label: 'Discover', href: 'shelves.index', icon: 'search', route: 'shelves' },
     { label: 'Gallery', href: 'gallery', icon: 'gallery', route: 'gallery' },
     { label: 'Following', href: 'following', icon: 'following', route: 'following', auth: true },
     { label: 'Messages', href: 'messages.index', icon: 'chat', route: 'messages', auth: true, badge: 'unread_messages' },
     { label: 'Notifications', href: 'notifications.index', icon: 'bell', route: 'notifications', auth: true, badge: 'unread_notifications' },
     { label: 'Comics', href: 'comics.index', icon: 'bookmark', route: 'comics' },
+    { label: 'Tags & wiki', href: 'knowledge.index', icon: 'bookmark', route: 'knowledge' },
+    { label: 'Saved works', href: 'collections.index', icon: 'save', route: 'collections', auth: true },
+    { label: 'Creator Studio', href: 'studio.index', icon: 'upload', route: 'studio', auth: true },
     { label: 'Profile', href: 'profile.show', icon: 'user', route: 'profile', auth: true },
 ];
 
-function Rail() {
-    const { auth, ageConfirmed } = usePage().props;
+function Rail({ admin = false }) {
+    const { auth } = usePage().props;
     const user = auth?.user;
+    const staffLinks = adminLinks(user);
 
     return (
-        <aside className="sticky top-0 z-20 hidden h-screen flex-col gap-1 overflow-y-auto border-r border-ink-line bg-ink-bg px-2.5 pb-3.5 pt-5 md:flex lg:px-3.5">
-            <Link href={route('gallery')} className="mb-4 flex items-center gap-2.5 px-2 font-extrabold tracking-[-0.02em] xl:text-xl">
+        <aside aria-label={admin ? 'Admin navigation' : 'Site navigation'} className="sticky top-0 z-20 hidden h-screen flex-col gap-1 overflow-y-auto border-r border-ink-line bg-ink-bg px-2.5 pb-3.5 pt-5 lg:flex lg:px-3.5">
+            <Link href={route(admin ? staffLinks[0]?.href ?? 'gallery' : 'gallery')} aria-label={admin ? 'Inkwell admin' : 'Inkwell'} className="mb-4 flex items-center gap-2.5 px-2 font-extrabold tracking-[-0.02em] xl:text-xl">
                 <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[9px] bg-gradient-to-br from-ink-brand to-ink-pink text-[15px] font-black text-[#1a1017]">
                     I
                 </span>
-                <span className="hidden xl:inline">Inkwell</span>
+                <span className="hidden xl:inline">{admin ? 'Inkwell admin' : 'Inkwell'}</span>
             </Link>
 
-            {NAV.map((item) => {
+            {(admin ? staffLinks : NAV).map((item) => {
                 if (item.auth && !user) return null;
-                const active = item.route === 'gallery'
+                const active = admin ? route().current(item.route) : item.route === 'gallery'
                     ? route().current('gallery')
                     : route().current(`${item.route}*`);
                 const href = item.href === 'profile.show'
@@ -78,6 +86,7 @@ function Rail() {
                         key={item.label}
                         href={href}
                         aria-label={item.label}
+                        title={item.label}
                         aria-current={active ? 'page' : undefined}
                         className={`relative flex min-h-[44px] items-center gap-3 rounded-[11px] px-3 py-2.5 text-[15.5px] font-semibold justify-center xl:justify-start ${
                             active ? 'bg-ink-raised text-ink-brand' : 'text-ink-text hover:bg-ink-raised'
@@ -94,7 +103,12 @@ function Rail() {
                 );
             })}
 
-            {user ? (
+            {admin ? (
+                <Link href={route('gallery')} aria-label="Back to site" title="Back to site" className="btn-primary mt-3 xl:mt-4">
+                    <Icon name="back" className="h-5 w-5 shrink-0" />
+                    <span className="hidden xl:inline">Back to site</span>
+                </Link>
+            ) : user ? (
                 <Link href={route('upload.create')} className="btn-primary mt-3 xl:mt-4">
                     <Icon name="plus" className="h-5 w-5" />
                     <span className="hidden xl:inline">Upload work</span>
@@ -105,28 +119,36 @@ function Rail() {
                 </Link>
             )}
 
-            {auth?.user?.is_admin && (
+            {!admin && staffLinks.length > 0 && (
                 <Link
-                    href={route('admin.reports')}
-                    aria-label="Moderation"
+                    href={route(staffLinks[0].href)}
+                    aria-label="Admin panel"
                     className="relative flex min-h-[44px] items-center gap-3 rounded-[11px] px-3 py-2.5 text-[15.5px] font-semibold justify-center text-[#ff98a9] hover:bg-ink-raised xl:justify-start"
                 >
                     <Icon name="flag" className="h-[22px] w-[22px] shrink-0" />
-                    <span className="hidden xl:inline">Moderation</span>
+                    <span className="hidden xl:inline">Admin panel</span>
                 </Link>
             )}
 
-            <Link
+            {!admin && <Link
                 href={route('search')}
                 aria-label="Search"
                 className="relative flex min-h-[44px] items-center gap-3 rounded-[11px] px-3 py-2.5 text-[15.5px] font-semibold justify-center text-ink-text hover:bg-ink-raised xl:justify-start"
             >
                 <Icon name="search" className="h-[22px] w-[22px] shrink-0 opacity-90" />
                 <span className="hidden xl:inline">Search</span>
-            </Link>
+            </Link>}
 
             <div className="mt-auto">
-                {user ? (
+                {admin && user ? (
+                    <div className="flex items-center gap-2.5 rounded-xl p-2" title={`Signed in as @${user.username}`}>
+                        <img src={user.avatar} alt="" className="h-[38px] w-[38px] shrink-0 rounded-full object-cover" />
+                        <span className="hidden min-w-0 xl:block">
+                            <span className="block truncate text-sm font-bold">{user.name}</span>
+                            <span className="block text-[12.5px] text-ink-muted capitalize">{user.is_admin ? 'Administrator' : user.staff_permissions?.join(', ')}</span>
+                        </span>
+                    </div>
+                ) : user ? (
                     <Link href={route('profile.show', user.username)} className="flex items-center gap-2.5 rounded-xl p-2 hover:bg-ink-raised">
                         <img src={user.avatar} alt="" className="h-[38px] w-[38px] shrink-0 rounded-full object-cover" />
                         <span className="hidden min-w-0 xl:block">
@@ -146,32 +168,72 @@ function Rail() {
 
 function BottomNav() {
     const { auth } = usePage().props;
+    const { url } = usePage();
+    const [menuOpen, setMenuOpen] = useState(false);
     const user = auth?.user;
+    useEffect(() => setMenuOpen(false), [url, user?.id]);
+    useEffect(() => {
+        const desktop = window.matchMedia('(min-width: 1024px)');
+        const closeOnDesktop = () => { if (desktop.matches) setMenuOpen(false); };
+        desktop.addEventListener('change', closeOnDesktop);
+        return () => desktop.removeEventListener('change', closeOnDesktop);
+    }, []);
     const items = [
         { label: 'Gallery', icon: 'gallery', href: route('gallery'), match: 'gallery' },
         { label: 'Following', icon: 'following', href: user ? route('following') : route('login'), match: 'following' },
-        { label: 'Messages', icon: 'chat', href: user ? route('messages.index') : route('login'), match: 'messages', badge: auth?.unread_messages },
-        { label: 'Notifications', icon: 'bell', href: user ? route('notifications.index') : route('login'), match: 'notifications', badge: auth?.unread_notifications },
-        { label: 'Profile', icon: 'user', href: user ? route('profile.show', user.username) : route('login'), match: 'profile' },
+        { label: 'User', icon: 'user', menu: true, match: 'profile' },
+        { label: 'Upload', icon: 'plus', href: user ? route('upload.create') : route('login'), match: 'upload' },
         { label: 'Search', icon: 'search', href: route('search'), match: 'search' },
     ];
+    const menuItems = [
+        ...(user ? [
+            { label: 'Profile', href: route('profile.show', user.username) },
+            { label: 'Messages', href: route('messages.index'), badge: auth?.unread_messages },
+            { label: 'Notifications', href: route('notifications.index'), badge: auth?.unread_notifications },
+        ] : [
+            { label: 'Log in', href: route('login') },
+            { label: 'Create account', href: route('register') },
+        ]),
+        { label: 'Discover', href: route('shelves.index') },
+        { label: 'Comics', href: route('comics.index') },
+        { label: 'Tags & wiki', href: route('knowledge.index') },
+        ...(user ? [
+            { label: 'Saved works', href: route('collections.index') },
+            { label: 'Saved searches', href: route('saved-searches.index') },
+            { label: 'Chapter inbox', href: route('chapters.inbox') },
+            { label: 'Creator Studio', href: route('studio.index') },
+            { label: 'Settings', href: route('settings.edit') },
+            { label: 'Blocked users', href: route('blocks.index') },
+        ] : []),
+        ...adminLinks(user).slice(0, 1).map((item) => ({ label: 'Admin panel', href: route(item.href) })),
+    ];
+    const unread = (auth?.unread_messages ?? 0) + (auth?.unread_notifications ?? 0);
 
     return (
-        <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-ink-line bg-ink-bg/95 pb-safe backdrop-blur md:hidden" aria-label="Main">
+        <>
+        <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-ink-line bg-ink-bg/95 pb-safe backdrop-blur lg:hidden" aria-label="Main">
             {items.map((item) => {
                 const active = route().current(`${item.match}*`);
+                const className = `relative flex min-h-[52px] flex-col items-center justify-center gap-0.5 py-1.5 text-[10.5px] ${active ? 'text-ink-brand' : 'text-ink-muted'}`;
+                if (item.menu) {
+                    return (
+                        <button key={item.label} type="button" aria-label="User menu" aria-haspopup="dialog" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)} className={className}>
+                            {user ? <img src={user.avatar} alt="" className="h-6 w-6 rounded-full object-cover" /> : <Icon name="user" className="h-[22px] w-[22px]" />}
+                            <span>User</span>
+                            {unread > 0 && <span className="absolute right-[calc(50%-22px)] top-0.5 rounded-full bg-ink-pink px-1 text-[9.5px] font-extrabold text-white" aria-label={`${unread} unread messages and notifications`}>{unread > 99 ? '99+' : unread}</span>}
+                        </button>
+                    );
+                }
                 return (
                     <Link
                         key={item.label}
                         href={item.href}
                         aria-label={item.label}
                         aria-current={active ? 'page' : undefined}
-                        className={`relative flex min-h-[52px] flex-col items-center justify-center gap-0.5 py-1.5 text-[10.5px] ${
-                            active ? 'text-ink-brand' : 'text-ink-muted'
-                        }`}
+                        className={className}
                     >
                         <Icon name={item.icon} className="h-[22px] w-[22px]" />
-                        <span>{item.label}</span>
+                        <span>{item.shortLabel ?? item.label}</span>
                         {item.badge > 0 && (
                             <span className="absolute right-[calc(50%-22px)] top-0.5 rounded-full bg-ink-pink px-1 text-[9.5px] font-extrabold text-white">
                                 {item.badge > 99 ? '99+' : item.badge}
@@ -181,6 +243,33 @@ function BottomNav() {
                 );
             })}
         </nav>
+        <Dialog open={menuOpen} onClose={() => setMenuOpen(false)} onKeyDown={(event) => {
+            if (event.key === 'Escape') setMenuOpen(false);
+        }} className="fixed inset-0 z-[100]">
+            <div className="fixed inset-0 bg-black/70" aria-hidden="true" />
+            <div className="fixed inset-0 flex items-end justify-center p-3 pb-safe sm:items-center">
+                <DialogPanel className="max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-2xl border border-ink-line bg-ink-bg p-4 shadow-2xl">
+                    <div className="mb-3 flex items-center gap-3">
+                        {user && <img src={user.avatar} alt="" className="h-10 w-10 rounded-full object-cover" />}
+                        <div className="min-w-0 flex-1">
+                            <DialogTitle className="truncate font-bold">{user?.name ?? 'User menu'}</DialogTitle>
+                            {user && <p className="truncate text-sm text-ink-muted">@{user.username}</p>}
+                        </div>
+                        <button type="button" onClick={() => setMenuOpen(false)} className="btn-ghost min-h-11 px-3">Close</button>
+                    </div>
+                    <nav aria-label="User destinations" className="flex flex-col gap-1">
+                        {menuItems.map((item) => (
+                            <Link key={item.label} href={item.href} onClick={() => setMenuOpen(false)} className="flex min-h-11 items-center justify-between gap-3 rounded-xl px-3 py-2 hover:bg-ink-raised">
+                                <span>{item.label}</span>
+                                {item.badge > 0 && <span className="rounded-full bg-ink-pink px-2 text-xs font-bold text-white">{item.badge > 99 ? '99+' : item.badge}</span>}
+                            </Link>
+                        ))}
+                        {user && <Link href={route('logout')} method="post" as="button" onClick={() => setMenuOpen(false)} className="min-h-11 rounded-xl px-3 py-2 text-left text-ink-muted hover:bg-ink-raised">Log out</Link>}
+                    </nav>
+                </DialogPanel>
+            </div>
+        </Dialog>
+        </>
     );
 }
 
@@ -190,6 +279,7 @@ function RightRail() {
 
     return (
         <aside className="sticky top-0 hidden h-screen flex-col gap-4 overflow-y-auto border-l border-ink-line px-4 py-5 lg:flex">
+            <Link href={route('knowledge.index')} className="btn-ghost">Community tags & wiki</Link>
             <div className="panel">
                 <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.1em] text-ink-faint">Ad — sidebar 300×250</p>
                 <div className="grid h-[190px] place-items-center rounded-xl border border-dashed border-[#4a3c58] bg-[#141118] text-center text-xs text-ink-faint">
@@ -294,23 +384,27 @@ function DemoSwitcher() {
 }
 
 /* ---------------------------------------------------------------- layout */
-export default function AppLayout({ children, rightRail = true, bare = false }) {
+export default function AppLayout({ children, rightRail = true, bare = false, admin = false }) {
     const shellName = rightRail ? 'shell-full' : 'shell-solo';
+    const [adminRailOpen, setAdminRailOpen] = useState(false);
 
     return (
         <ToastProvider>
             <div className={`mx-auto grid min-h-screen max-w-shell grid-cols-1 items-start gap-0 ${bare ? '' : shellName}`}>
-                {!bare && <Rail />}
+                {!bare && <Rail admin={admin} />}
                 <main
-                    className={`min-h-screen border-r border-ink-line pb-20 md:min-w-0 md:pb-16 ${
+                    className={`min-h-screen border-r border-ink-line ${admin ? 'pb-6 lg:pb-16' : 'pb-20 md:min-w-0 lg:pb-16'} ${
                         rightRail ? '' : 'border-r-0'
                     }`}
                 >
-                    {children}
+                    <AdminRailToggleContext.Provider value={() => setAdminRailOpen(true)}>
+                        {children}
+                    </AdminRailToggleContext.Provider>
                 </main>
                 {!bare && rightRail && <RightRail />}
-                {!bare && <BottomNav />}
-                {!bare && <DemoSwitcher />}
+                {!bare && !admin && <BottomNav />}
+                {!bare && admin && <AdminMobileRail open={adminRailOpen} onClose={() => setAdminRailOpen(false)} />}
+                {!bare && !admin && <DemoSwitcher />}
                 <footer className={`${rightRail ? 'lg:col-span-3' : 'lg:col-span-2'} col-span-1 border-t border-ink-line px-5 py-4 pb-24 text-[12px] text-ink-faint md:pb-4`}>
                     <nav className="flex flex-wrap gap-x-4 gap-y-1" aria-label="Legal">
                         <Link href={route('legal.terms')} className="hover:text-ink-text">Terms</Link>
@@ -326,12 +420,16 @@ export default function AppLayout({ children, rightRail = true, bare = false }) 
 }
 
 /* ---------------------------------------------------------------- top bar */
-export function TopBar({ title, subtitle, back = null, children, tabs = null, actions = null }) {
+export function TopBar({ title, subtitle, back = null, children, tabs = null, actions = null, siteActions = true }) {
     const [mobileSearch, setMobileSearch] = useState(false);
+    const openAdminRail = useContext(AdminRailToggleContext);
 
     return (
         <div className="sticky top-0 z-[15] border-b border-ink-line bg-ink-bg/90 backdrop-blur">
             <div className="flex min-h-[56px] items-center gap-3 px-4 pt-3 md:px-5">
+                <span className="lg:hidden">
+                    <AdminRailButton onClick={openAdminRail} />
+                </span>
                 {back && (
                     <Link href={back} aria-label="Back" className="btn-icon-flat -ml-2 shrink-0">
                         <Icon name="back" />
@@ -341,12 +439,12 @@ export function TopBar({ title, subtitle, back = null, children, tabs = null, ac
                     {title}
                     {subtitle && <span className="ml-2 hidden text-sm font-medium text-ink-muted md:inline">{subtitle}</span>}
                 </h1>
-                <div className="ml-auto flex min-w-0 items-center gap-2">
-                    {actions}
-                    <div className="hidden w-[min(42vw,340px)] lg:block">
+                <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2">
+                    {actions && <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">{actions}</div>}
+                    {siteActions && <div className="hidden w-[min(42vw,340px)] lg:block">
                         <SearchBox />
-                    </div>
-                    <button
+                    </div>}
+                    {siteActions && <button
                         type="button"
                         aria-label="Search"
                         aria-expanded={mobileSearch}
@@ -354,13 +452,17 @@ export function TopBar({ title, subtitle, back = null, children, tabs = null, ac
                         className="btn-icon-flat lg:hidden"
                     >
                         <Icon name="search" />
-                    </button>
-                    <Link href={route('upload.create')} aria-label="Upload work" className="btn-primary h-10 w-10 p-0 lg:hidden">
+                    </button>}
+                    {siteActions && <Link href={route('upload.create')} aria-label="Upload work" className="btn-primary h-10 w-10 p-0 lg:hidden">
                         <Icon name="plus" />
-                    </Link>
+                    </Link>}
+                    {!siteActions && <Link href={route('gallery')} className="btn-ghost min-h-11 text-[12px]">
+                        <Icon name="back" className="h-4 w-4 shrink-0" />
+                        Back to site
+                    </Link>}
                 </div>
             </div>
-            {mobileSearch && (
+            {siteActions && mobileSearch && (
                 <div className="pb-3 pt-1 lg:hidden">
                     <SearchBox autoFocus />
                 </div>

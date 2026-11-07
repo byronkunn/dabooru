@@ -23,6 +23,55 @@ You are about to run an NSFW-capable artist site for real. The app is built and 
 
 Three gaps that matter more than the rest, because they are the ones that cost you money or get you taken down:
 
+### Community tags and wiki
+
+The `/tags` directory now supports categorized tags, tag wikis, standalone guides,
+discussion, watch notifications, revision diffs, and a community moderation queue
+at `/admin/community`. Categories include anatomy, clothing, relationships,
+themes, and content warnings alongside artist, character, series, medium, style,
+subject, and general. They describe artwork, not contributors.
+
+- New verified, unrestricted contributors submit edits for review. Five edits
+  independently approved by moderators unlock ordinary publishing.
+- Category changes, renames, aliases, relationships, merges, and bulk retagging require moderator
+  approval. Renames retain the old name as an alias. For merges, first review bulk
+  retagging and remove relationships, then approve the canonical redirect.
+- Bulk previews contain exact affected-work tags (maximum 100 works). Changed
+  work or implication rules invalidate a preview. Rollback refuses to overwrite
+  later changes. Wiki and post-tag changes have histories; page locks, reviews,
+  and contributor restrictions are recorded in the moderation log.
+- Uploads accept 10 entered tags; approved implications may expand to 50. Existing
+  works can be edited with up to 50 tags. New implication rules do not silently
+  retag existing works: submit a bulk change instead.
+- Artist membership is unverified by default. Only moderators can confirm an
+  external artist or link a verified member after checking identity. A wiki
+  does not establish ownership, consent, endorsement, or reposting permission.
+- Wiki ratings are separate from work ratings. Explicit wiki pages, revisions,
+  example galleries, autocomplete, and counts respect viewer settings. Embedded
+  images and raw HTML are not allowed in wiki Markdown.
+- Run `php artisan migrate` before deployment. The default seeder includes
+  neutral starter definitions and community guides. On an existing installation,
+  run `php artisan db:seed --class=KnowledgeSeeder` to add only those definitions;
+  existing edits are not overwritten.
+
+The operational checklist below predates some current features and should not
+be used as a fresh code audit.
+
+Mobile navigation has exactly five items: Gallery, Following, User/avatar,
+Upload, and Search. The avatar opens a keyboard-accessible dialog containing
+the remaining destinations, account controls, and unread-message badges.
+
+Admin pages use a separate navigation shell with Reports, Users, Moderation log,
+and Community edits. The desktop rail matches the site's responsive rail styling;
+mobile navigation contains those four sections and a fifth link back to the site.
+Every admin header also includes "Back to site." Public pages retain their normal
+navigation, and admin routes remain protected by the existing admin middleware.
+
+The gallery reserves a labeled advertisement slot after every four works,
+including works appended by "Load more." Slots do not replace media and are not
+inserted into other masonry galleries or the comic reader. These are placeholders;
+no advertising network is connected.
+
 1. **`reports` rows go nowhere.** `POST /report` inserts a row and that is it. There is no page, notification-to-admin, or email that surfaces a report. An "open" report on a CSAM upload will sit there silently. Until you build the queue (section 4), you need a person checking the table or the site.
 2. **`banned_at` is enforced but there is no way to set it.** Since this checklist was written, `EnsureAgeConfirmed` was updated to log out a banned account on its next request. What is still missing is any admin surface: banning someone means a direct database update until the admin panel exists.
 3. **Nothing is logged for takedowns.** There is no takedown log, so your DMCA safe-harbor story is "we have no record of what we received or when we acted." That is a bad position to argue from.

@@ -1,3 +1,4 @@
+import TagField from '@/Components/TagField';
 import { Head, Link, useForm } from '@inertiajs/react';
 import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 import { Icon } from '@/Components/Icons';
@@ -21,7 +22,18 @@ export default function UploadCreate({ limits }) {
     const [type, setType] = useState('image');
     const [previews, setPreviews] = useState([]);
     const inputRef = useRef(null);
-    const form = useForm({ type: 'image', title: '', caption: '', rating: 'sfw', files: [] });
+    const form = useForm({
+        type: 'image',
+        title: '',
+        caption: '',
+        tags: '',
+        rating: 'sfw',
+        is_original: true,
+        artist_name: '',
+        source_url: '',
+        files: [],
+        draft: false,
+    });
 
     const active = FORMATS.find((f) => f.key === type);
 
@@ -44,9 +56,10 @@ export default function UploadCreate({ limits }) {
         if (inputRef.current) inputRef.current.value = '';
     };
 
-    const submit = (e) => {
+    const submit = (e, draft = false) => {
         e.preventDefault();
-        form.post(route('upload.store'), { forceFormData: true });
+        form.transform((data) => ({ ...data, draft }));
+form.post(route('upload.store'), { forceFormData: true });
     };
 
     const goComic = () => {
@@ -60,7 +73,7 @@ export default function UploadCreate({ limits }) {
                 title="Upload work"
                 back={route('gallery')}
                 actions={
-                    <button type="button" onClick={type === 'comic' ? goComic : submit} disabled={form.processing} className="btn-primary h-10 px-4">
+                    <button type="button" onClick={type === 'comic' ? goComic : (event) => submit(event)} disabled={form.processing} className="btn-primary h-10 px-4">
                         {type === 'comic' ? 'Continue' : form.processing ? 'Publishing…' : 'Publish'}
                     </button>
                 }
@@ -147,6 +160,94 @@ export default function UploadCreate({ limits }) {
                             <p className="field-hint">{form.data.caption.length} / 1000</p>
                         </div>
 
+                        <div className="mt-3.5"><TagField form={form} /></div>
+
+                        {/* Artist attribution section */}
+                        <div className="mt-5 rounded-2xl border border-ink-line bg-ink-raised/50 p-4">
+                            <h2 className="text-sm font-semibold text-ink-text">Artist & Creator</h2>
+                            <p className="mt-0.5 text-xs text-ink-muted">
+                                Did you create this piece yourself, or are you sharing work by an artist not on the site?
+                            </p>
+
+                            <div className="mt-3 flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => form.setData({ ...form.data, is_original: true, artist_name: '', source_url: '' })}
+                                    className={`flex-1 rounded-xl border p-3 text-left transition-colors ${
+                                        form.data.is_original
+                                            ? 'border-ink-brand bg-ink-brand/10 text-ink-text'
+                                            : 'border-ink-line bg-ink-surface text-ink-muted hover:text-ink-text'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <span className={`h-3 w-3 rounded-full border-2 ${form.data.is_original ? 'border-ink-brand bg-ink-brand' : 'border-ink-muted'}`} />
+                                        <span className="text-[13.5px] font-bold">My original work</span>
+                                    </div>
+                                    <p className="mt-1 text-xs text-ink-muted">You created this artwork.</p>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => form.setData({ ...form.data, is_original: false })}
+                                    className={`flex-1 rounded-xl border p-3 text-left transition-colors ${
+                                        !form.data.is_original
+                                            ? 'border-ink-brand bg-ink-brand/10 text-ink-text'
+                                            : 'border-ink-line bg-ink-surface text-ink-muted hover:text-ink-text'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <span className={`h-3 w-3 rounded-full border-2 ${!form.data.is_original ? 'border-ink-brand bg-ink-brand' : 'border-ink-muted'}`} />
+                                        <span className="text-[13.5px] font-bold">Artist not on site</span>
+                                    </div>
+                                    <p className="mt-1 text-xs text-ink-muted">Credit the external artist & link their source.</p>
+                                </button>
+                            </div>
+
+                            {!form.data.is_original && (
+                                <div className="mt-4 space-y-3 border-t border-ink-line/60 pt-3.5">
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                        <div>
+                                            <label htmlFor="artist_name" className="field-label">
+                                                Artist name / handle <span className="text-ink-expl">*</span>
+                                            </label>
+                                            <input
+                                                id="artist_name"
+                                                value={form.data.artist_name}
+                                                onChange={(e) => form.setData('artist_name', e.target.value)}
+                                                className="field-input"
+                                                placeholder="e.g. WLOP, John Staub"
+                                                maxLength={120}
+                                                required={!form.data.is_original}
+                                            />
+                                            {form.errors.artist_name && (
+                                                <p className="field-hint text-ink-expl">{form.errors.artist_name}</p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label htmlFor="source_url" className="field-label">
+                                                Original source or portfolio link
+                                            </label>
+                                            <input
+                                                id="source_url"
+                                                type="url"
+                                                value={form.data.source_url}
+                                                onChange={(e) => form.setData('source_url', e.target.value)}
+                                                className="field-input"
+                                                placeholder="https://twitter.com/... or ArtStation"
+                                                maxLength={500}
+                                            />
+                                            {form.errors.source_url && (
+                                                <p className="field-hint text-ink-expl">{form.errors.source_url}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <p className="text-[12px] text-ink-faint">
+                                        The site will reflect that this work was created by an external artist who is not on Inkwell and link to their source.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
                         <h2 className="mb-2.5 mt-5 text-sm font-semibold">Rating</h2>
                         <div className="flex flex-wrap gap-2">
                             {RATINGS.map((r) => (
@@ -165,7 +266,8 @@ export default function UploadCreate({ limits }) {
                         </div>
                         <p className="field-hint">Explicit work stays hidden for logged-out visitors and anyone with explicit off.</p>
 
-                        <div className="mt-5 flex justify-end">
+                        <div className="mt-5 flex flex-wrap justify-end gap-2">
+                            <button type="button" disabled={form.processing} onClick={(event) => submit(event, true)} className="btn-ghost">Save private draft</button>
                             <button type="submit" disabled={form.processing} className="btn-primary px-6">
                                 {form.processing ? 'Publishing…' : 'Publish'}
                             </button>

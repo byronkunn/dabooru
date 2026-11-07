@@ -75,6 +75,27 @@ class ComicsTest extends TestCase
         $this->assertDatabaseHas('comics', ['slug' => 'midnight-ink', 'user_id' => $artist->id]);
     }
 
+    public function test_creating_a_series_with_cover_stores_media(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $artist = User::factory()->create();
+        $cover = \Tests\Support\FakeImage::upload('cover.png', 600, 800);
+
+        $this->actingAs($artist)
+            ->post(route('comics.series.store'), [
+                'title' => 'Starlight Blade',
+                'rating' => 'sfw',
+                'status' => 'ongoing',
+                'cover' => $cover,
+            ])
+            ->assertRedirect(route('comics.chapters.create', ['comic' => 'starlight-blade']));
+
+        $comic = Comic::where('slug', 'starlight-blade')->first();
+        $this->assertNotNull($comic);
+        $this->assertNotNull($comic->cover_media_id);
+        $this->assertNotNull($comic->cover());
+    }
+
     public function test_cannot_add_a_chapter_to_someone_elses_series(): void
     {
         $comic = $this->makeComic();

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Comment;
 use App\Models\Message;
 use App\Models\Post;
+use App\Models\Tag;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -27,8 +28,13 @@ class ContentController extends Controller
                 'id' => $post->id,
                 'type' => $post->type,
                 'rating' => $post->rating,
+                'is_original' => (bool) $post->is_original,
+                'artist_name' => $post->artist_name,
+                'source_url' => $post->source_url,
                 'title' => $post->title,
                 'caption' => $post->caption,
+                'tags' => $post->tags()->pluck('name')->all(),
+                'tag_version' => $post->tag_version,
                 'media' => $post->media()->with('media')->get()->map(fn ($pm) => [
                     'id' => $pm->media?->id,
                     'url' => $pm->media?->url(),
@@ -46,10 +52,36 @@ class ContentController extends Controller
         $data = $request->validate([
             'title' => ['nullable', 'string', 'max:160'],
             'caption' => ['nullable', 'string', 'max:1000'],
+            'tags' => ['sometimes', 'nullable', 'string', 'max:2050'],
+            'base_tag_version' => ['sometimes', 'integer', 'min:0'],
             'rating' => ['required', 'in:sfw,suggestive,explicit'],
+            'is_original' => ['nullable', 'boolean'],
+            'artist_name' => ['nullable', 'string', 'max:120'],
+            'source_url' => ['nullable', 'url', 'max:500'],
         ]);
 
-        $post->update($data);
+        $tags = array_key_exists('tags', $data) ? Tag::parse($data['tags'], 50) : null;
+        $baseTagVersion = $data['base_tag_version'] ?? null;
+        unset($data['tags'], $data['base_tag_version']);
+
+        if (isset($data['is_original']) && $data['is_original']) {
+            $data['artist_name'] = null;
+            $data['source_url'] = null;
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($post, $data, $tags, $baseTagVersion) {
+            $post = Post::lockForUpdate()->findOrFail($post->id);
+            if ($tags !== null && $baseTagVersion !== null && $post->tag_version !== $baseTagVersion) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'base_tag_version' => 'Tags changed since you opened this form. Reload and compare the latest tags before saving.',
+                ]);
+            }
+            $post->update($data);
+
+            if ($tags !== null) {
+                Tag::syncFor($post, $tags);
+            }
+        });
 
         return redirect()->route('posts.show', $post)->with('success', 'Work updated.');
     }

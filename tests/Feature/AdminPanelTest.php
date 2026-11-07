@@ -13,13 +13,14 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class ModerationTest extends TestCase
+class AdminPanelTest extends TestCase
 {
     use RefreshDatabase;
 
     private function mod(): User
     {
-        return User::factory()->admin()->create(['username' => 'mod']);
+        return User::where('username', 'mod')->first()
+            ?? User::factory()->admin()->create(['username' => 'mod']);
     }
 
     private function reportedPost(): array

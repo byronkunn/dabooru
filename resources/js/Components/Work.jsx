@@ -1,5 +1,5 @@
 import { Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Icon } from '@/Components/Icons';
 import { KIND_ICON, KIND_LABEL, RATING_CLASS, compact } from '@/Lib/format';
 
@@ -84,9 +84,10 @@ export function WorkCell({ post, wide = false }) {
             <div className="relative overflow-hidden bg-[#1c1820]" style={{ aspectRatio: cover?.aspect_ratio || 1 }}>
                 {cover && (
                     <img
-                        src={cover.kind === 'video' ? cover.thumb || cover.url : cover.url}
+                        src={cover.thumb || cover.url}
                         alt=""
                         loading="lazy"
+                        decoding="async"
                         className={`h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03] ${blurred ? 'blur-2xl' : ''}`}
                     />
                 )}
@@ -121,21 +122,39 @@ export function WorkCell({ post, wide = false }) {
             </div>
 
             <div className="flex flex-col gap-1.5 p-2.5">
-                <div className="flex min-w-0 items-center gap-2">
-                    {post.user ? (
-                        <img
-                            src={post.user.avatar}
-                            alt=""
-                            className="h-[22px] w-[22px] shrink-0 rounded-full bg-ink-raised object-cover"
-                        />
-                    ) : (
-                        <span className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full bg-ink-raised text-ink-faint">
-                            <Icon name="user" className="h-3 w-3" />
-                        </span>
-                    )}
-                    <span className="truncate text-[13px] font-semibold">{post.user?.name ?? 'Unsorted'}</span>
-                    {post.user && <span className="hidden truncate text-[13px] text-ink-muted sm:inline">@{post.user.username}</span>}
-                </div>
+                {post.artist_name || post.external_artist ? (
+                    <div className="flex min-w-0 flex-col">
+                        <div className="flex items-center gap-1.5">
+                            <span className="truncate text-[13px] font-bold text-ink-text">
+                                {post.artist_name || post.external_artist.name}
+                            </span>
+                            <span className="shrink-0 rounded bg-amber-500/15 px-1 py-0.5 text-[10px] font-bold text-amber-300">
+                                External
+                            </span>
+                        </div>
+                        {post.user && (
+                            <span className="truncate text-[11px] text-ink-muted">
+                                via @{post.user.username}
+                            </span>
+                        )}
+                    </div>
+                ) : (
+                    <div className="flex min-w-0 items-center gap-2">
+                        {post.user ? (
+                            <img
+                                src={post.user.avatar}
+                                alt=""
+                                className="h-[22px] w-[22px] shrink-0 rounded-full bg-ink-raised object-cover"
+                            />
+                        ) : (
+                            <span className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full bg-ink-raised text-ink-faint">
+                                <Icon name="user" className="h-3 w-3" />
+                            </span>
+                        )}
+                        <span className="truncate text-[13px] font-semibold">{post.user?.name ?? 'Unsorted'}</span>
+                        {post.user && <span className="hidden truncate text-[13px] text-ink-muted sm:inline">@{post.user.username}</span>}
+                    </div>
+                )}
                 {!wide && post.title && <p className="line-clamp-2 text-[13px] leading-snug text-[#d8d0dd]">{post.title}</p>}
                 <div className="flex items-center gap-3.5 text-xs text-ink-muted">
                     <span className="inline-flex items-center gap-1">
@@ -181,14 +200,41 @@ export function PostCard({ post, liked = false, saved = false }) {
             )}
             <div className="min-w-0">
                 <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-[14.5px]">
-                    {post.user ? (
+                    {post.artist_name || post.external_artist ? (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="font-bold text-ink-text">{post.artist_name || post.external_artist.name}</span>
+                            <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10.5px] font-bold text-amber-300">
+                                External artist
+                            </span>
+                            {(post.source_url || post.external_artist?.url) && (
+                                <a
+                                    href={post.source_url || post.external_artist.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-xs font-semibold text-ink-brand hover:underline"
+                                >
+                                    Source ↗
+                                </a>
+                            )}
+                            {post.user && (
+                                <span className="text-[12.5px] text-ink-muted">
+                                    · shared by{' '}
+                                    <Link href={route('profile.show', post.user.username)} className="hover:underline">
+                                        @{post.user.username}
+                                    </Link>
+                                </span>
+                            )}
+                        </div>
+                    ) : post.user ? (
                         <Link href={route('profile.show', post.user.username)} className="font-bold hover:underline">
                             {post.user.name}
                         </Link>
                     ) : (
                         <span className="font-bold">Unsorted</span>
                     )}
-                    {post.user && <span className="text-[13.5px] font-medium text-ink-muted">@{post.user.username}</span>}
+                    {!post.artist_name && !post.external_artist && post.user && (
+                        <span className="text-[13.5px] font-medium text-ink-muted">@{post.user.username}</span>
+                    )}
                     <span className="text-ink-muted">·</span>
                     <time className="text-[13.5px] text-ink-muted" dateTime={post.created_at}>
                         {post.created_at_human}
@@ -284,11 +330,14 @@ export function SeriesCard({ comic }) {
 }
 
 /* ------------------------------------------------------------------ masonry */
-export function Masonry({ posts }) {
+export function Masonry({ posts, renderAfterPost }) {
     return (
         <div className="columns-2 gap-2.5 md:columns-3 md:gap-3.5 xl:columns-3">
-            {posts.map((post) => (
-                <WorkCell key={post.id} post={post} />
+            {posts.map((post, index) => (
+                <Fragment key={post.id}>
+                    <WorkCell post={post} />
+                    {renderAfterPost?.(post, index)}
+                </Fragment>
             ))}
         </div>
     );

@@ -85,4 +85,41 @@ class ImageProcessor
 
         return $name;
     }
+
+    /** Store a small, metadata-free JPEG preview when the uploaded image can be decoded. */
+    public static function storeThumbnail(string $sourcePath, string $directory, string $disk): ?string
+    {
+        if (! function_exists('imagecreatefromstring')) {
+            return null;
+        }
+
+        $raw = @file_get_contents($sourcePath);
+        $image = $raw === false ? false : @imagecreatefromstring($raw);
+        if (! $image) {
+            return null;
+        }
+
+        $width = imagesx($image);
+        $height = imagesy($image);
+        $max = 640;
+        $scale = min(1, $max / max($width, $height));
+        $targetWidth = max(1, (int) round($width * $scale));
+        $targetHeight = max(1, (int) round($height * $scale));
+        $thumb = imagecreatetruecolor($targetWidth, $targetHeight);
+        imagecopyresampled($thumb, $image, 0, 0, 0, 0, $targetWidth, $targetHeight, $width, $height);
+        ob_start();
+        imagejpeg($thumb, null, 82);
+        $bytes = ob_get_clean();
+        imagedestroy($image);
+        imagedestroy($thumb);
+
+        if (! is_string($bytes) || $bytes === '') {
+            return null;
+        }
+
+        $path = $directory.'/'.bin2hex(random_bytes(12)).'.jpg';
+        Storage::disk($disk)->put($path, $bytes);
+
+        return $path;
+    }
 }

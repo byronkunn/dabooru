@@ -3,20 +3,41 @@ import AppLayout, { TopBar, RatingBadge } from '@/Layouts/AppLayout';
 import { MediaViewer, WorkCell } from '@/Components/Work';
 import { Icon } from '@/Components/Icons';
 import { compact } from '@/Lib/format';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import ReportDialog from '@/Components/ReportDialog';
 
-export default function PostShow({ post, comments, more, liked, saved, followedAuthor }) {
+export default function PostShow({ post, comments, more, liked, saved, followedAuthor, creditClaim, collections = [] }) {
     const { auth } = usePage().props;
     const [revealed, setRevealed] = useState(false);
     const [isLiked, setLiked] = useState(liked);
     const [isSaved, setSaved] = useState(saved);
     const [isFollowing, setFollowing] = useState(followedAuthor);
     const [reporting, setReporting] = useState(false);
+    const [lightboxIndex, setLightboxIndex] = useState(null);
+    const [copied, setCopied] = useState(false);
     const form = useForm({ body: '' });
+    const creditForm = useForm({ evidence: '' });
+    const collectionForm = useForm({ collection: '' });
 
     const blurred = post.rating === 'explicit' && !revealed;
     const isVideo = post.media?.[0]?.kind === 'video';
+
+    useEffect(() => {
+        if (lightboxIndex === null) return;
+        const onKey = (e) => {
+            if (e.key === 'Escape') setLightboxIndex(null);
+            if (e.key === 'ArrowLeft') setLightboxIndex((i) => (i > 0 ? i - 1 : post.media.length - 1));
+            if (e.key === 'ArrowRight') setLightboxIndex((i) => (i < post.media.length - 1 ? i + 1 : 0));
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [lightboxIndex, post.media?.length]);
+
+    const copyLink = () => {
+        navigator.clipboard?.writeText(window.location.href);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
 
     const submitComment = (e) => {
         e.preventDefault();
@@ -34,7 +55,11 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
 
             <article className="mx-auto max-w-[720px] border-b border-ink-line px-4 pb-4 pt-4 md:px-5">
                 <div className="flex items-center gap-2.5">
-                    {post.user ? (
+                    {post.artist_name || post.external_artist ? (
+                        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-amber-500/20 text-amber-300">
+                            <span className="text-base font-bold">✎</span>
+                        </div>
+                    ) : post.user ? (
                         <Link href={route('profile.show', post.user.username)}>
                             <img src={post.user.avatar} alt="" className="h-11 w-11 rounded-full bg-ink-raised object-cover" />
                         </Link>
@@ -44,19 +69,48 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
                         </span>
                     )}
                     <div className="min-w-0">
-                        {post.user ? (
-                            <Link href={route('profile.show', post.user.username)} className="block truncate text-[15px] font-bold hover:underline">
-                                {post.user.name}
-                            </Link>
+                        {post.artist_name || post.external_artist ? (
+                            <div>
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                    <span className="block truncate text-[15px] font-bold">
+                                        {post.artist_name || post.external_artist.name}
+                                    </span>
+                                    <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10.5px] font-bold text-amber-300">
+                                        Artist not on site
+                                    </span>
+                                </div>
+                                <p className="truncate text-[12.5px] text-ink-muted">
+                                    {post.user ? (
+                                        <>
+                                            Shared by{' '}
+                                            <Link href={route('profile.show', post.user.username)} className="text-ink-brand hover:underline">
+                                                @{post.user.username}
+                                            </Link>{' '}
+                                            ·{' '}
+                                        </>
+                                    ) : null}
+                                    {post.created_at_human}
+                                </p>
+                            </div>
+                        ) : post.user ? (
+                            <>
+                                <Link href={route('profile.show', post.user.username)} className="block truncate text-[15px] font-bold hover:underline">
+                                    {post.user.name}
+                                </Link>
+                                <p className="truncate text-[13px] text-ink-muted">
+                                    @{post.user.username} · {post.created_at_human}
+                                </p>
+                            </>
                         ) : (
-                            <span className="block truncate text-[15px] font-bold">Unsorted</span>
+                            <>
+                                <span className="block truncate text-[15px] font-bold">Unsorted</span>
+                                <p className="truncate text-[13px] text-ink-muted">
+                                    Unattributed · {post.created_at_human}
+                                </p>
+                            </>
                         )}
-                        <p className="truncate text-[13px] text-ink-muted">
-                            {post.user ? `@${post.user.username} · ` : 'Unattributed · '}
-                            {post.created_at_human}
-                        </p>
                     </div>
-                    <div className="ml-auto flex items-center gap-2">
+                    <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
                         <RatingBadge rating={post.rating} label={post.rating_label} />
                         {auth.user && post.user && auth.user.id === post.user.id && (
                             <>
@@ -91,8 +145,64 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
                     </div>
                 </div>
 
+                {(post.artist_name || post.external_artist) && (
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3.5">
+                        <div className="min-w-0">
+                            <p className="text-xs font-bold uppercase tracking-wider text-amber-300">{post.credited_artist ? 'Artist credit' : 'External artist'}</p>
+                            <p className="mt-0.5 text-[14px] text-ink-text">
+                                Created by {post.credited_artist
+                                    ? <Link href={route('profile.show', post.credited_artist.username)} className="link-brand font-bold">{post.credited_artist.name}</Link>
+                                    : <b className="text-white">{post.artist_name || post.external_artist.name}</b>}.
+                                {post.credited_artist && post.artist_name && <span className="ml-1 text-ink-muted">Originally credited as {post.artist_name}.</span>}
+                            </p>
+                        </div>
+                        {(post.source_url || post.external_artist?.url) && (
+                            <a
+                                href={post.source_url || post.external_artist.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="btn-ghost shrink-0 border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+                            >
+                                Original source ↗
+                            </a>
+                        )}
+                    </div>
+                )}
+
+                {creditClaim && (
+                    <div className="mt-3 text-sm">
+                        {creditClaim.status === 'pending' ? <p className="text-ink-muted">Your artist credit claim is awaiting review.</p>
+                            : creditClaim.status !== 'revoked' && (
+                                <details>
+                                    <summary className="cursor-pointer font-semibold text-ink-brand">Claim artist credit</summary>
+                                    <form className="mt-2 space-y-2" onSubmit={(event) => {
+                                        event.preventDefault();
+                                        creditForm.post(route('credits.store', post.id), { preserveScroll: true, onSuccess: () => creditForm.reset() });
+                                    }}>
+                                        <label className="block">Tell staff how they can verify this work is yours
+                                            <textarea className="field-input mt-1" value={creditForm.data.evidence} onChange={(event) => creditForm.setData('evidence', event.target.value)} placeholder="A portfolio link or the original upload is helpful." rows={3} minLength={10} maxLength={2000} required />
+                                        </label>
+                                        {creditForm.errors.evidence && <p role="alert" className="text-ink-expl">{creditForm.errors.evidence}</p>}
+                                        <button className="btn-ghost" disabled={creditForm.processing}>Submit claim</button>
+                                    </form>
+                                </details>
+                            )}
+                    </div>
+                )}
+
                 {post.title && <h2 className="mt-4 text-xl font-bold tracking-[-0.02em]">{post.title}</h2>}
                 {post.caption && <p className="mt-2 whitespace-pre-wrap text-[15px] leading-relaxed text-[#dfd7e5]">{post.caption}</p>}
+
+                {post.tags?.length > 0 && (
+                    <nav className="mt-3 flex flex-wrap gap-2" aria-label="Work tags">
+                        {post.tags.map((tag) => (
+                            <Link key={tag} href={route('gallery', { tag, window: 'all' })} className="chip max-w-full !whitespace-normal break-words">#{tag}</Link>
+                        ))}
+                    </nav>
+                )}
+                <Link href={route('knowledge.show', { type: 'post', id: post.id })} className="mt-3 inline-block text-sm text-ink-brand hover:underline">
+                    Improve tags / view tag history
+                </Link>
 
                 {post.type === 'comic' && post.chapter && (
                     <div className="mt-4 flex flex-wrap items-center gap-2.5 rounded-2xl border border-ink-line bg-ink-raised p-4">
@@ -103,11 +213,11 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
                                 Chapter {post.chapter.number} · {post.chapter.pages} pages
                             </p>
                         </div>
-                        <div className="flex gap-2">
-                            <Link href={route('comics.show', post.chapter.comic.slug)} className="btn-ghost">
+                        <div className="flex w-full gap-2 sm:w-auto">
+                            <Link href={route('comics.show', post.chapter.comic.slug)} className="btn-ghost flex-1 sm:flex-none">
                                 Series page
                             </Link>
-                            <Link href={post.chapter.url} className="btn-primary">
+                            <Link href={post.chapter.url} className="btn-primary flex-1 sm:flex-none">
                                 Read chapter
                             </Link>
                         </div>
@@ -116,19 +226,39 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
 
                 {post.media?.length > 1 && (
                     <div className={`mt-4 grid gap-2 ${post.type === 'album' ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2'}`}>
-                        {post.media.map((m) => (
-                            <MediaViewer key={m.id} media={m} blurred={false} className="overflow-hidden rounded-xl border border-ink-line" />
+                        {post.media.map((m, index) => (
+                            <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => setLightboxIndex(index)}
+                                className="group relative overflow-hidden rounded-xl border border-ink-line text-left focus:outline-none focus:ring-2 focus:ring-ink-brand"
+                            >
+                                <MediaViewer media={m} blurred={false} />
+                                <span className="absolute bottom-1.5 right-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[10.5px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">
+                                    Expand
+                                </span>
+                            </button>
                         ))}
                     </div>
                 )}
 
                 {post.media?.length === 1 && (
                     <div className="mt-4 overflow-hidden rounded-2xl border border-ink-line bg-black">
-                        <MediaViewer media={post.media[0]} blurred={blurred} onReveal={() => setRevealed(true)} />
+                        {post.media[0].kind === 'image' ? (
+                            <button
+                                type="button"
+                                onClick={() => setLightboxIndex(0)}
+                                className="block w-full text-left focus:outline-none"
+                            >
+                                <MediaViewer media={post.media[0]} blurred={blurred} onReveal={() => setRevealed(true)} />
+                            </button>
+                        ) : (
+                            <MediaViewer media={post.media[0]} blurred={blurred} onReveal={() => setRevealed(true)} />
+                        )}
                     </div>
                 )}
 
-                <div className="mt-4 flex items-center gap-5 border-b border-ink-line pb-4 text-[13.5px] text-ink-muted">
+                <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-ink-line pb-4 text-[13.5px] text-ink-muted">
                     <span>
                         <b className="text-ink-text">{compact(post.views)}</b> views
                     </span>
@@ -141,7 +271,7 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
                     <span className="ml-auto text-xs">{post.rating === 'explicit' ? '18+ · visible with explicit on' : 'All ages'}</span>
                 </div>
 
-                <div className="mt-3 flex items-center gap-2">
+                <div className="mt-3 flex flex-wrap items-center gap-2">
                     <button
                         type="button"
                         onClick={() => {
@@ -166,10 +296,10 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
                     </button>
                     <button
                         type="button"
-                        onClick={() => navigator.clipboard?.writeText(window.location.href)}
+                        onClick={copyLink}
                         className="btn-ghost gap-2"
                     >
-                        <Icon name="share" className="h-4 w-4" /> Copy link
+                        <Icon name="share" className="h-4 w-4" /> {copied ? 'Copied!' : 'Copy link'}
                     </button>
                     {auth.user && (
                         <button
@@ -195,6 +325,29 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
                         </button>
                     )}
                 </div>
+                {auth.user && (
+                    <div className="mt-3">
+                        {collections.length > 0 ? (
+                            <form className="flex flex-wrap items-center gap-2" onSubmit={(e) => {
+                                e.preventDefault();
+                                if (!collectionForm.data.collection) return;
+                                collectionForm.post(route('collections.posts.add', [collectionForm.data.collection, post.id]), {
+                                    preserveScroll: true,
+                                    onSuccess: () => setSaved(true),
+                                });
+                            }}>
+                                <label className="sr-only" htmlFor="post-collection">Private collection</label>
+                                <select id="post-collection" className="field-input w-auto max-w-full" value={collectionForm.data.collection} onChange={(e) => collectionForm.setData('collection', e.target.value)} required>
+                                    <option value="">Choose a collection</option>
+                                    {collections.map((list) => <option key={list.id} value={list.id}>{list.name}</option>)}
+                                </select>
+                                <button className="btn-ghost" disabled={collectionForm.processing || !collectionForm.data.collection}>Add to collection</button>
+                            </form>
+                        ) : (
+                            <Link className="link-brand text-sm" href={route('collections.index')}>Organize saved works in collections</Link>
+                        )}
+                    </div>
+                )}
             </article>
 
             {/* comments */}
@@ -208,7 +361,7 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
                             placeholder="Add a reply…"
                             rows={2}
                             maxLength={2000}
-                            className="field-input min-h-[52px] resize-none border-0 bg-transparent px-0 text-[15px] focus:ring-0"
+                            className="field-input min-h-[52px] min-w-0 flex-1 resize-none border-0 bg-transparent px-0 text-[15px] focus:ring-0"
                         />
                         <button type="submit" disabled={form.processing || !form.data.body.trim()} className="btn-primary self-end">
                             Reply
@@ -269,6 +422,55 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
                         ))}
                     </div>
                 </section>
+            )}
+
+            {lightboxIndex !== null && post.media?.[lightboxIndex] && (
+                <div
+                    className="fixed inset-0 z-[70] flex flex-col bg-black/95 backdrop-blur-md"
+                    role="dialog"
+                    aria-label="Image lightbox"
+                >
+                    <header className="flex min-h-[56px] shrink-0 items-center justify-between border-b border-white/10 px-4 py-2 text-white">
+                        <span className="text-sm font-semibold">
+                            {post.title ? `${post.title} · ` : ''}{lightboxIndex + 1} of {post.media.length}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setLightboxIndex(null)}
+                            className="btn-icon-flat h-9 w-9 text-white hover:bg-white/10"
+                            aria-label="Close lightbox"
+                        >
+                            <Icon name="close" className="h-5 w-5" />
+                        </button>
+                    </header>
+                    <div className="relative flex flex-1 items-center justify-center p-4">
+                        {post.media.length > 1 && (
+                            <button
+                                type="button"
+                                onClick={() => setLightboxIndex((i) => (i > 0 ? i - 1 : post.media.length - 1))}
+                                className="btn-icon-flat absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"
+                                aria-label="Previous image"
+                            >
+                                <Icon name="back" className="h-6 w-6" />
+                            </button>
+                        )}
+                        <img
+                            src={post.media[lightboxIndex].url}
+                            alt=""
+                            className="max-h-[82vh] max-w-[90vw] object-contain select-none"
+                        />
+                        {post.media.length > 1 && (
+                            <button
+                                type="button"
+                                onClick={() => setLightboxIndex((i) => (i < post.media.length - 1 ? i + 1 : 0))}
+                                className="btn-icon-flat absolute right-3 top-1/2 -translate-y-1/2 rotate-180 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"
+                                aria-label="Next image"
+                            >
+                                <Icon name="back" className="h-6 w-6" />
+                            </button>
+                        )}
+                    </div>
+                </div>
             )}
         </AppLayout>
     );

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\MediaResource;
+use App\Models\Block;
 use App\Models\Comic;
 use App\Models\ComicChapter;
 use App\Models\Post;
@@ -16,19 +17,23 @@ class ComicController extends Controller
     public function index(Request $request): Response
     {
         $comics = Comic::query()
-            ->with(['user', 'chapters' => fn ($q) => $q->with('pages.media')])
+            ->withCount('chapters')
+            ->with(['user', 'coverMedia', 'chapters' => fn ($q) => $q->limit(1)->with(['pages' => fn ($p) => $p->limit(1)->with('media')])])
             ->visibleRating($request->user()?->show_explicit ?? false)
             ->latest('last_chapter_at')
             ->take(24)
             ->get()
             ->map(fn (Comic $c) => $this->seriesCard($c));
 
-        return Inertia::render('Comics/Index', ['comics' => $comics]);
+        return Inertia::render('Comics/Index', [
+            'comics' => $comics,
+            'continueReading' => $request->user() ? $this->recentReading($request->user()) : [],
+        ]);
     }
 
     public function show(Request $request, string $slug): Response
     {
-        $comic = Comic::with(['user', 'chapters.pages.media'])
+        $comic = Comic::with(['user', 'coverMedia', 'chapters.pages.media'])
             ->where('slug', $slug)
             ->firstOrFail();
 
@@ -74,7 +79,7 @@ class ComicController extends Controller
     public function read(Request $request, string $slug, int $number): Response
     {
         $comic = Comic::where('slug', $slug)->firstOrFail();
-        $chapter = ComicChapter::with('pages.media')
+        $chapter = ComicChapter::published()->visibleAfterModeration()->with('pages.media')
             ->where('comic_id', $comic->id)
             ->where('number', $number)
             ->firstOrFail();
@@ -88,6 +93,7 @@ class ComicController extends Controller
 
         return Inertia::render('Comics/Read', [
             'comic' => [
+                'id' => $comic->id,
                 'slug' => $comic->slug,
                 'title' => $comic->title,
                 'author' => $comic->user->name,
@@ -107,7 +113,7 @@ class ComicController extends Controller
                 ] : null,
             ],
             'pages' => $chapter->pages->map(fn ($page) => (new MediaResource($page->media))->resolve()),
-            'startPage' => $progress && $progress->comic_chapter_id === $chapter->id ? (int) $progress->page : 1,
+            'startPage' => $progress && $progress->comic_chapter_id === $chapter->id ? max(1, min((int) $progress->page, $chapter->pages->count())) : 1,
             'defaultMode' => 'page',
         ]);
     }
@@ -130,16 +136,63 @@ class ComicController extends Controller
         }
 
         $data = $request->validate([
-            'chapter_id' => ['required', 'integer', 'exists:comic_chapters,id'],
+            'chapter_id' => ['required', 'integer'],
             'page' => ['required', 'integer', 'min:1'],
         ]);
 
-        ReadingProgress::updateOrCreate(
-            ['user_id' => $request->user()->id, 'comic_id' => $comic->id],
-            ['comic_chapter_id' => $data['chapter_id'], 'page' => $data['page']]
-        );
+        $chapter = $comic->chapters()->whereKey($data['chapter_id'])->firstOrFail();
+        $pages = $chapter->pages()->count();
+        if ($data['page'] > $pages) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['page' => 'That page is outside this chapter.']);
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($request, $comic, $chapter, $data, $pages) {
+            $viewer = $request->user();
+            ReadingProgress::upsert([[
+                'user_id' => $viewer->id,
+                'comic_id' => $comic->id,
+                'comic_chapter_id' => $chapter->id,
+                'page' => $data['page'],
+            ]], ['user_id', 'comic_id'], ['comic_chapter_id', 'page', 'updated_at']);
+
+            if ((int) $data['page'] === $pages) {
+                \Illuminate\Support\Facades\DB::table('comic_chapter_reads')->insertOrIgnore([
+                    'user_id' => $viewer->id, 'comic_chapter_id' => $chapter->id,
+                ]);
+            }
+        });
 
         return response()->json(['saved' => true]);
+    }
+
+    private function recentReading(\App\Models\User $viewer): array
+    {
+        $showExplicit = (bool) $viewer->show_explicit;
+        $readableChapters = fn ($query) => $query->visibleAfterModeration()->published()
+            ->when(! $showExplicit, fn ($q) => $q->where('rating', '!=', 'explicit'));
+
+        return ReadingProgress::where('user_id', $viewer->id)
+            ->whereHas('comic', fn ($q) => $q->visibleRating($showExplicit)
+                ->whereNotIn('user_id', Block::counterpartIds($viewer->id)))
+            ->whereHas('chapter', fn ($q) => $readableChapters($q)
+                ->whereColumn('comic_chapters.comic_id', 'reading_progress.comic_id')->has('pages'))
+            ->with([
+                'comic' => fn ($q) => $q->withMax(['chapters as newest_number' => $readableChapters], 'number'),
+                'chapter' => fn ($q) => $q->withCount('pages'),
+            ])
+            ->latest('updated_at')
+            ->orderByDesc('id')
+            ->limit(12)
+            ->get()
+            ->map(fn (ReadingProgress $progress) => [
+                'id' => $progress->comic_id,
+                'title' => $progress->comic->title,
+                'chapter' => $progress->chapter->number,
+                'page' => max(1, min((int) $progress->page, $progress->chapter->pages_count)),
+                'pages' => $progress->chapter->pages_count,
+                'hasNewerChapter' => $progress->comic->newest_number > $progress->chapter->number,
+                'url' => route('comics.read', [$progress->comic->slug, $progress->chapter->number], false),
+            ])->all();
     }
 
     private function seriesCard(Comic $c): array
@@ -154,7 +207,7 @@ class ComicController extends Controller
             'author' => $c->user->name,
             'author_username' => $c->user->username,
             'cover' => $c->cover()?->thumbUrl(),
-            'chapters' => $c->chapters->count(),
+            'chapters' => $c->chapters_count,
             'url' => route('comics.show', $c->slug, false),
         ];
     }

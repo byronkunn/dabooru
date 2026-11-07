@@ -3,7 +3,7 @@ import AppLayout, { TopBar, RatingBadge } from '@/Layouts/AppLayout';
 import { Icon } from '@/Components/Icons';
 
 export default function ComicShow({ comic }) {
-    const toggleFollow = () => router.post(route('comics.follow', comic.slug), {}, { preserveScroll: true });
+    const toggleFollow = () => router.post(route('comics.follow', comic.id), {}, { preserveScroll: true });
 
     return (
         <AppLayout>

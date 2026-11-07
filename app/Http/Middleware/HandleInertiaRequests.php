@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Support\AgeGate;
+use App\Support\StaffAccess;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -21,6 +22,7 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
+        $staffPermissions = $user ? StaffAccess::permissions($user) : [];
 
         return array_merge(parent::share($request), [
             'ageConfirmed' => AgeGate::confirmed(),
@@ -36,10 +38,14 @@ class HandleInertiaRequests extends Middleware
                     'avatar' => $user->avatarUrl(),
                     'banner' => $user->bannerUrl(),
                     'is_admin' => $user->isAdmin(),
+                    'staff_permissions' => $staffPermissions,
                     'show_explicit' => $user->show_explicit,
                     'email_verified' => (bool) $user->email_verified_at,
                 ] : null,
-                'unread_notifications' => $user ? \App\Models\AppNotification::where('user_id', $user->id)->whereNull('read_at')->count() : 0,
+                'unread_notifications' => $user ? \App\Models\AppNotification::where('user_id', $user->id)
+                    ->whereNull('read_at')
+                    ->when(! in_array('moderator', $staffPermissions, true), fn ($query) => $query->where('type', '!=', 'urgent_report'))
+                    ->count() : 0,
                 'unread_messages' => $user ? (int) \DB::table('messages')
                     ->join('conversation_participants', function ($j) use ($user) {
                         $j->on('conversation_participants.conversation_id', '=', 'messages.conversation_id')

@@ -14,6 +14,7 @@ export default function ProfileShow({ profile, posts, comics, tab, isOwner, isFo
         { key: 'works', label: 'Works' },
         { key: 'albums', label: 'Albums' },
         { key: 'comics', label: 'Comics' },
+        { key: 'credited', label: 'Credited works' },
     ];
 
     const goTab = (key) => router.get(route('profile.show', profile.username), { tab: key }, { preserveScroll: true, preserveState: true });
@@ -31,6 +32,11 @@ export default function ProfileShow({ profile, posts, comics, tab, isOwner, isFo
                 <Link href={route('search')} aria-label="Search" className="btn-icon-flat lg:hidden">
                     <Icon name="search" />
                 </Link>
+                {isOwner && (
+                    <Link href={route('collections.index')} aria-label="Saved works" className="btn-icon-flat shrink-0">
+                        <Icon name="save" />
+                    </Link>
+                )}
                 {isOwner && (
                     <Link href={route('settings.edit')} aria-label="Settings" className="btn-icon-flat">
                         <Icon name="settings" />

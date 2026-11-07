@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AppNotification;
+use App\Support\StaffAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -17,6 +18,10 @@ class NotificationController extends Controller
             : 'all';
 
         $query = AppNotification::where('user_id', $request->user()->id)->with('actor')->latest();
+
+        if (! in_array('moderator', StaffAccess::permissions($request->user()), true)) {
+            $query->where('type', '!=', 'urgent_report');
+        }
 
         $query->when($tab !== 'all', function ($q) use ($tab) {
             $q->where('type', rtrim($tab, 's'));

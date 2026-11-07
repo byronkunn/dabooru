@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Comic extends Model
 {
     protected $fillable = [
-        'user_id', 'slug', 'title', 'description', 'rating', 'status',
+        'user_id', 'slug', 'title', 'cover_media_id', 'description', 'rating', 'status',
         'views', 'likes_count', 'last_chapter_at',
     ];
 
@@ -25,7 +25,7 @@ class Comic extends Model
 
     public function chapters(): HasMany
     {
-        return $this->hasMany(ComicChapter::class)->orderByDesc('number');
+        return $this->hasMany(ComicChapter::class)->published()->visibleAfterModeration()->orderByDesc('number');
     }
 
     public function latestChapter(): ?ComicChapter
@@ -33,8 +33,17 @@ class Comic extends Model
         return $this->chapters()->first();
     }
 
+    public function coverMedia(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'cover_media_id');
+    }
+
     public function cover(): ?Media
     {
+        if ($this->cover_media_id) {
+            return $this->coverMedia;
+        }
+
         $latest = $this->relationLoaded('chapters')
             ? $this->chapters->first()
             : $this->chapters()->first();

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Comment;
 use App\Models\Post;
 use App\Models\AppNotification;
+use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -26,7 +27,7 @@ class CommentController extends Controller
 
         $post->increment('comments_count');
 
-        if ($post->user_id !== $request->user()->id) {
+        if ($post->user_id && $post->user_id !== $request->user()->id && Setting::enabled($post->user_id, 'notification_comments')) {
             AppNotification::create([
                 'user_id' => $post->user_id,
                 'actor_id' => $request->user()->id,

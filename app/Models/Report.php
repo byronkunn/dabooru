@@ -30,6 +30,13 @@ class Report extends Model
         return $this->belongsTo(User::class, 'handled_by');
     }
 
+    public function assignee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public const URGENT_REASONS = ['minor', 'non_consensual'];
+
     public const REASONS = [
         'minor' => 'Minor / underage or child-like depiction',
         'non_consensual' => 'Non-consensual or stolen',

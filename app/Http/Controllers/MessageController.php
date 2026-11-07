@@ -12,7 +12,8 @@ use Inertia\Response;
 
 class MessageController extends Controller
 {
-    public function index(Request $request): Response
+    /** Returns the inbox, or redirects into the new thread when ?to= is given. */
+    public function index(Request $request): Response|RedirectResponse
     {
         $user = $request->user();
 

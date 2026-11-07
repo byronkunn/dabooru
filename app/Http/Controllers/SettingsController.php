@@ -13,17 +13,9 @@ class SettingsController extends Controller
 {
     private const DEFAULTS = [
         'show_explicit' => true,
-        'mature_preview' => false,
-        'autoplay_videos' => false,
-        'animate_gifs' => true,
-        'reduce_motion' => false,
-        'reader_mode' => 'page',
         'notification_likes' => true,
         'notification_comments' => true,
         'notification_follows' => true,
-        'email_notifications' => false,
-        'dm_requests' => true,
-        'read_receipts' => true,
     ];
 
     public function edit(Request $request): Response
@@ -95,6 +87,24 @@ class SettingsController extends Controller
         }
 
         return back()->with('success', 'Settings saved.');
+    }
+
+    public function destroyAccount(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'password' => ['required', 'current_password'],
+        ]);
+
+        $user = $request->user();
+
+        \Illuminate\Support\Facades\Auth::logout();
+
+        $user->delete();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('gallery')->with('success', 'Your account has been deleted.');
     }
 
     private function stored(int $userId): array

@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\PostResource;
 use App\Http\Resources\UserResource;
+use App\Models\ArtistCreditClaim;
 use App\Models\Post;
 use App\Models\PostView;
+use App\Models\SavedCollection;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -14,7 +16,7 @@ class PostController extends Controller
 {
     public function show(Request $request, Post $post): Response
     {
-        $post->load(['user', 'media.media', 'chapter.comic']);
+        $post->load(['user', 'media.media', 'chapter.comic', 'tags', 'creditedArtist:id,username,name,banned_at,email_verified_at']);
         $this->recordView($request, $post);
 
         $viewer = $request->user();
@@ -28,6 +30,9 @@ class PostController extends Controller
 
         return Inertia::render('Posts/Show', [
             'post' => (new PostResource($post))->resolve(),
+            'creditClaim' => $viewer && $viewer->email_verified_at && $post->isExternalArtist() && ! $post->credited_artist_id
+                ? ['status' => ArtistCreditClaim::where('user_id', $viewer->id)->where('post_id', $post->id)->value('status')]
+                : null,
             'comments' => $post->comments()
                 ->with('user')
                 ->whereNull('parent_id')
@@ -42,6 +47,9 @@ class PostController extends Controller
                 ]),
             'more' => PostResource::collection($more)->resolve(),
             'liked' => $viewer ? $post->likes()->where('user_id', $viewer->id)->exists() : false,
+            'collections' => $viewer
+                ? SavedCollection::where('user_id', $viewer->id)->orderBy('name')->get(['id', 'name'])
+                : [],
             'saved' => $viewer ? $post->bookmarkedBy()->where('users.id', $viewer->id)->exists() : false,
             'followedAuthor' => $viewer ? $viewer->following()->whereKey($post->user_id)->exists() : false,
         ]);

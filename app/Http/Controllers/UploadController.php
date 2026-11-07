@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Media;
 use App\Models\Post;
+use App\Models\Tag;
 use App\Models\PostMedia;
 use App\Support\ImageProcessor;
 use Illuminate\Http\RedirectResponse;
@@ -43,7 +44,12 @@ class UploadController extends Controller
             'type' => ['required', 'in:image,gif,video,album'],
             'title' => ['nullable', 'string', 'max:160'],
             'caption' => ['nullable', 'string', 'max:1000'],
+            'tags' => ['nullable', 'string', 'max:500'],
             'rating' => ['required', 'in:sfw,suggestive,explicit'],
+            'draft' => ['sometimes', 'boolean'],
+            'is_original' => ['nullable', 'boolean'],
+            'artist_name' => ['nullable', 'string', 'max:120'],
+            'source_url' => ['nullable', 'url', 'max:500'],
         ]);
 
         $type = $request->input('type');
@@ -55,46 +61,69 @@ class UploadController extends Controller
 
         $files = $type === 'album' ? $request->file('files') : [$request->file('files')];
 
-        $post = DB::transaction(function () use ($request, $type, $files) {
+        $tags = Tag::parse($request->input('tags'));
+        $isOriginal = $request->boolean('is_original', true);
+        $artistName = $isOriginal ? null : $request->input('artist_name');
+        $sourceUrl = $isOriginal ? null : $request->input('source_url');
+
+        $draft = $request->boolean('draft');
+        $post = DB::transaction(function () use ($request, $type, $files, $tags, $isOriginal, $artistName, $sourceUrl, $draft) {
             $post = Post::create([
                 'user_id' => $request->user()->id,
                 'type' => $type,
+                'is_draft' => $draft,
+                'draft_tags' => $draft ? $tags : null,
                 'rating' => $request->input('rating'),
+                'is_original' => $isOriginal,
+                'artist_name' => $artistName,
+                'source_url' => $sourceUrl,
                 'title' => $request->input('title'),
                 'caption' => $request->input('caption'),
             ]);
 
+            if (! $draft) {
+                Tag::syncFor($post, $tags);
+            }
+
             foreach (array_values($files) as $i => $file) {
-                $media = $this->storeMedia($request->user(), $file, $type);
+                $media = $this->storeMedia($request->user(), $file, $type, $draft);
                 PostMedia::create(['post_id' => $post->id, 'media_id' => $media->id, 'position' => $i]);
             }
 
             return $post;
         });
 
+        if ($draft) {
+            return redirect()->route('studio.index')->with('success', 'Private draft saved.');
+        }
+
         return redirect()
             ->route('posts.show', $post)
             ->with('success', 'Work published.');
     }
 
-    private function storeMedia($user, $file, string $type): Media
+    private function storeMedia($user, $file, string $type, bool $draft): Media
     {
-        $disk = config('filesystems.upload_disk', 'public');
+        $disk = $draft ? 'local' : config('filesystems.upload_disk', 'public');
+        $directory = ($draft ? 'drafts/' : 'uploads/').$user->id;
 
         $isImage = $type !== 'video';
 
         // Re-encode images so EXIF / GPS never reaches storage.
         $path = $isImage
-            ? ImageProcessor::storeClean($file->getRealPath(), "uploads/{$user->id}", $disk)
-            : $file->store("uploads/{$user->id}", $disk);
+            ? ImageProcessor::storeClean($file->getRealPath(), $directory, $disk)
+            : $file->store($directory, $disk);
+        $thumbPath = $isImage
+            ? ImageProcessor::storeThumbnail($file->getRealPath(), $directory.'/thumbs', $disk)
+            : null;
 
         [$width, $height] = ImageProcessor::dimensions($file->getRealPath());
 
         return Media::create([
             'user_id' => $user->id,
-            'disk' => config('filesystems.upload_disk', 'public'),
+            'disk' => $disk,
             'path' => $path,
-            'thumb_path' => null,
+            'thumb_path' => $thumbPath,
             'kind' => match ($type) {
                 'video' => 'video',
                 'gif' => $file->getClientOriginalExtension() === 'gif' ? 'gif' : 'video',

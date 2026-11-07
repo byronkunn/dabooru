@@ -2,10 +2,12 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { Icon } from '@/Components/Icons';
 import SearchBox from '@/Components/SearchBox';
-import { useEffect, useRef } from 'react';
+import ReportDialog from '@/Components/ReportDialog';
+import { useEffect, useRef, useState } from 'react';
 
 export default function MessagesShow({ conversation }) {
     const { auth } = usePage().props;
+    const [reporting, setReporting] = useState(false);
     const form = useForm({ conversation_id: conversation.id, body: '' });
     const endRef = useRef(null);
 
@@ -43,12 +45,37 @@ export default function MessagesShow({ conversation }) {
                         </Link>
                         <p className="truncate text-[12.5px] text-ink-muted">@{conversation.with?.username}</p>
                     </div>
+                    {conversation.with && (
+                        <div className="ml-auto flex items-center gap-1.5">
+                            <button
+                                type="button"
+                                onClick={() => setReporting(true)}
+                                className="btn-icon-flat h-9 w-9 text-ink-muted hover:text-ink-text"
+                                title="Report user"
+                                aria-label="Report user"
+                            >
+                                <Icon name="flag" className="h-4 w-4" />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (window.confirm(`Block @${conversation.with.username}? They won't be able to message you or see your posts.`)) {
+                                        router.post(route('users.block', conversation.with.username));
+                                    }
+                                }}
+                                className="btn-ghost h-8 px-2.5 text-xs"
+                                aria-label="Block user"
+                            >
+                                Block
+                            </button>
+                        </div>
+                    )}
                 </header>
 
                 <div className="flex-1 space-y-2.5 overflow-y-auto px-4 py-4">
                     {conversation.messages.map((m) => (
                         <div key={m.id} className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 text-[14.5px] leading-snug ${m.mine ? 'ml-auto rounded-br-[5px] bg-gradient-to-br from-[#5a3b1f] to-[#4a2436]' : 'rounded-bl-[5px] bg-ink-raised'}`}>
-                            <p className="whitespace-pre-wrap">{m.body}</p>
+                            <p className="break-words whitespace-pre-wrap">{m.body}</p>
                             <span className="mt-1 block text-[10.5px] text-white/45">{m.created_at_human}</span>
                         </div>
                     ))}
@@ -68,6 +95,9 @@ export default function MessagesShow({ conversation }) {
                     </button>
                 </form>
             </div>
+            {reporting && conversation.with && (
+                <ReportDialog type="user" id={conversation.with.id} onClose={() => setReporting(false)} />
+            )}
         </AppLayout>
     );
 }
