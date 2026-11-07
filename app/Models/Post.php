@@ -104,6 +104,27 @@ class Post extends Model
         return $type && in_array($type, self::TYPES, true) ? $q->where('type', $type) : $q;
     }
 
+    /**
+     * Restrict to works whose media duration falls in [min, max] seconds.
+     * Only videos carry a duration, so this also keeps the feed to video.
+     */
+    public function scopeWithinDuration(Builder $q, ?int $min, ?int $max): Builder
+    {
+        if ($min === null && $max === null) {
+            return $q;
+        }
+
+        return $q->whereHas('media.media', function ($media) use ($min, $max) {
+            $media->whereNotNull('duration_seconds');
+            if ($min !== null) {
+                $media->where('duration_seconds', '>=', $min);
+            }
+            if ($max !== null) {
+                $media->where('duration_seconds', '<=', $max);
+            }
+        });
+    }
+
     public function scopeVisibleRating(Builder $q, bool $showExplicit): Builder
     {
         return $showExplicit ? $q : $q->where('rating', '!=', 'explicit');

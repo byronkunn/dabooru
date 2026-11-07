@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Media;
 use App\Models\Post;
+use App\Models\PostMedia;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -66,6 +68,45 @@ class GalleryTest extends TestCase
         $this->get('/?sort=newest')
             ->assertOk()
             ->assertInertia(fn ($page) => $page->where('posts.0.id', $video->id));
+    }
+
+    public function test_duration_filter_keeps_only_videos_in_range(): void
+    {
+        $artist = User::factory()->create();
+        $make = function (int $seconds) use ($artist) {
+            $media = Media::create([
+                'user_id' => $artist->id, 'disk' => 'public', 'path' => 'uploads/x.mp4',
+                'kind' => 'video', 'status' => 'ready', 'mime_type' => 'video/mp4',
+                'duration_seconds' => $seconds,
+            ]);
+            $post = Post::create(['user_id' => $artist->id, 'type' => 'video', 'rating' => 'sfw', 'title' => "Clip {$seconds}s"]);
+            PostMedia::create(['post_id' => $post->id, 'media_id' => $media->id, 'position' => 0]);
+
+            return $post;
+        };
+        $short = $make(5);
+        $long = $make(30);
+        $image = Post::create(['user_id' => $artist->id, 'type' => 'image', 'rating' => 'sfw', 'title' => 'Still']);
+
+        // no bounds: everything is returned
+        $this->get('/?window=all')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->has('posts', 3));
+
+        // min 10s drops the 5s clip and any work without a duration
+        $this->get('/?window=all&min_duration=10')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('posts', 1)
+                ->where('posts.0.id', $long->id)
+                ->where('filters.min_duration', 10));
+
+        // an upper bound keeps only the short clip
+        $this->get('/?window=all&max_duration=10')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('posts', 1)
+                ->where('posts.0.id', $short->id));
     }
 
     public function test_invalid_filters_fall_back_to_defaults(): void

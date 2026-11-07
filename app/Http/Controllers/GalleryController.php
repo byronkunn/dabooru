@@ -18,6 +18,16 @@ class GalleryController extends Controller
 
     private const WINDOWS = ['today', 'week', 'month', 'all'];
 
+    /** Read a duration bound from the query, clamped to a sane range. */
+    private function durationBound(mixed $value, ?int $default): ?int
+    {
+        if ($value === null || $value === '' || ! is_numeric($value)) {
+            return $default;
+        }
+
+        return max(1, min(3600, (int) $value));
+    }
+
     public function index(Request $request)
     {
         $format = in_array($request->query('format'), self::FORMATS, true) ? $request->query('format') : 'all';
@@ -28,6 +38,17 @@ class GalleryController extends Controller
         $showExplicit = $request->has('explicit')
             ? $request->boolean('explicit')
             : ($user ? (bool) $user->show_explicit : false);
+        // optional duration bounds, used by the duration slider
+        // 0 and "no upper bound" both mean "unfiltered", so they collapse to null
+        $minDuration = $this->durationBound($request->query('min_duration'), null);
+        $maxDuration = $this->durationBound($request->query('max_duration'), null);
+        if ($minDuration !== null && $minDuration <= 0) {
+            $minDuration = null;
+        }
+        if ($minDuration !== null && $maxDuration !== null && $minDuration > $maxDuration) {
+            [$minDuration, $maxDuration] = [$maxDuration, $minDuration];
+        }
+
         $term = trim((string) $request->query('q'));
 
         $tagInput = $request->query('tag');
@@ -42,6 +63,7 @@ class GalleryController extends Controller
             ->ofType($format)
             ->visibleRating($showExplicit)
             ->withinWindow($window)
+            ->withinDuration($minDuration, $maxDuration)
             ->sorted($sort)
             ->when(mb_strlen($term) >= 2, function ($q) use ($term) {
                 $like = '%'.str_replace(['\\', '%'], ['\\\\', '\\%'], $term).'%';
@@ -68,6 +90,8 @@ class GalleryController extends Controller
                 'format' => $format,
                 'sort' => $sort,
                 'window' => $window,
+                'min_duration' => $minDuration ?? '',
+                'max_duration' => $maxDuration ?? '',
                 'explicit' => $showExplicit,
                 'q' => $term,
                 'tag' => $tag,
@@ -105,6 +129,7 @@ class GalleryController extends Controller
                 ['value' => 'album', 'label' => 'Albums'],
                 ['value' => 'comic', 'label' => 'Comics'],
             ],
+            'durationBounds' => [0, 60],
             'ratingLabels' => Rating::LABELS,
         ]);
     }

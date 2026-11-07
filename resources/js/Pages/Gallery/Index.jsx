@@ -2,9 +2,11 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 import { Masonry } from '@/Components/Work';
 import GalleryAdSlot from '@/Components/GalleryAdSlot';
+import { Icon } from '@/Components/Icons';
+import GalleryFilterSheet, { GalleryFilterButton } from '@/Components/GalleryFilterSheet';
 import { useEffect, useRef, useState } from 'react';
 
-export default function GalleryIndex({ posts, page = 1, hasMore, filters, stats, sortOptions, windowOptions, formatOptions }) {
+export default function GalleryIndex({ posts, page = 1, hasMore, filters, stats, sortOptions, windowOptions, formatOptions, durationBounds = [0, 60] }) {
     const { auth } = usePage().props;
     const [busy, setBusy] = useState(false);
     const [items, setItems] = useState(posts);
@@ -13,6 +15,7 @@ export default function GalleryIndex({ posts, page = 1, hasMore, filters, stats,
     const [loadingMore, setLoadingMore] = useState(false);
     const [loadError, setLoadError] = useState(false);
     const requestRef = useRef(null);
+    const [sheetOpen, setSheetOpen] = useState(false);
 
     useEffect(() => {
         setItems(posts);
@@ -59,6 +62,20 @@ export default function GalleryIndex({ posts, page = 1, hasMore, filters, stats,
     };
 
     const visibleTags = [...new Set(items.flatMap((post) => post.tags ?? []))].slice(0, 12);
+
+    // how many non-default choices are active — shown as the badge on the icon
+    const activeCount = [
+        filters.sort !== 'top',
+        filters.window !== 'week',
+        filters.format !== 'all',
+        !!filters.tag,
+        filters.explicit,
+        !!filters.min_duration,
+        filters.max_duration != null && filters.max_duration !== '',
+    ].filter(Boolean).length;
+
+    const sortLabel = sortOptions.find((o) => o.value === filters.sort)?.label ?? 'Top rated';
+    const windowLabel = windowOptions.find((w) => w.value === filters.window)?.label ?? 'This week';
     const tabs = (
         <>
             <div className="scrollbar-none mt-3.5 flex gap-1.5 overflow-x-auto px-4 pb-2.5 md:px-5" role="tablist" aria-label="Format">
@@ -106,54 +123,7 @@ export default function GalleryIndex({ posts, page = 1, hasMore, filters, stats,
                 </div>
             ) : null}
 
-            <div className="scrollbar-none flex items-center gap-2 overflow-x-auto px-4 pb-3 md:px-5" role="group" aria-label="Sort and filters">
-                <div className="flex shrink-0 rounded-full border border-ink-line bg-ink-raised p-[3px]">
-                    {sortOptions.map((opt) => (
-                        <button
-                            key={opt.value}
-                            type="button"
-                            aria-pressed={filters.sort === opt.value}
-                            onClick={() => navigate({ sort: opt.value })}
-                            className={`min-h-9 whitespace-nowrap rounded-full px-3 text-[13px] font-semibold transition-colors ${
-                                filters.sort === opt.value ? 'bg-ink-brand text-[#1c1017]' : 'text-ink-muted hover:text-ink-text'
-                            }`}
-                        >
-                            {opt.label}
-                        </button>
-                    ))}
-                </div>
-
-                <button
-                    type="button"
-                    onClick={() => {
-                        const idx = windowOptions.findIndex((w) => w.value === filters.window);
-                        navigate({ window: windowOptions[(idx + 1) % windowOptions.length].value });
-                    }}
-                    className="chip shrink-0"
-                    aria-label="Change time window"
-                >
-                    {windowOptions.find((w) => w.value === filters.window)?.label}
-                    <span className="opacity-60">▾</span>
-                </button>
-
-                <div className="flex shrink-0 items-center gap-2 text-[13px] text-ink-muted">
-                    <button
-                        type="button"
-                        role="switch"
-                        aria-checked={filters.explicit}
-                        aria-label="Show explicit"
-                        onClick={() => (auth.user ? navigate({ explicit: !filters.explicit }) : router.post(route('age-gate.confirm')))}
-                        className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${filters.explicit ? 'bg-ink-brand/40' : 'bg-[#3a3242]'}`}
-                    >
-                        <span
-                            className={`absolute top-0.5 h-4 w-4 rounded-full transition-all ${
-                                filters.explicit ? 'left-[18px] bg-ink-brand' : 'left-0.5 bg-[#8d8297]'
-                            }`}
-                        />
-                    </button>
-                    <span className="hidden sm:inline">Show explicit</span>
-                </div>
-            </div>
+            {/* sort + filters live behind the icon in the top bar */}
         </>
     );
 
@@ -164,9 +134,37 @@ export default function GalleryIndex({ posts, page = 1, hasMore, filters, stats,
                 title="Gallery"
                 subtitle={`${stats.works.toLocaleString()} works · ${stats.artists.toLocaleString()} artists`}
                 tabs={tabs}
+                actions={<GalleryFilterButton onClick={() => setSheetOpen((v) => !v)} activeCount={activeCount} expanded={sheetOpen} />}
             />
 
-            <div className="px-2.5 pb-16 pt-3 md:px-5 md:pt-4">
+            <GalleryFilterSheet
+                open={sheetOpen}
+                onClose={() => setSheetOpen(false)}
+                filters={filters}
+                sortOptions={sortOptions}
+                windowOptions={windowOptions}
+                formatOptions={formatOptions}
+                durationBounds={durationBounds}
+                onApply={(next) => navigate(next)}
+            />
+
+            <div className="flex items-center gap-2 px-3.5 pb-1 pt-2.5 text-[12.5px] text-ink-muted md:px-5">
+                <Icon name="filter" className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                <span className="truncate">
+                    {sortLabel} · {windowLabel}
+                    {filters.tag ? ` · #${filters.tag}` : ''}
+                    {filters.min_duration || (filters.max_duration !== '' && filters.max_duration != null)
+                        ? ` · ${filters.min_duration || 0}–${filters.max_duration || durationBounds[1]}s`
+                        : ''}
+                </span>
+                {(activeCount > 0) && (
+                    <button type="button" onClick={() => navigate({ sort: 'top', window: 'week', format: 'all', tag: '', q: '', min_duration: '', max_duration: '' })} className="ml-auto shrink-0 text-[12px] font-semibold text-ink-brand hover:underline">
+                        Clear
+                    </button>
+                )}
+            </div>
+
+            <div className="px-2.5 pb-16 pt-2 md:px-5 md:pt-3">
                 {items.length === 0 ? (
                     <div className="grid place-items-center gap-3 py-24 text-center text-ink-muted">
                         <p className="text-[15px]">Nothing in this filter yet.</p>

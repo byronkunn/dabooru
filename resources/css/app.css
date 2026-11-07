@@ -207,3 +207,40 @@ img[data-seed] {
 .rate-badge-explicit {
     @apply inline-flex items-center rounded-md border border-ink-expl/40 bg-ink-expl/20 px-1.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-[#ff98a9] backdrop-blur;
 }
+
+
+/* ---------------------------------------------------------------- range slider
+   Two overlaid native inputs share one visual track (see GalleryFilterSheet). */
+.range-thumb {
+    pointer-events: none;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 100%;
+    margin: 0;
+    background: transparent;
+}
+.range-thumb::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    pointer-events: auto;
+    height: 18px;
+    width: 18px;
+    border-radius: 9999px;
+    background: #e8b04b;
+    border: 3px solid #1c1017;
+    box-shadow: 0 0 0 1px #e8b04b;
+    cursor: pointer;
+}
+.range-thumb::-moz-range-thumb {
+    pointer-events: auto;
+    height: 18px;
+    width: 18px;
+    border-radius: 9999px;
+    background: #e8b04b;
+    border: 3px solid #1c1017;
+    box-shadow: 0 0 0 1px #e8b04b;
+    cursor: pointer;
+}
+.range-thumb::-moz-range-track {
+    background: transparent;
+}

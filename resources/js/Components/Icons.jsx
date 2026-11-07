@@ -60,6 +60,9 @@ export function Icon({ name, className = 'w-5 h-5' }) {
         ),
         back: <path d="M15 5l-7 7 7 7" />,
         close: <path d="M6 6l12 12M18 6L6 18" />,
+        // funnel — the sort/filter control
+        filter: <path d="M3 4.5h18l-7 8.2v6.3l-4 2.5v-8.8L3 4.5z" />,
+        check: <path d="M4 12.5l5 5L20 6.5" />,
         plus: <path d="M12 5v14M5 12h14" />,
         send: <path d="M4 12l16-8-6 16-3-6-7-2z" />,
         more: (
