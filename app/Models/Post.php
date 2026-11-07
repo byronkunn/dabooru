@@ -93,6 +93,16 @@ class Post extends Model
         };
     }
 
+    public function isUnattributed(): bool
+    {
+        return $this->user_id === null;
+    }
+
+    public function displayAuthor(): string
+    {
+        return $this->user?->name ?? 'Unsorted';
+    }
+
     public function cover(): ?Media
     {
         return $this->media->first()?->media;

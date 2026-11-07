@@ -23,7 +23,7 @@ class PostResource extends JsonResource
             'comments' => $this->comments_count,
             'created_at' => $this->created_at?->toIso8601String(),
             'created_at_human' => $this->created_at?->diffForHumans(short: true),
-            'user' => $this->relationLoaded('user') ? (new UserResource($this->user))->resolve() : null,
+            'user' => ($this->relationLoaded('user') && $this->user) ? (new UserResource($this->user))->resolve() : null,
             'media' => MediaResource::collection(
                 $this->relationLoaded('media') ? $this->media->pluck('media')->filter() : collect()
             )->resolve(),

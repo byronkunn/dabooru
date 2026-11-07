@@ -175,7 +175,7 @@ function BottomNav() {
 
 /* ---------------------------------------------------------------- right rail */
 function RightRail() {
-    const { suggested = [], trendingTags = [], ageConfirmed } = usePage().props;
+    const { suggested = [] } = usePage().props;
 
     return (
         <aside className="sticky top-0 hidden h-screen flex-col gap-4 overflow-y-auto border-l border-ink-line px-4 py-5 lg:flex">
@@ -201,7 +201,7 @@ function RightRail() {
 
             {suggested.length > 0 && (
                 <div className="panel">
-                    <h3 className="card-title">Artists to follow</h3>
+                    <h3 className="card-title">Artists with work here</h3>
                     {suggested.map((artist) => (
                         <div key={artist.id} className="flex items-center gap-2.5 py-2">
                             <Link href={route('profile.show', artist.username)}>
@@ -216,21 +216,9 @@ function RightRail() {
                 </div>
             )}
 
-            {trendingTags.length > 0 && (
-                <div className="panel">
-                    <h3 className="card-title">Trending tags</h3>
-                    <div className="flex flex-wrap gap-1.5">
-                        {trendingTags.map((tag) => (
-                            <span key={tag} className="chip-plain">
-                                {tag}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            )}
-
             <p className="px-1 text-[11.5px] leading-relaxed text-ink-faint">
-                No ads inside the comic reader. Promoted tiles are labelled and collapse when empty.
+                Work with no artist in its file name is filed under <b className="text-ink-muted">Unsorted</b>.
+                No ads inside the comic reader.
             </p>
         </aside>
     );
@@ -288,7 +276,7 @@ function DemoSwitcher() {
                 <span className="grid h-5 w-5 place-items-center rounded-full bg-ink-brand text-[10px] font-black text-[#1c1017]">
                     ⇄
                 </span>
-                <span>Demo</span>
+                <span>Accounts</span>
             </button>
         </div>
     );

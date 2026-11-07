@@ -33,29 +33,57 @@ Then open **http://127.0.0.1:8001** and log in with the demo account.
 
 `composer setup` also exists as a one-shot bootstrap, but it appends a second `DB_` block to `.env`; the explicit steps above are what was actually used to get this build running.
 
-## Demo accounts
+## Where the content comes from
 
-Three accounts ship with the seed data. **You do not need their passwords** — open
-[http://127.0.0.1:8001/login](http://127.0.0.1:8001/login) and click one under
-"Jump in as…". (The buttons only exist when `APP_ENV` is `local` or `testing`.)
+The library is built **entirely from the files in `sfw/`** — nothing is
+invented. Running `php artisan migrate:fresh --seed` gives you:
 
-| Account | Email | Password | Role | What it can do |
-| --- | --- | --- | --- | --- |
-| **mira.ink** (`mira_ink`) | demo@inkwell.test | `password` | Artist · owner | 8 works incl. albums and media, 2 comic series. Uploading, comics, settings all apply to this account. |
-| **Rin Senpai** (`rin_senpai`) | rin_senpai@inkwell.test | `password` | Artist · manga | 7 works incl. two videos, runs *Neon After Dark*. |
-| **Sam Viewer** (`viewer`) | viewer@inkwell.test | `password` | Viewer | Follows both artists, likes, comments, saved posts and reading progress — but has **no posts** and is not expected to upload. |
+| | Count | Note |
+| --- | --- | --- |
+| Image posts | 49 | one per file in `sfw/image/` |
+| Video posts | 23 | one per usable file in `sfw/video/`; posters come from `sfw/thumbs/` |
+| Credited artists | 6 | **only** files whose name carries a name (`john-staub-marvel-...` → John Staub, `pavel-yankovich-01` → Pavel Yankovich) |
+| Unattributed posts | 64 | hashed file names (`148a0f0e….png`, `sample_<hash>.jpg`) — posted as **Unsorted**, not assigned a fake artist |
 
-Signing in with the form works too: any of the emails above with `password`.
+Titles come from the file name when it has real words in it, and are left empty
+otherwise. No comics, likes, comments, follows, messages or notifications are
+fabricated — there's no real data behind them, so the site starts with an empty
+social graph.
 
-### Content comes from `sfw/`
+`public/sfw/content` is a symlink to `sfw/`, so files are served in place with
+no copying and no external image hosts.
 
-The demo gallery is built from the real files in `sfw/` (images, videos, avatars,
-banners). `public/sfw/content` is a symlink to that folder, so the files are
-served straight from where they are — nothing is copied into storage and there
-are no external image hosts. Video posters are the JPEGs in `sfw/thumbs`,
-generated with `ffmpeg`. If you add files to `sfw/`, re-run
-`php artisan db:seed` after regenerating `database/data/sfw/manifest.json`
-(the seeder reads dimensions from it).
+### Crediting a file
+
+Rename it so the first two real words are the artist:
+
+```
+sfw/image/jane-doe-dragon-study.jpg   →  Jane Doe, "Jane Doe Dragon Study"
+```
+
+then regenerate the manifest and reseed:
+
+```bash
+php artisan db:seed --class=DatabaseSeeder   # after: php artisan migrate:fresh
+```
+
+The manifest (`database/data/sfw/manifest.json`) holds every file's dimensions,
+regenerated with `python3` + Pillow + `ffprobe`; the seeder never touches an
+image library.
+
+### Accounts
+
+There are no demo personas. The credited artists above are real library
+accounts with unguessable passwords; `/login` lists up to three of them for
+one-click sign-in **only when `APP_ENV=local` or `testing`**, otherwise the
+quick-login route does not exist.
+
+To get an account you can actually log into and upload with:
+
+```bash
+php artisan tinker
+>>> App\Models\User::create(['name'=>'You','username'=>'you','email'=>'you@example.com','password'=>'password']);
+```
 
 
 ## Routes
@@ -224,12 +252,10 @@ AWS_BUCKET=inkwell-media
 
 The `s3` disk reads those variables from `config/filesystems.php`. Existing rows keep their own `disk` column, so old local uploads still resolve after the switch and new uploads go to the bucket. For production, also consider switching `BROADCAST_CONNECTION`, `QUEUE_CONNECTION` and `CACHE_STORE` off `database` once those services exist.
 
-## Switching between demo accounts
+## Switching accounts
 
-A **Demo accounts** button floats in the bottom-left of every page. Click it and
-pick one of the three accounts to switch instantly — handy for seeing the same
-gallery as an artist (with upload) and then as the viewer (without).
+The **Accounts** button in the bottom-left (desktop) lists the credited library
+artists, so you can look at the site as different people. It only renders when
+the server sends `demoAccounts`, which happens only when the `demo.login` route
+exists (`APP_ENV=local` or `testing`). On mobile it lives in Settings.
 
-It only renders when the server sends `demoAccounts` in shared Inertia props,
-which happens only when the `demo.login` route exists (i.e. `APP_ENV=local` or
-`testing`). On a production environment it disappears along with the route.

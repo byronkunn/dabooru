@@ -15,7 +15,7 @@ class DemoLoginController extends Controller
 {
     public function login(string $username): RedirectResponse
     {
-        abort_unless(in_array($username, array_column(DemoAccounts::ACCOUNTS, 'username'), true), 404);
+        abort_unless(in_array($username, DemoAccounts::usernames(), true), 404);
 
         $user = \App\Models\User::where('username', $username)->firstOrFail();
 

@@ -19,7 +19,7 @@ export default function Login({ status, canResetPassword, demoAccounts = [] }) {
             {demoAccounts.length > 0 && (
                 <div className="mb-5 rounded-2xl border border-ink-line bg-ink-surface p-3">
                     <p className="mb-2 px-1 text-[11px] font-extrabold uppercase tracking-[0.12em] text-ink-faint">
-                        Jump in as…
+                        Sign in as…
                     </p>
                     <div className="space-y-1.5">
                         {demoAccounts.map((account) => (
@@ -40,7 +40,7 @@ export default function Login({ status, canResetPassword, demoAccounts = [] }) {
                         ))}
                     </div>
                     <p className="mt-2 px-1 text-[11.5px] leading-snug text-ink-faint">
-                        Local demo accounts. Disabled when APP_ENV=production.
+                        Library accounts for local testing. Disabled when APP_ENV=production.
                     </p>
                 </div>
             )}
@@ -72,7 +72,7 @@ export default function Login({ status, canResetPassword, demoAccounts = [] }) {
                 </Link>
             </p>
             <p className="mt-2 text-center text-[12.5px] text-ink-faint">
-                All demo accounts use <span className="text-ink-muted">password</span>.
+                Library accounts are for looking, not posting — they have no usable password.
             </p>
         </GuestLayout>
     );

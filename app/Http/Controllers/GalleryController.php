@@ -55,15 +55,16 @@ class GalleryController extends Controller
             ],
             'stats' => [
                 'works' => Post::count(),
-                'artists' => \App\Models\User::verified()->count(),
+                'artists' => \App\Models\User::verified()->has('posts')->count(),
             ],
-            'trendingTags' => ['#neon', '#sketch', '#webtoon', '#yuri', '#romance', '#oc', '#comic', '#lineart'],
+            // real credited artists only: never the "unsorted" bucket
             'suggested' => \App\Http\Resources\UserResource::collection(
                 \App\Models\User::verified()
-                    ->whereKeyNot($user?->id ?? 0)
-                    ->inRandomOrder()
-                    ->take(3)
+                    ->when($user, fn ($q) => $q->whereKeyNot($user->id))
                     ->withCount(['followers', 'posts'])
+                    ->orderByDesc('posts_count')
+                    ->orderBy('name')
+                    ->take(3)
                     ->get()
             )->resolve(),
             'sortOptions' => [

@@ -32,20 +32,31 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
 
             <article className="mx-auto max-w-[720px] border-b border-ink-line px-4 pb-4 pt-4 md:px-5">
                 <div className="flex items-center gap-2.5">
-                    <Link href={route('profile.show', post.user.username)}>
-                        <img src={post.user.avatar} alt="" className="h-11 w-11 rounded-full object-cover" />
-                    </Link>
-                    <div className="min-w-0">
-                        <Link href={route('profile.show', post.user.username)} className="block truncate text-[15px] font-bold hover:underline">
-                            {post.user.name}
+                    {post.user ? (
+                        <Link href={route('profile.show', post.user.username)}>
+                            <img src={post.user.avatar} alt="" className="h-11 w-11 rounded-full bg-ink-raised object-cover" />
                         </Link>
+                    ) : (
+                        <span className="grid h-11 w-11 place-items-center rounded-full bg-ink-raised text-ink-faint">
+                            <Icon name="user" className="h-5 w-5" />
+                        </span>
+                    )}
+                    <div className="min-w-0">
+                        {post.user ? (
+                            <Link href={route('profile.show', post.user.username)} className="block truncate text-[15px] font-bold hover:underline">
+                                {post.user.name}
+                            </Link>
+                        ) : (
+                            <span className="block truncate text-[15px] font-bold">Unsorted</span>
+                        )}
                         <p className="truncate text-[13px] text-ink-muted">
-                            @{post.user.username} · {post.created_at_human}
+                            {post.user ? `@${post.user.username} · ` : 'Unattributed · '}
+                            {post.created_at_human}
                         </p>
                     </div>
                     <div className="ml-auto flex items-center gap-2">
                         <RatingBadge rating={post.rating} label={post.rating_label} />
-                        {auth.user && auth.user.id !== post.user.id && (
+                        {auth.user && post.user && auth.user.id !== post.user.id && (
                             <button
                                 type="button"
                                 onClick={() => {
@@ -193,7 +204,9 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
 
             {more.length > 0 && (
                 <section className="mx-auto max-w-[720px] px-3 py-5 md:px-5">
-                    <h2 className="mb-3 px-1 text-[15px] font-bold">More from {post.user.name}</h2>
+                    <h2 className="mb-3 px-1 text-[15px] font-bold">
+                        {post.user ? `More from ${post.user.name}` : 'More from the library'}
+                    </h2>
                     <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
                         {more.map((item) => (
                             <WorkCell key={item.id} post={item} wide />

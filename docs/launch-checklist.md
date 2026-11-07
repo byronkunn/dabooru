@@ -314,17 +314,22 @@ A few `.env.example` defaults are also worth reviewing for production, if not st
 
 ---
 
-## Appendix: the demo accounts are local-only
+## Appendix: the library and the local quick-login
 
-The "Jump in as…" buttons on `/login` sign you in with one click by hitting
+The seeded library is built from the files in `sfw/` — 49 images and 23 videos,
+credited only where the file name names an artist, with everything else filed as
+**Unsorted**. There are no demo personas, so deleting the seed data before
+launch is a single `php artisan migrate:fresh`.
+
+The "Jump in as…" list on `/login` and the **Accounts** button in the app hit
 `GET /demo-login/{username}` (`DemoLoginController`). The route is registered
 inside an `app()->environment(['local', 'testing'])` guard in `routes/auth.php`,
-so it **does not exist** when `APP_ENV=production`. Two rules:
+so it **does not exist** when `APP_ENV=production`.
 
-- [ ] Never set `APP_ENV` to anything other than `production` on a public box.
-- [ ] Before launch, either delete `app/Http/Controllers/DemoLoginController.php`
-      and `app/Support/DemoAccounts.php` or leave them — they are dead code on a
-      production environment, but the demo users (`@inkwell.test`) must still be
-      gone from the database.
-
-Demo accounts and their passwords (`password`) are for local development only.
+- [ ] Never run a public box with `APP_ENV` anything other than `production`.
+- [ ] Before launch, wipe the seeded library (`migrate:fresh`) so only real
+      artists' uploads exist.
+- [ ] The credited library accounts (`john-staub@sfw.local` etc.) have random,
+      unusable passwords. Delete them or hand the artists real accounts.
+- [ ] Decide who owns the **Unsorted** account long-term — it is an uploader of
+      record for anonymous files, not a person.

@@ -39,6 +39,8 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
+            'is_unsorted' => 'boolean',
+            'is_admin' => 'boolean',
             'email_verified_at' => 'datetime',
             'age_confirmed_at' => 'datetime',
             'banned_at' => 'datetime',
@@ -107,9 +109,14 @@ class User extends Authenticatable
         return '/avatar.svg?h='.$hue.'&l='.Str::substr($this->username ?: 'ink', 0, 1);
     }
 
+    public function isUnsorted(): bool
+    {
+        return (bool) $this->is_unsorted;
+    }
+
     public function scopeVerified(Builder $q): Builder
     {
-        return $q->whereNotNull('email_verified_at')->whereNull('banned_at');
+        return $q->whereNotNull('email_verified_at')->whereNull('banned_at')->where('is_unsorted', false);
     }
 
     public function scopeFollowingPosts(Builder $q, int $userId)

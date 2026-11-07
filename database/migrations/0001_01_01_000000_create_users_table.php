@@ -26,6 +26,7 @@ return new class extends Migration
             $table->timestamp('age_confirmed_at')->nullable();
             $table->boolean('show_explicit')->default(true);
             $table->boolean('is_admin')->default(false);
+            $table->boolean('is_unsorted')->default(false);
             $table->timestamp('banned_at')->nullable();
             $table->string('banned_reason')->nullable();
             $table->rememberToken();

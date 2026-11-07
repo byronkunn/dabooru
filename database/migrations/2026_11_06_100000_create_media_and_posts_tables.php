@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('media', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->string('disk')->default('public');
             $table->string('path');                       // original
             $table->string('thumb_path')->nullable();     // grid / feed derivative
@@ -28,7 +28,7 @@ return new class extends Migration
 
         Schema::create('posts', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->string('type');                       // image | gif | video | album | comic
             $table->string('rating')->default('sfw');     // sfw | suggestive | explicit
             $table->string('title')->nullable();

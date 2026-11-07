@@ -122,17 +122,19 @@ export function WorkCell({ post, wide = false }) {
 
             <div className="flex flex-col gap-1.5 p-2.5">
                 <div className="flex min-w-0 items-center gap-2">
-                    <img
-                        src={post.user?.avatar}
-                        alt=""
-                        className="h-[22px] w-[22px] shrink-0 rounded-full bg-ink-raised object-cover"
-                        onError={(e) => {
-                            e.currentTarget.onerror = null;
-                            e.currentTarget.src = '/avatar.svg';
-                        }}
-                    />
-                    <span className="truncate text-[13px] font-semibold">{post.user?.name ?? 'Artist'}</span>
-                    <span className="hidden truncate text-[13px] text-ink-muted sm:inline">@{post.user?.username ?? ''}</span>
+                    {post.user ? (
+                        <img
+                            src={post.user.avatar}
+                            alt=""
+                            className="h-[22px] w-[22px] shrink-0 rounded-full bg-ink-raised object-cover"
+                        />
+                    ) : (
+                        <span className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full bg-ink-raised text-ink-faint">
+                            <Icon name="user" className="h-3 w-3" />
+                        </span>
+                    )}
+                    <span className="truncate text-[13px] font-semibold">{post.user?.name ?? 'Unsorted'}</span>
+                    {post.user && <span className="hidden truncate text-[13px] text-ink-muted sm:inline">@{post.user.username}</span>}
                 </div>
                 {!wide && post.title && <p className="line-clamp-2 text-[13px] leading-snug text-[#d8d0dd]">{post.title}</p>}
                 <div className="flex items-center gap-3.5 text-xs text-ink-muted">
@@ -168,15 +170,25 @@ export function PostCard({ post, liked = false, saved = false }) {
 
     return (
         <article className="grid grid-cols-[40px_minmax(0,1fr)] gap-2.5 border-b border-ink-line px-3.5 py-3.5 hover:bg-white/[0.015] md:grid-cols-[48px_minmax(0,1fr)] md:gap-3 md:px-5 md:py-4">
-            <Link href={route('profile.show', post.user?.username ?? 'me')}>
-                <img src={post.user?.avatar} alt="" className="h-10 w-10 rounded-full object-cover md:h-12 md:w-12" />
-            </Link>
+            {post.user ? (
+                <Link href={route('profile.show', post.user.username)}>
+                    <img src={post.user.avatar} alt="" className="h-10 w-10 rounded-full bg-ink-raised object-cover md:h-12 md:w-12" />
+                </Link>
+            ) : (
+                <span className="grid h-10 w-10 place-items-center rounded-full bg-ink-raised text-ink-faint md:h-12 md:w-12">
+                    <Icon name="user" className="h-5 w-5" />
+                </span>
+            )}
             <div className="min-w-0">
                 <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-[14.5px]">
-                    <Link href={route('profile.show', post.user?.username)} className="font-bold hover:underline">
-                        {post.user?.name}
-                    </Link>
-                    <span className="text-[13.5px] font-medium text-ink-muted">@{post.user?.username}</span>
+                    {post.user ? (
+                        <Link href={route('profile.show', post.user.username)} className="font-bold hover:underline">
+                            {post.user.name}
+                        </Link>
+                    ) : (
+                        <span className="font-bold">Unsorted</span>
+                    )}
+                    {post.user && <span className="text-[13.5px] font-medium text-ink-muted">@{post.user.username}</span>}
                     <span className="text-ink-muted">·</span>
                     <time className="text-[13.5px] text-ink-muted" dateTime={post.created_at}>
                         {post.created_at_human}
