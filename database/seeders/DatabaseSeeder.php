@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call(AdminSeeder::class);
         $this->seedLibrary();
 
         $this->command?->info(sprintf(

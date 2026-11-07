@@ -4,6 +4,7 @@ import { MediaViewer, WorkCell } from '@/Components/Work';
 import { Icon } from '@/Components/Icons';
 import { compact } from '@/Lib/format';
 import { useState } from 'react';
+import ReportDialog from '@/Components/ReportDialog';
 
 export default function PostShow({ post, comments, more, liked, saved, followedAuthor }) {
     const { auth } = usePage().props;
@@ -11,6 +12,7 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
     const [isLiked, setLiked] = useState(liked);
     const [isSaved, setSaved] = useState(saved);
     const [isFollowing, setFollowing] = useState(followedAuthor);
+    const [reporting, setReporting] = useState(false);
     const form = useForm({ body: '' });
 
     const blurred = post.rating === 'explicit' && !revealed;
@@ -56,6 +58,24 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
                     </div>
                     <div className="ml-auto flex items-center gap-2">
                         <RatingBadge rating={post.rating} label={post.rating_label} />
+                        {auth.user && post.user && auth.user.id === post.user.id && (
+                            <>
+                                <Link href={route('posts.edit', post.id)} className="btn-ghost h-9 px-3 text-[13px]">
+                                    Edit
+                                </Link>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (window.confirm('Delete this work? This cannot be undone.')) {
+                                            router.delete(route('posts.destroy', post.id));
+                                        }
+                                    }}
+                                    className="btn-ghost h-9 border-[#6b2c3a] px-3 text-[13px] text-[#ff98a9]"
+                                >
+                                    Delete
+                                </button>
+                            </>
+                        )}
                         {auth.user && post.user && auth.user.id !== post.user.id && (
                             <button
                                 type="button"
@@ -151,6 +171,29 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
                     >
                         <Icon name="share" className="h-4 w-4" /> Copy link
                     </button>
+                    {auth.user && (
+                        <button
+                            type="button"
+                            onClick={() => setReporting(true)}
+                            className="btn-ghost gap-2"
+                            title="Report this work to a moderator"
+                        >
+                            <Icon name="flag" className="h-4 w-4" /> Report
+                        </button>
+                    )}
+                    {auth.user && post.user && auth.user.id !== post.user.id && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (window.confirm(`Block @${post.user.username}? Their work disappears from your feed.`)) {
+                                    router.post(route('users.block', post.user.username));
+                                }
+                            }}
+                            className="btn-ghost gap-2"
+                        >
+                            Block
+                        </button>
+                    )}
                 </div>
             </article>
 
@@ -196,11 +239,24 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
                                     <span className="text-[13px] text-ink-muted">{comment.created_at_human}</span>
                                 </p>
                                 <p className="mt-1 whitespace-pre-wrap text-[14.5px] leading-snug">{comment.body}</p>
+                                {auth.user?.id === comment.user.id && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (window.confirm('Delete this comment?')) router.delete(route('comments.destroy', comment.id), { preserveScroll: true });
+                                        }}
+                                        className="mt-1 text-[12px] text-ink-faint hover:text-[#ff98a9]"
+                                    >
+                                        Delete
+                                    </button>
+                                )}
                             </div>
                         </div>
                     ))
                 )}
             </section>
+
+            {reporting && <ReportDialog type="post" id={post.id} onClose={() => setReporting(false)} />}
 
             {more.length > 0 && (
                 <section className="mx-auto max-w-[720px] px-3 py-5 md:px-5">

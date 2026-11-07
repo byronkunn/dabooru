@@ -6,6 +6,10 @@ You are about to run an NSFW-capable artist site for real. The app is built and 
 
 | Built and working | Not built |
 | --- | --- |
+| Admin panel: report queue with remove/dismiss, user ban/unban, permanent moderation log | Bulk moderation tools (pagination exists, no bulk actions) |
+| Legal pages: terms, privacy, content policy, DMCA form with the statutory statements | A lawyer's review of all four |
+| DMCA notices stored and surfaced in the log | Email replies to a DMCA notice (it is stored, not emailed) |
+| Edit/delete your own posts, comments and DMs; block/unblock users | Edit history, appeals |
 | `/age-gate` with a one-year `inkwell_age_ok` cookie (`app/Support/AgeGate.php`, `EnsureAgeConfirmed` middleware) | Moderation admin panel (no admin UI; `is_admin` exists but nothing reads it as a route guard) |
 | `age_confirmed_at` on users; registration requires a date of birth that passes an 18+ validation rule | DMCA form or `DMCA` page anywhere in `routes/`, `app/`, or the React pages |
 | Email verification routes (`routes/auth.php`, Breeze) | Content policy page, terms of service page, privacy policy page |

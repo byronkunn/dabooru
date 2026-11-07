@@ -194,6 +194,47 @@ The design doc and the static HTML mockups (15 screens at 3 breakpoints) are in
 `mockup/` folder. The HTML screens are static mockups; `resources/js/Pages` is
 the implementation.
 
+## Moderation, legal and ownership
+
+### Admin panel (`/admin`) — moderators only
+
+Set `is_admin` on an account (the seeder creates `mod@inkwell.test` / `password`).
+The **Moderation** link appears in the rail for admins; everyone else gets a 403.
+
+| Page | What it does |
+| --- | --- |
+| **Reports** | Queue of user reports with a preview of the reported post/comment/user (explicit previews are blurred). "Remove & close" soft-deletes the content, bans the user if they were the target, and writes to the log. "Dismiss" closes it. |
+| **Users** | Search by name/handle/email, filter banned or the Unsorted bucket, ban (requires a reason) and unban. Admins can't be banned. |
+| **Moderation log** | Permanent, un-deletable record of every removal, ban, dismissal and DMCA notice, with who did it and when. Also lists DMCA notices. |
+
+Every action is written to `moderation_actions` in the same request as the change.
+
+### Legal pages (public, no age gate)
+
+| URL | Page |
+| --- | --- |
+| `/terms` | Terms of service |
+| `/privacy` | Privacy policy — states exactly what is stored today |
+| `/content-policy` | Content policy — ratings, the no-minors rule, enforcement |
+| `/dmca` | Copyright form, `/dmca/sent` confirmation |
+
+Registration's checkbox now links to the real pages, and the footer links all four
+on every page.
+
+The DMCA form requires both statutory statements (good-faith belief and
+acknowledgement of liability); a notice without them is rejected. Accepted
+notices are stored in `dmca_notices` and appear in the moderation log.
+
+> These documents are written starters, not legal advice. Have a lawyer review
+> them before launch — see [docs/launch-checklist.md](docs/launch-checklist.md).
+
+### Owning your content
+
+- **Edit / delete your posts** — `/p/{id}/edit`, owner only. Delete is a soft delete, so it leaves the gallery and your profile immediately and a moderator can still see it.
+- **Delete your comments** — from the post page, author only. The post's comment count is recalculated.
+- **Delete your DMs** — the message body becomes `[deleted]`, so the conversation keeps its shape.
+- **Block / unblock** — button on any profile and on other people's posts, plus `/settings/blocked`. Blocking hides their work from your gallery and Your Following feed, ends follows in both directions, and closes the DM thread. Nobody is told.
+
 ## Search
 
 Available on every page:

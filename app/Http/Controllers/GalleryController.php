@@ -29,6 +29,21 @@ class GalleryController extends Controller
 
         $posts = Post::query()
             ->with(['user', 'media.media', 'chapter.comic'])
+            // hide work from anyone I blocked, and from anyone who blocked me
+            ->when($user, function ($q) use ($user) {
+                $ids = \App\Models\Block::query()
+                    ->where(fn ($b) => $b->where('blocker_id', $user->id)->orWhere('blocked_id', $user->id))
+                    ->get()
+                    ->flatMap(fn ($b) => [$b->blocker_id, $b->blocked_id])
+                    ->unique()
+                    ->reject(fn ($id) => $id === $user->id)
+                    ->values()
+                    ->all();
+
+                if ($ids !== []) {
+                    $q->where(fn ($w) => $w->whereNull('user_id')->orWhereNotIn('user_id', $ids));
+                }
+            })
             ->ofType($format)
             ->visibleRating($showExplicit)
             ->withinWindow($window)

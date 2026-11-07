@@ -105,6 +105,17 @@ function Rail() {
                 </Link>
             )}
 
+            {auth?.user?.is_admin && (
+                <Link
+                    href={route('admin.reports')}
+                    aria-label="Moderation"
+                    className="relative flex min-h-[44px] items-center gap-3 rounded-[11px] px-3 py-2.5 text-[15.5px] font-semibold justify-center text-[#ff98a9] hover:bg-ink-raised xl:justify-start"
+                >
+                    <Icon name="flag" className="h-[22px] w-[22px] shrink-0" />
+                    <span className="hidden xl:inline">Moderation</span>
+                </Link>
+            )}
+
             <Link
                 href={route('search')}
                 aria-label="Search"
@@ -300,6 +311,15 @@ export default function AppLayout({ children, rightRail = true, bare = false }) 
                 {!bare && rightRail && <RightRail />}
                 {!bare && <BottomNav />}
                 {!bare && <DemoSwitcher />}
+                <footer className={`${rightRail ? 'lg:col-span-3' : 'lg:col-span-2'} col-span-1 border-t border-ink-line px-5 py-4 pb-24 text-[12px] text-ink-faint md:pb-4`}>
+                    <nav className="flex flex-wrap gap-x-4 gap-y-1" aria-label="Legal">
+                        <Link href={route('legal.terms')} className="hover:text-ink-text">Terms</Link>
+                        <Link href={route('legal.privacy')} className="hover:text-ink-text">Privacy</Link>
+                        <Link href={route('legal.policy')} className="hover:text-ink-text">Content policy</Link>
+                        <Link href={route('dmca')} className="hover:text-ink-text">Copyright / DMCA</Link>
+                        <span className="w-full md:ml-auto md:w-auto">18+ only. Work is rated by its artist.</span>
+                    </nav>
+                </footer>
             </div>
         </ToastProvider>
     );

@@ -33,7 +33,11 @@ class EnsureAgeConfirmed
         }
 
         // The gate and the auth pages are always reachable, logged out or not.
-        if ($request->is('age-gate*', 'login', 'register', 'forgot-password*', 'reset-password*', 'up', 'build/*', 'storage/*')) {
+        if ($request->is(
+            'age-gate*', 'login', 'register', 'forgot-password*', 'reset-password*',
+            'terms', 'privacy', 'content-policy', 'dmca*',
+            'up', 'build/*', 'storage/*', 'sfw/*',
+        )) {
             return $next($request);
         }
 

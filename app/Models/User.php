@@ -77,6 +77,15 @@ class User extends Authenticatable
             ->withPivot('last_read_at');
     }
 
+    /**
+     * Route model binding by handle: /u/{user} resolves by username, not id,
+     * so follow/block URLs read as /u/rin_senpai/follow.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'username';
+    }
+
     /* ---------------- helpers ---------------- */
 
     public function isAdmin(): bool
@@ -107,6 +116,27 @@ class User extends Authenticatable
         $hue = crc32($this->username ?: (string) $this->id) % 360;
 
         return '/avatar.svg?h='.$hue.'&l='.Str::substr($this->username ?: 'ink', 0, 1);
+    }
+
+    public function isBanned(): bool
+    {
+        return $this->banned_at !== null;
+    }
+
+    public function blocks(): HasMany
+    {
+        return $this->hasMany(Block::class, 'blocker_id');
+    }
+
+    /** Ids of everyone this user has blocked. */
+    public function blockedUserIds(): array
+    {
+        return Block::where('blocker_id', $this->id)->pluck('blocked_id')->all();
+    }
+
+    public function hasBlocked(User $other): bool
+    {
+        return Block::existsBetween($this->id, $other->id);
     }
 
     public function isUnsorted(): bool

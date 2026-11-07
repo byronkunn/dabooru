@@ -1,4 +1,4 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 
 const SECTIONS = [
@@ -154,6 +154,16 @@ export default function SettingsIndex({ user, settings, demoAccounts = [] }) {
                             </div>
                         </section>
                     ))}
+
+                    <section className="panel mb-4">
+                        <h2 className="text-[17px] font-bold">Blocked accounts</h2>
+                        <p className="mb-3 mt-1 text-[13px] text-ink-muted">
+                            People you blocked cannot appear in your feed or message you.
+                        </p>
+                        <Link href={route('blocks.index')} className="btn-ghost">
+                            Manage blocked accounts
+                        </Link>
+                    </section>
 
                     {demoAccounts.length > 0 && (
                         <section className="panel mb-4">

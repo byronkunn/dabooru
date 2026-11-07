@@ -48,6 +48,7 @@ class ProfileController extends Controller
             'tab' => $tab,
             'isOwner' => $viewer && $viewer->id === $profile->id,
             'isFollowing' => $viewer ? $viewer->following()->whereKey($profile->id)->exists() : false,
+            'blockedCount' => $viewer ? \App\Models\Block::where('blocker_id', $viewer->id)->count() : 0,
         ]);
     }
 }

@@ -61,7 +61,12 @@ export default function Register() {
                         onChange={(e) => setData('age_confirmed', e.target.checked)}
                         className="mt-0.5 h-5 w-5 shrink-0 rounded border-ink-line bg-ink-raised text-ink-brand focus:ring-ink-brand"
                     />
-                    <span>I am 18 or older and I have read the terms, privacy policy and content policy.</span>
+                    <span>
+                        I am 18 or older and I have read the{' '}
+                        <a href={route('legal.terms')} target="_blank" rel="noreferrer" className="text-ink-brand hover:underline">terms</a>,{' '}
+                        <a href={route('legal.privacy')} target="_blank" rel="noreferrer" className="text-ink-brand hover:underline">privacy policy</a> and{' '}
+                        <a href={route('legal.policy')} target="_blank" rel="noreferrer" className="text-ink-brand hover:underline">content policy</a>.
+                    </span>
                 </label>
                 {errors.age_confirmed && <p className="field-hint text-ink-expl">{errors.age_confirmed}</p>}
 

@@ -6,7 +6,7 @@ import SearchBox from '@/Components/SearchBox';
 import { compact } from '@/Lib/format';
 import { useState } from 'react';
 
-export default function ProfileShow({ profile, posts, comics, tab, isOwner, isFollowing }) {
+export default function ProfileShow({ profile, posts, comics, tab, isOwner, isFollowing, blockedCount = 0 }) {
     const { auth } = usePage().props;
     const [following, setFollowing] = useState(isFollowing);
 
@@ -59,6 +59,9 @@ export default function ProfileShow({ profile, posts, comics, tab, isOwner, isFo
                             <Link href={route('settings.edit')} className="btn-ghost">
                                 Edit profile
                             </Link>
+                            <Link href={route('blocks.index')} className="btn-ghost">
+                                Blocked{blockedCount ? ` (${blockedCount})` : ''}
+                            </Link>
                             <Link href={route('upload.create')} className="btn-primary">
                                 Upload
                             </Link>
@@ -78,6 +81,18 @@ export default function ProfileShow({ profile, posts, comics, tab, isOwner, isFo
                                     className={following ? 'btn-ghost' : 'btn-primary'}
                                 >
                                     {following ? 'Following' : 'Follow'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (window.confirm(`Block @${profile.username}? Their work disappears from your feed.`)) {
+                                            router.post(route('users.block', profile.username));
+                                        }
+                                    }}
+                                    className="btn-ghost"
+                                    aria-label="Block this account"
+                                >
+                                    Block
                                 </button>
                             </>
                         )

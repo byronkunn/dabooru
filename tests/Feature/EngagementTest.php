@@ -46,10 +46,10 @@ class EngagementTest extends TestCase
         $artist = User::factory()->create();
         $fan = User::factory()->create();
 
-        $this->actingAs($fan)->post(route('users.follow', $artist))->assertRedirect();
+        $this->actingAs($fan)->post(route('users.follow', $artist->username))->assertRedirect();
         $this->assertDatabaseHas('follows', ['follower_id' => $fan->id, 'following_id' => $artist->id]);
 
-        $this->actingAs($fan)->delete(route('users.unfollow', $artist))->assertRedirect();
+        $this->actingAs($fan)->delete(route('users.unfollow', $artist->username))->assertRedirect();
         $this->assertDatabaseMissing('follows', ['follower_id' => $fan->id, 'following_id' => $artist->id]);
     }
 
@@ -57,7 +57,7 @@ class EngagementTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user)->post(route('users.follow', $user))->assertStatus(422);
+        $this->actingAs($user)->post(route('users.follow', $user->username))->assertStatus(422);
         $this->assertSame(0, Follow::count());
     }
 

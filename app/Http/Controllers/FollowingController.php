@@ -13,7 +13,9 @@ class FollowingController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $followingIds = \App\Models\Follow::where('follower_id', $user->id)->pluck('following_id');
+        $followingIds = \App\Models\Follow::where('follower_id', $user->id)
+            ->whereNotIn('following_id', \App\Models\Block::where('blocker_id', $user->id)->pluck('blocked_id'))
+            ->pluck('following_id');
         $cursor = $request->query('cursor');
 
         $query = Post::query()
