@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0b0f">
+<title>Profile · Inkwell</title>
+<link rel="stylesheet" href="screens.css">
+<style>
+  .pdot{display:inline-flex;align-items:center;gap:6px}
+  .plink{color:var(--brand)}
+  .ptabwrap{position:sticky;top:0;z-index:13;background:rgba(13,11,15,.92);backdrop-filter:blur(14px)}
+  .pcolgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px}
+  .pcolgrid .thumb{aspect-ratio:1}
+  @media (max-width:900px){ .pcolgrid{grid-template-columns:repeat(2,1fr)} }
+</style>
+</head>
+<body>
+<div class="app">
+  <main>
+    <div class="profile-hero">
+      <div class="banner"></div>
+    </div>
+    <div class="profile-main">
+      <img class="pav" src="https://i.pravatar.cc/300?img=47" alt="">
+      <div class="pinfo">
+        <div class="pname">mira.ink</div>
+        <div class="phandle">@mira_ink</div>
+      </div>
+      <div class="profile-actions">
+        <a class="btn-ghost" href="screen-profile-edit.html">Edit profile</a>
+        <a class="btn-ghost" href="screen-settings.html" aria-label="Settings">⚙</a>
+        <a class="btn-primary" href="screen-upload.html">Upload</a>
+      </div>
+    </div>
+    <div class="bio">Comics & character studies. Mostly ink, sometimes colour. NSFW sometimes, marked per post. <a class="plink" href="#">example.com</a></div>
+    <div class="pmeta">
+      <span>📍 Portland</span>
+      <span>🔗 <a class="plink" href="#">miraink.studio</a></span>
+      <span>🗓 Joined Mar 2024</span>
+    </div>
+    <div class="pmeta" style="padding-bottom:14px">
+      <span><b>318</b> Following</span>
+      <span><b>12.4k</b> Followers</span>
+      <span><b>204</b> works</span>
+      <span><b>3</b> series</span>
+    </div>
+    <div class="ptabwrap"><div class="ptabs" role="tablist">
+      <button class="ptab on" data-tab="works" role="tab" aria-selected="true">Works</button>
+      <button class="ptab" data-tab="albums" role="tab" aria-selected="false">Albums</button>
+      <button class="ptab" data-tab="comics" role="tab" aria-selected="false">Comics</button>
+      <button class="ptab" data-tab="likes" role="tab" aria-selected="false">Likes</button>
+      <button class="ptab" data-tab="about" role="tab" aria-selected="false">About</button>
+    </div></div>
+    <div id="panels"></div>
+  </main>
+</div>
+<script src="app.js"></script>
+<script>
+(function(){
+  Ink.mount({active:'Profile'});
+  const mine = Ink.WORKS.filter(w => w.user === 'mira');
+  const likes = Ink.WORKS.filter(w => w.id === 'w01' || w.id === 'w04' || w.id === 'w07' || w.id === 'w12' || w.id === 'w17');
+
+  function grid(list){
+    return `<div class="pgrid">` + list.map(w => `
+      <a class="cell" href="screen-post.html?id=${w.id}" aria-label="${w.title}">
+        <div class="thumb"><img src="${w.img}" alt="" loading="lazy" onerror="this.style.display='none'">
+          <div class="chipbadge"><span class="rate ${Ink.RATE_CLASS[w.rate]}">${Ink.RATE_LABEL[w.rate]}</span></div>
+          <span class="kind" style="left:auto;right:9px;bottom:9px">${Ink.KIND_ICON[w.type]} ${Ink.KIND[w.type]}</span>
+        </div></a>`).join('') + `</div>`;
+  }
+  const comics = `<div style="padding:20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px">
+    <a href="screen-comic-series.html?series=paper-lanterns" style="display:block">
+      <img src="https://picsum.photos/id/1036/400/530" style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:12px;border:1px solid var(--line)" alt="">
+      <div style="font-size:14px;font-weight:700;margin-top:8px">Paper Lanterns</div>
+      <div style="font-size:12.5px;color:var(--muted)">12 chapters · Suggestive</div></a>
+  </div>`;
+  const albums = grid(mine.filter(w => w.type === 'album'));
+  const about = `<div class="setsec" style="margin:20px">
+    <h3>About</h3><div class="sub">Shown on your profile</div>
+    <div class="field"><label>Bio</label><div style="color:#dfd7e5;font-size:14.5px;line-height:1.6">Comics & character studies. Mostly ink, sometimes colour. NSFW sometimes, marked per post.</div></div>
+    <div class="field"><label>Content rating</label><div style="color:#dfd7e5;font-size:14.5px">Mixed — posts are rated individually (SFW / Suggestive / Explicit)</div></div>
+    <div class="field"><label>Links</label><div><a class="plink" href="#">miraink.studio</a></div></div>
+  </div>`;
+
+  const panels = { works: grid(mine), albums, comics, likes: grid(likes), about };
+  function show(tab){
+    document.getElementById('panels').innerHTML = panels[tab];
+    document.querySelectorAll('.ptab').forEach(b => { const on = b.dataset.tab === tab; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+  }
+  show('works');
+  document.querySelectorAll('.ptab').forEach(b => b.onclick = () => show(b.dataset.tab));
+})();
+</script>
+</body>
+</html>

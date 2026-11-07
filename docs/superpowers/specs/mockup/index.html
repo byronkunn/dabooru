@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inkwell — mockup screens</title>
+<link rel="stylesheet" href="screens.css">
+<style>
+  body{background:var(--bg);padding:32px 20px}
+  .wrap{max-width:1100px;margin:0 auto}
+  h1{font-size:30px;letter-spacing:-.03em;margin:0 0 6px}
+  .lead{color:var(--muted);font-size:15px;margin-bottom:28px}
+  .group{margin-bottom:30px}
+  .group h2{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+  a.card2{display:block;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;transition:.15s}
+  a.card2:hover{border-color:#5b4b6b;transform:translateY(-1px)}
+  a.card2 .t{font-weight:700;font-size:15px}
+  a.card2 .d{color:var(--muted);font-size:12.5px;margin-top:4px;line-height:1.45}
+  a.card2 .u{color:#6d6275;font-size:11px;margin-top:8px;font-family:ui-monospace,Menlo,monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Inkwell — mockup screens</h1>
+  <div class="lead">Gallery-first NSFW art site. Every screen is responsive at desktop (1440), tablet (834) and mobile (390). Clickable between pages.</div>
+
+  <div class="group"><h2>Browse</h2><div class="cards">
+    <a class="card2" href="screens-gallery.html"><div class="t">Gallery</div><div class="d">Masonry wall, format tabs, sort + window, explicit toggle, promoted tile.</div><div class="u">/ </div></a>
+    <a class="card2" href="screen-following.html"><div class="t">Following feed</div><div class="d">Twitter-style chronological feed of people you follow.</div><div class="u">/following</div></a>
+    <a class="card2" href="screen-post.html?id=w08"><div class="t">Work detail</div><div class="d">Full work, engagement bar, comments, related grid.</div><div class="u">/p/{id}</div></a>
+    <a class="card2" href="screen-post.html?id=w06"><div class="t">Comic chapter post</div><div class="d">The feed card for a chapter, linking into the series.</div><div class="u">/p/{id}</div></a>
+  </div></div>
+
+  <div class="group"><h2>Comics</h2><div class="cards">
+    <a class="card2" href="screen-comic-series.html?series=neon-after-dark"><div class="t">Series page</div><div class="d">Cover, meta, chapter list with read ticks, follow/save.</div><div class="u">/comics/{slug}</div></a>
+    <a class="card2" href="screen-reader.html"><div class="t">Reader</div><div class="d">Page mode + scroll mode toggle, slider, arrows, swipe.</div><div class="u">/comics/{slug}/{n}</div></a>
+  </div></div>
+
+  <div class="group"><h2>Social</h2><div class="cards">
+    <a class="card2" href="screen-profile.html"><div class="t">Profile</div><div class="d">Banner, bio, tabs, works/albums/comics/likes/about.</div><div class="u">/u/{handle}</div></a>
+    <a class="card2" href="screen-profile-edit.html"><div class="t">Edit profile</div><div class="d">Avatar, banner, handle, bio, links.</div><div class="u">/settings/profile</div></a>
+    <a class="card2" href="screen-messages.html"><div class="t">Messages</div><div class="d">Two-pane DMs, mobile list→thread, send + reply.</div><div class="u">/messages</div></a>
+    <a class="card2" href="screen-notifications.html"><div class="t">Notifications</div><div class="d">Tabs, unread states, mark-all-read.</div><div class="u">/notifications</div></a>
+  </div></div>
+
+  <div class="group"><h2>Create &amp; account</h2><div class="cards">
+    <a class="card2" href="screen-upload.html"><div class="t">Upload work</div><div class="d">Dropzone, 5 formats, comic chapter picker, rating.</div><div class="u">/upload</div></a>
+    <a class="card2" href="screen-settings.html"><div class="t">Settings</div><div class="d">Account, content, media, notifications, privacy.</div><div class="u">/settings</div></a>
+    <a class="card2" href="screen-gate.html"><div class="t">18+ gate</div><div class="d">First-visit age confirmation.</div><div class="u">/age-gate</div></a>
+    <a class="card2" href="screen-signup.html"><div class="t">Sign up</div><div class="d">Email, handle, password, DOB + 18+ consent.</div><div class="u">/register</div></a>
+    <a class="card2" href="screen-auth.html"><div class="t">Log in</div><div class="d">Email or handle + password.</div><div class="u">/login</div></a>
+  </div></div>
+</div>
+</body>
+</html>

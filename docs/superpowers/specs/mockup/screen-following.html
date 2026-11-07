@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0b0f">
+<title>Following · Inkwell</title>
+<link rel="stylesheet" href="screens.css">
+<style>
+  .feedtabs{display:flex;border-bottom:1px solid var(--line);margin-top:12px;position:sticky;top:0}
+  .feedtabs button{flex:1;padding:14px 0;font-size:14.5px;font-weight:650;color:var(--muted);border-bottom:2px solid transparent;min-height:48px}
+  .feedtabs button.on{color:var(--text);border-bottom-color:var(--brand)}
+  .newpill{position:sticky;top:132px;z-index:14;display:block;margin:10px auto 0;width:max-content;
+    background:var(--brand);color:#1c1017;font-weight:800;font-size:13px;border-radius:99px;padding:8px 16px;box-shadow:0 10px 24px -8px #000}
+  @media (max-width:900px){ .newpill{top:120px} }
+</style>
+</head>
+<body>
+<div class="app">
+  <main>
+    <div class="topbar">
+      <div class="row1"><h1>Following</h1>
+        <div class="search" role="search">🔍<input placeholder="Search…"></div>
+        <button class="searchbtn" aria-label="Search">🔍</button>
+      </div>
+      <div class="feedtabs" role="tablist">
+        <button class="on" role="tab" aria-selected="true" data-feed="following">Following</button>
+        <button role="tab" aria-selected="false" data-feed="foryou">For you</button>
+      </div>
+    </div>
+    <button class="newpill">↑ 6 new posts</button>
+    <div class="feedwrap" id="feed"></div>
+    <div class="empty">You're all caught up.</div>
+  </main>
+</div>
+<script src="app.js"></script>
+<script>
+(function(){
+  Ink.mount({active:'Following'});
+  const order = ['w06','w03','w08','w01','w11','w05','w13','w16','w04'];
+  document.getElementById('feed').innerHTML = order.map((id, i) => Ink.postHTML(Ink.byId(id), {when: ['2m','14m','1h','3h','5h','8h','12h','1d','2d'][i]})).join('');
+  Ink.swapEmojiIcons();
+  document.querySelectorAll('.feedtabs button').forEach(b => b.onclick = () => {
+    document.querySelectorAll('.feedtabs button').forEach(x => { x.classList.remove('on'); x.setAttribute('aria-selected','false'); });
+    b.classList.add('on'); b.setAttribute('aria-selected','true');
+    const ids = b.dataset.feed === 'following' ? order : ['w02','w09','w12','w15','w18','w20','w07','w10','w14'];
+    document.getElementById('feed').innerHTML = ids.map((id, i) => Ink.postHTML(Ink.byId(id), {when: ['1m','4m','22m','2h','6h','11h','1d','2d','3d'][i]})).join('');
+    Ink.swapEmojiIcons();
+  });
+})();
+</script>
+</body>
+</html>

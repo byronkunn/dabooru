@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0b0f">
+<title>Upload · Inkwell</title>
+<link rel="stylesheet" href="screens.css">
+<style>
+  .fmtcard{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;border:1px solid var(--line);
+    border-radius:14px;background:var(--surface);min-width:86px;font-size:12.5px;font-weight:650;color:var(--muted);flex:1;min-height:76px;justify-content:center}
+  .fmtcard span:first-child{font-size:20px}
+  .fmtcard.on{border-color:var(--brand);color:var(--brand);background:rgba(232,176,75,.08)}
+  .ratingcard{display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;
+    font-size:13px;font-weight:650;color:var(--muted);min-height:44px}
+  .ratingcard.on{border-color:var(--brand);color:var(--brand);background:rgba(232,176,75,.08)}
+  .coverpick{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px}
+  .coverpick .cp{width:96px;height:128px;border-radius:10px;overflow:hidden;border:2px solid transparent;position:relative}
+  .coverpick .cp.on{border-color:var(--brand)}
+  .coverpick .cp span{position:absolute;bottom:4px;left:4px;font-size:10px;background:rgba(0,0,0,.7);padding:2px 5px;border-radius:4px}
+  .previews{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-top:14px}
+  .previews .pv{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:1;background:#1c1820;border:1px solid var(--line)}
+  .previews .pv img{width:100%;height:100%;object-fit:cover}
+  .previews .pv .del{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.7);font-size:12px;display:grid;place-items:center;border:0}
+  .chaprow{display:flex;align-items:center;gap:10px;margin-top:16px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface2)}
+  @media (max-width:900px){
+    .upload{padding:12px}
+    .fmtcard{min-width:66px;padding:10px 8px;min-height:70px}
+    .fmtcard span:first-child{font-size:17px}
+    .fmtcard{font-size:11.5px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <main>
+    <div class="topbar">
+      <div class="row1"><a class="back" href="screens-gallery.html" aria-label="Cancel">✕</a><h1>Upload work</h1>
+        <button class="btn-primary" id="publish" style="margin-left:auto;padding:9px 18px;min-height:40px">Publish</button></div>
+    </div>
+    <div class="upload">
+      <div class="dropzone" id="dz" role="button" tabindex="0" aria-label="Drop files or browse">
+        <div>
+          <div class="dz-ico">⤒</div>
+          <div class="dz-t">Drop images, GIFs or video</div>
+          <div class="dz-d">or <u>browse files</u> · up to 40MB each · video up to 500MB / 20 min</div>
+        </div>
+      </div>
+
+      <h4 style="margin:18px 0 10px;font-size:14px">Format</h4>
+      <div class="fmtrow">
+        <button class="fmtcard on" data-fmt="image"><span>🖼</span>Image</button>
+        <button class="fmtcard" data-fmt="gif"><span>🎞</span>GIF</button>
+        <button class="fmtcard" data-fmt="video"><span>▶</span>Video</button>
+        <button class="fmtcard" data-fmt="album"><span>🗂</span>Album</button>
+        <button class="fmtcard" data-fmt="comic"><span>📖</span>Comic</button>
+      </div>
+
+      <div id="comicpanel" style="display:none">
+        <div class="chaprow">
+          <span style="font-size:20px">📖</span>
+          <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700">New chapter of Paper Lanterns</div>
+            <div style="font-size:12.5px;color:var(--muted)">or <a href="#" style="color:var(--brand)">start a new series</a></div></div>
+          <span class="cbadge" style="font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;background:rgba(232,176,75,.16);color:var(--brand)">NEW</span>
+        </div>
+        <div class="coverpick" id="coverpick"></div>
+      </div>
+
+      <div class="field" style="margin-top:18px">
+        <label for="ttl">Title</label>
+        <input id="ttl" placeholder="Give it a name">
+      </div>
+      <div class="field">
+        <label for="cap">Caption</label>
+        <textarea id="cap" rows="3" placeholder="Say something about this work…" maxlength="1000"></textarea>
+        <div class="hint" id="caphint">0 / 1000</div>
+      </div>
+
+      <h4 style="margin:6px 0 10px;font-size:14px">Rating</h4>
+      <div class="ratingrow">
+        <button class="ratingcard on" data-rate="sfw">SFW</button>
+        <button class="ratingcard" data-rate="sug">Suggestive</button>
+        <button class="ratingcard" data-rate="expl">Explicit · 18+</button>
+      </div>
+      <div class="hint" style="font-size:12px;color:#7b6f85;margin-top:8px">Explicit work stays blurred for logged-out visitors and anyone with explicit hidden.</div>
+
+      <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:18px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);align-items:center">
+        <div class="toggle"><div class="sw on" data-pref="allowSave"></div><span>Let people save</span></div>
+        <div class="toggle"><div class="sw on" data-pref="allowComments"></div><span>Allow comments</span></div>
+        <div class="toggle"><div class="sw" data-pref="autoplayClip"></div><span>Play on view in post</span></div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="app.js"></script>
+<script>
+(function(){
+  Ink.mount({active:'Gallery'});
+  let fmt = 'image';
+  document.querySelectorAll('[data-fmt]').forEach(b => b.onclick = () => {
+    document.querySelectorAll('[data-fmt]').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); fmt = b.dataset.fmt;
+    document.getElementById('comicpanel').style.display = fmt === 'comic' ? 'block' : 'none';
+  });
+  document.querySelectorAll('[data-rate]').forEach(b => b.onclick = () => {
+    document.querySelectorAll('[data-rate]').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+  });
+  const cp = document.getElementById('coverpick');
+  cp.innerHTML = [0,1,2,3,4,5].map(n => `<div class="cp ${n===0?'on':''}"><img src="https://picsum.photos/id/${(1030+n*7)}/200/270" alt="" style="width:100%;height:100%;object-fit:cover"><span>${n===0?'Set cover':'Page '+(n+1)}</span></div>`).join('');
+  cp.onclick = (e) => { const c = e.target.closest('.cp'); if (!c) return; cp.querySelectorAll('.cp').forEach(x => x.classList.remove('on')); c.classList.add('on'); };
+
+  const cap = document.getElementById('cap'), hint = document.getElementById('caphint');
+  cap.addEventListener('input', () => { hint.textContent = cap.value.length + ' / 1000'; });
+
+  const dz = document.getElementById('dz');
+  dz.onclick = () => { dz.innerHTML = `<div style="text-align:center"><img src="https://picsum.photos/id/1015/300/200" style="width:min(260px,60vw);border-radius:12px;margin-bottom:10px"><div style="font-size:13px;color:var(--text)">mountain-quiet.png</div><div style="font-size:12px;color:var(--muted)">2.4 MB · ready</div></div>`; Ink.toast('File added (mockup)'); };
+  document.getElementById('publish').onclick = () => { Ink.toast('Publishing…'); setTimeout(() => location.href = 'screens-gallery.html', 900); };
+})();
+</script>
+</body>
+</html>

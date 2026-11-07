@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#08070a">
+<title>Reader · Inkwell</title>
+<link rel="stylesheet" href="screens.css">
+<style>
+  body{background:#08070a;overflow:hidden}
+  .reader-body.vertical .pageframe{display:none}
+  .reader-body.vertical .scrollframe{display:block}
+  .reader-body.vertical .reader-bottom{display:none}
+  .endchapter{padding:26px 16px;text-align:center}
+  .endchapter .ec{font-size:15px;color:var(--text);font-weight:700;margin-bottom:4px}
+  .endchapter .es{font-size:13px;color:var(--muted);margin-bottom:14px}
+  @media (max-width:900px){
+    .reader-body.vertical .scrollframe{padding:0}
+    .reader-body.vertical .scrollframe img{border-radius:0;margin-bottom:0}
+  }
+</style>
+</head>
+<body>
+<div class="reader-shell">
+  <div class="reader-top">
+    <a class="back" href="screen-comic-series.html" aria-label="Back to series">‹</a>
+    <div class="rtitle">Neon After Dark <em>· Ch. <span id="chnum">12</span></em></div>
+    <div class="rmode" role="group" aria-label="Reading mode">
+      <button id="mPage" class="on" data-mode="page">Page</button>
+      <button id="mScroll" data-mode="scroll">Scroll</button>
+    </div>
+  </div>
+
+  <div class="reader-body" id="rbody">
+    <div class="pageframe">
+      <img id="pageimg" src="https://picsum.photos/id/1007/900/1280" alt="Comic page 1">
+    </div>
+    <div class="scrollframe" id="scrollframe"></div>
+  </div>
+
+  <div class="reader-bottom">
+    <button class="pbtn" id="prev" aria-label="Previous page">←</button>
+    <input type="range" min="1" max="24" value="1" id="slider" aria-label="Page">
+    <button class="pbtn" id="next" aria-label="Next page">→</button>
+    <span class="pnum"><b id="pnum">1</b> / 24</span>
+  </div>
+</div>
+<script src="app.js"></script>
+<script>
+(function(){
+  const TOTAL = 24;
+  let page = 1;
+  let mode = Ink.prefs.readerMode || 'page';
+  const img = document.getElementById('pageimg');
+  const slider = document.getElementById('slider');
+  const rbody = document.getElementById('rbody');
+  const scrollframe = document.getElementById('scrollframe');
+
+  function pageSrc(n){ return `https://picsum.photos/id/${(1000 + (n * 11) % 118)}/900/1280`; }
+
+  function setMode(m){
+    mode = m; Ink.prefs.readerMode = m; Ink.savePrefs();
+    document.getElementById('mPage').classList.toggle('on', m === 'page');
+    document.getElementById('mScroll').classList.toggle('on', m === 'scroll');
+    rbody.classList.toggle('vertical', m === 'scroll');
+    document.body.classList.toggle('vertical', m === 'scroll');
+    if (m === 'scroll') renderScroll();
+  }
+  function goto(n){
+    page = Math.max(1, Math.min(TOTAL, n));
+    img.src = pageSrc(page);
+    slider.value = page;
+    document.getElementById('pnum').textContent = page;
+    document.getElementById('prev').disabled = page === 1;
+  }
+  function renderScroll(){
+    if (scrollframe.dataset.done === '1') return;
+    let html = '';
+    for (let n = 1; n <= TOTAL; n++) html += `<img loading="lazy" src="${pageSrc(n)}" alt="Page ${n}">`;
+    html += `<div class="endchapter"><div class="ec">End of Chapter 12</div>
+      <div class="es">Next: Chapter 13 — not out yet. Follow the series to get notified.</div>
+      <a class="nextch" href="screen-comic-series.html">Back to series</a></div>`;
+    scrollframe.innerHTML = html;
+    scrollframe.dataset.done = '1';
+  }
+
+  document.getElementById('prev').onclick = () => goto(page - 1);
+  document.getElementById('next').onclick = () => goto(page + 1);
+  slider.oninput = () => goto(+slider.value);
+  document.getElementById('mPage').onclick = () => setMode('page');
+  document.getElementById('mScroll').onclick = () => setMode('scroll');
+
+  document.addEventListener('keydown', (e) => {
+    if (mode !== 'page') return;
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); goto(page + 1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); goto(page - 1); }
+  });
+
+  /* swipe on touch */
+  let sx = null;
+  rbody.addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; }, {passive:true});
+  rbody.addEventListener('touchend', (e) => {
+    if (sx === null || mode !== 'page') return;
+    const dx = e.changedTouches[0].clientX - sx;
+    if (Math.abs(dx) > 50) goto(page + (dx < 0 ? 1 : -1));
+    sx = null;
+  }, {passive:true});
+
+  /* restore last page from the series page */
+  const p = +new URLSearchParams(location.search).get('page') || 1;
+  const ch = new URLSearchParams(location.search).get('chapter') || '12';
+  document.getElementById('chnum').textContent = ch;
+  const seriesTitle = { 'neon-after-dark':'Neon After Dark', 'paper-lanterns':'Paper Lanterns', 'wired':'Wired' };
+  const st = seriesTitle[new URLSearchParams(location.search).get('series')] || 'Neon After Dark';
+  document.querySelector('.rtitle').innerHTML = st + ' <em>· Ch. <span id="chnum">' + ch + '</span></em>';
+  goto(p);
+  setMode(mode);
+})();
+</script>
+</body>
+</html>

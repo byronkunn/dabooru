@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0b0f">
+<title>Post · Inkwell</title>
+<link rel="stylesheet" href="screens.css">
+<style>
+  .detail{max-width:680px;margin:0 auto}
+  .detail .post{border-bottom:1px solid var(--line);padding:16px 20px}
+  .detailmeta{display:flex;gap:20px;color:var(--muted);font-size:13.5px;padding:14px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .detailmeta b{color:var(--text)}
+  .comment{display:grid;grid-template-columns:40px minmax(0,1fr);gap:10px;padding:14px 20px;border-bottom:1px solid var(--line)}
+  .comment .cav{width:40px;height:40px;border-radius:50%;object-fit:cover}
+  .comment .cbody{min-width:0}
+  .comment .chead{display:flex;gap:8px;align-items:center;font-size:14px;flex-wrap:wrap}
+  .comment .chead b{font-weight:700}
+  .comment .chead .h,.comment .chead .dot,.comment .chead .when{color:var(--muted);font-weight:500;font-size:13px}
+  .comment p{margin:4px 0 6px;font-size:14.5px;line-height:1.45}
+  .comment .cacts{display:flex;gap:16px;color:var(--muted);font-size:12.5px}
+  .comment .cacts button{display:flex;gap:5px;align-items:center;min-height:32px}
+  .reply{background:var(--surface);position:sticky;bottom:0;border-top:1px solid var(--line);padding:12px 20px;
+    display:flex;gap:10px;align-items:flex-start}
+  .reply img{width:40px;height:40px;border-radius:50%;object-fit:cover;flex:none}
+  .reply textarea{flex:1;background:transparent;border:0;outline:none;resize:none;font-size:15px;line-height:1.45;min-height:52px;color:var(--text);padding-top:8px}
+  .reply .send{background:var(--brand);color:#1c1017;font-weight:800;border-radius:99px;padding:8px 16px;font-size:14px;min-height:40px;align-self:flex-end}
+  .reply .send:disabled{opacity:.4}
+  .related{padding:18px 20px}
+  .related h3{font-size:15px;margin:0 0 12px}
+  .relgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .relgrid .thumb{aspect-ratio:1;border-radius:10px;overflow:hidden}
+  @media (max-width:900px){
+    .detail .post{padding:14px}
+    .comment{padding:12px 14px;grid-template-columns:34px minmax(0,1fr)}
+    .comment .cav{width:34px;height:34px}
+    .reply{padding:10px 14px}
+    .relgrid{grid-template-columns:repeat(3,1fr)}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <main>
+    <div id="topbar"></div>
+    <div class="detail" id="detail"></div>
+    <div class="related">
+      <h3>More from <span id="reluser"></span></h3>
+      <div class="relgrid" id="relgrid"></div>
+    </div>
+  </main>
+</div>
+<script src="app.js"></script>
+<script>
+(function(){
+  Ink.mount({active:'Gallery'});
+  const id = new URLSearchParams(location.search).get('id') || 'w06';
+  const w = Ink.byId(id) || Ink.byId('w06');
+  const u = Ink.userOf(w);
+  document.getElementById('topbar').innerHTML = Ink.topbarHTML({ back:'screens-gallery.html', title:'Work' });
+  document.getElementById('reluser').textContent = u.name;
+
+  let extra = '';
+  if (w.type === 'comic') {
+    extra = `<div class="detailmeta" style="justify-content:center;padding:16px 0">
+      <a class="btn-primary" style="padding:12px 22px" href="screen-comic-series.html?series=${w.series.slug}">📖 Open series page</a>
+      <a class="btn-ghost" style="padding:12px 20px" href="screen-reader.html?series=${w.series.slug}&chapter=${w.series.chapter}">Read Ch. ${w.series.chapter}</a>
+    </div>`;
+  }
+  if (w.type === 'album') {
+    extra = `<div style="padding:16px 20px;border-bottom:1px solid var(--line)">
+      <h3 style="font-size:15px;margin:0 0 10px">Album · 7 pieces</h3>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        ${[0,1,2,3,4,5,6].map(n => `<div class="thumb" style="aspect-ratio:1;border-radius:10px;overflow:hidden"><img src="https://picsum.photos/id/${(1030+n*7)}/400/400" alt="" style="width:100%;height:100%;object-fit:cover"></div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('detail').innerHTML = `
+    <div id="postmount"></div>
+    ${extra}
+    <div style="display:flex;gap:20px;padding:14px 20px;color:var(--muted);font-size:13.5px;border-bottom:1px solid var(--line)">
+      <span>👁 <b style="color:var(--text)">${w.views}</b> views</span>
+      <span>♥ <b style="color:var(--text)">${w.likes}</b> likes</span>
+      <span>💬 <b style="color:var(--text)">128</b> comments</span>
+      <span style="margin-left:auto">${w.rate === 'explicit' ? '18+ · visible to age-verified only' : 'All ages'}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--line)">
+      <img src="https://i.pravatar.cc/96?img=47" alt="" style="width:40px;height:40px;border-radius:50%">
+      <span style="color:var(--muted);font-size:14px">Reply to this work…</span>
+      <button class="btn-ghost" style="margin-left:auto;padding:7px 14px;font-size:13px">Reply</button>
+    </div>
+    <div class="comment"><img class="cav" src="https://i.pravatar.cc/80?img=26" alt="">
+      <div class="cbody"><div class="chead"><b>Aya</b><span class="h">@aya_lines</span><span class="dot">·</span><span class="when">42m</span></div>
+        <p>The lighting on this one is unfair. How long did the backdrop take?</p>
+        <div class="cacts"><button>♥ 24</button><button>Reply</button></div></div></div>
+    <div class="comment"><img class="cav" src="https://i.pravatar.cc/80?img=5" alt="">
+      <div class="cbody"><div class="chead"><b>Kuro</b><span class="h">@kurostudies</span><span class="dot">·</span><span class="when">1h</span></div>
+        <p>Saving this for the colour notes. The shadow shift is so clean.</p>
+        <div class="cacts"><button>♥ 9</button><button>Reply</button></div></div></div>
+    <div class="comment"><img class="cav" src="https://i.pravatar.cc/80?img=32" alt="">
+      <div class="cbody"><div class="chead"><b>Val</b><span class="h">@valdraws</span><span class="dot">·</span><span class="when">2h</span></div>
+        <p>Jealous of this whole page, honestly.</p>
+        <div class="cacts"><button>♥ 3</button><button>Reply</button></div></div></div>
+    <div class="reply"><img src="https://i.pravatar.cc/96?img=47" alt="">
+      <textarea id="replyta" placeholder="Add a reply…" rows="2" aria-label="Reply"></textarea>
+      <button class="send" id="replies" disabled>Reply</button></div>
+  `;
+  document.getElementById('postmount').innerHTML = Ink.postHTML(w, {when:'2h'});
+  Ink.swapEmojiIcons();
+
+  const ta = document.getElementById('replyta'), send = document.getElementById('replies');
+  ta.addEventListener('input', () => { send.disabled = ta.value.trim().length === 0; });
+  send.addEventListener('click', () => {
+    const c = document.createElement('div');
+    c.className = 'comment';
+    c.innerHTML = `<img class="cav" src="https://i.pravatar.cc/80?img=47" alt=""><div class="cbody">
+      <div class="chead"><b>mira.ink</b><span class="h">@mira_ink</span><span class="dot">·</span><span class="when">now</span></div>
+      <p></p><div class="cacts"><button>♥ 0</button><button>Reply</button></div></div>`;
+    c.querySelector('p').textContent = ta.value.trim();
+    document.querySelector('.reply').before(c);
+    ta.value = ''; send.disabled = true; Ink.toast('Reply posted');
+  });
+
+  document.getElementById('relgrid').innerHTML = Ink.WORKS.filter(x => x.user === w.user && x.id !== w.id).slice(0,8)
+    .map(x => `<a class="cell" href="screen-post.html?id=${x.id}" style="margin:0;border-radius:10px"><div class="thumb"><img src="${x.img}" alt="" loading="lazy" onerror="this.style.display='none'"></div></a>`).join('');
+})();
+</script>
+</body>
+</html>

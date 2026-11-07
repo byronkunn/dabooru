@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0b0f">
+<title>Settings · Inkwell</title>
+<link rel="stylesheet" href="screens.css">
+</head>
+<body>
+<div class="app">
+  <main>
+    <div class="topbar">
+      <div class="row1"><a class="back" href="screen-profile.html" aria-label="Back">‹</a><h1>Settings</h1></div>
+    </div>
+    <div class="settings">
+      <nav class="setnav" aria-label="Settings sections">
+        <a class="on" href="#account">Account</a>
+        <a href="#content">Content &amp; feed</a>
+        <a href="#media">Media</a>
+        <a href="#notifications">Notifications</a>
+        <a href="#privacy">Privacy &amp; safety</a>
+        <a href="#blocked">Blocked &amp; muted</a>
+      </nav>
+      <div>
+        <section class="setsec" id="account">
+          <h3>Account</h3><div class="sub">Login, email and password.</div>
+          <div class="field"><label for="em">Email</label><input id="em" value="mira@example.com" type="email"><div class="hint">Verified · used for password reset</div></div>
+          <div class="field"><label for="pw">Password</label><input id="pw" value="••••••••••" type="password"><div class="hint">Last changed 3 months ago</div></div>
+          <div class="rowset"><div class="rt"><div class="t">Two-factor authentication</div><div class="d">Codes from an authenticator app.</div></div><div class="sw" data-pref="twofa" role="switch" aria-checked="false" tabindex="0"></div></div>
+          <div class="rowset"><div class="rt"><div class="t">Change password</div><div class="d">You'll be signed out of other devices.</div></div><button class="btn-ghost" style="font-size:13px;padding:8px 14px;min-height:38px">Change</button></div>
+          <div class="rowset"><div class="rt"><div class="t" style="color:var(--danger)">Delete account</div><div class="d">Deletes your work, comments and messages after 7 days.</div></div><button class="btn-ghost" style="font-size:13px;padding:8px 14px;min-height:38px;border-color:#6b2c3a;color:#ff98a9">Delete</button></div>
+        </section>
+
+        <section class="setsec" id="content">
+          <h3>Content &amp; feed</h3><div class="sub">What you see, and what shows by default.</div>
+          <div class="rowset"><div class="rt"><div class="t">Show explicit work</div><div class="d">When off, explicit posts are blurred in the gallery and following feed.</div></div><div class="sw on" data-pref="showExplicit" role="switch" aria-checked="true" tabindex="0"></div></div>
+          <div class="rowset"><div class="rt"><div class="t">Mature preview</div><div class="d">Show a small preview on the 18+ gate even when it's off.</div></div><div class="sw" data-pref="maturePreview" role="switch" aria-checked="false" tabindex="0"></div></div>
+          <div class="rowset"><div class="rt"><div class="t">Default gallery filter</div><div class="d">The format tab the gallery opens on.</div></div>
+            <select id="deffmt" style="background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-height:40px"><option>All</option><option>Images</option><option>GIFs</option><option>Videos</option><option>Albums</option><option>Comics</option></select></div>
+          <div class="rowset"><div class="rt"><div class="t">Default sort</div><div class="d">Top rated, most viewed or newest.</div></div>
+            <select id="defsort" style="background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-height:40px"><option>Top rated</option><option>Most viewed</option><option>Newest</option></select></div>
+        </section>
+
+        <section class="setsec" id="media">
+          <h3>Media</h3><div class="sub">Playback and data use.</div>
+          <div class="rowset"><div class="rt"><div class="t">Autoplay videos in feeds</div><div class="d">Off saves data on mobile connections.</div></div><div class="sw" data-pref="autoplayVid" role="switch" aria-checked="false" tabindex="0"></div></div>
+          <div class="rowset"><div class="rt"><div class="t">Animate GIFs on hover</div><div class="d">The gallery never autoplays; on hover it plays.</div></div><div class="sw on" data-pref="gifHover" role="switch" aria-checked="true" tabindex="0"></div></div>
+          <div class="rowset"><div class="rt"><div class="t">Reduce motion</div><div class="d">Disables hover lifts and transitions.</div></div><div class="sw on" data-pref="actionMotion" role="switch" aria-checked="true" tabindex="0"></div></div>
+          <div class="rowset"><div class="rt"><div class="t">Reader default</div><div class="d">Page mode or vertical scroll in comics.</div></div>
+            <select id="defreader" style="background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-height:40px"><option value="page">Page</option><option value="scroll">Scroll</option></select></div>
+        </section>
+
+        <section class="setsec" id="notifications">
+          <h3>Notifications</h3><div class="sub">Push and email, per event.</div>
+          <div class="rowset"><div class="rt"><div class="t">Likes</div></div><div class="sw on" data-pref="nLike" role="switch" aria-checked="true" tabindex="0"></div></div>
+          <div class="rowset"><div class="rt"><div class="t">Comments</div></div><div class="sw on" data-pref="nComment" role="switch" aria-checked="true" tabindex="0"></div></div>
+          <div class="rowset"><div class="rt"><div class="t">New followers</div></div><div class="sw on" data-pref="nFollow" role="switch" aria-checked="true" tabindex="0"></div></div>
+          <div class="rowset"><div class="rt"><div class="t">New comic chapters</div><div class="d">Push for every chapter you publish.</div></div><div class="sw on" data-pref="nChapter" role="switch" aria-checked="true" tabindex="0"></div></div>
+          <div class="rowset"><div class="rt"><div class="t">Email notifications</div><div class="d">Weekly digest only.</div></div><div class="sw" data-pref="emailNotif" role="switch" aria-checked="false" tabindex="0"></div></div>
+        </section>
+
+        <section class="setsec" id="privacy">
+          <h3>Privacy &amp; safety</h3><div class="sub">Who can reach you.</div>
+          <div class="rowset"><div class="rt"><div class="t">Message requests</div><div class="d">People you don't follow can send a request.</div></div><div class="sw on" data-pref="dmRequests" role="switch" aria-checked="true" tabindex="0"></div></div>
+          <div class="rowset"><div class="rt"><div class="t">Read receipts</div><div class="d">Show when you've read a message.</div></div><div class="sw on" data-pref="readReceipts" role="switch" aria-checked="true" tabindex="0"></div></div>
+          <div class="rowset"><div class="rt"><div class="t">Hide my work from logged-out visitors</div><div class="d">Keeps your gallery behind the 18+ gate only.</div></div><div class="sw" data-pref="hideLoggedOut" role="switch" aria-checked="false" tabindex="0"></div></div>
+        </section>
+
+        <section class="setsec" id="blocked">
+          <h3>Blocked &amp; muted</h3><div class="sub">Nobody here yet.</div>
+          <div class="empty">People you block or mute will show up here.</div>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="app.js"></script>
+<script>
+  Ink.mount({active:'Profile'});
+  document.getElementById('defreader').value = Ink.prefs.readerMode || 'page';
+  document.querySelectorAll('.skw').forEach(() => {});
+  document.addEventListener('click', (e) => {
+    const s = e.target.closest('.sw');
+    if (s) { s.classList.toggle('on'); s.setAttribute('aria-checked', s.classList.contains('on')); }
+  });
+  document.querySelectorAll('.setnav a').forEach(a => a.onclick = () => {
+    document.querySelectorAll('.setnav a').forEach(x => x.classList.remove('on')); a.classList.add('on');
+  });
+  document.getElementById('defreader').onchange = (e) => { Ink.prefs.readerMode = e.target.value; Ink.savePrefs(); Ink.toast('Saved'); };
+</script>
+</body>
+</html>

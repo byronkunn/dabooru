@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0b0f">
+<title>18+ · Inkwell</title>
+<link rel="stylesheet" href="screens.css">
+</head>
+<body>
+<div class="gatewrap">
+  <div class="gatecard">
+    <div class="logo">Inkwell</div>
+    <div style="font-size:13px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;font-weight:700">Adult content warning</div>
+    <p class="gsub">This site hosts artwork for adults, including explicit illustrations, comics and GIFs. You must be <b style="color:var(--text)">18 or older</b> to enter. SFW work is welcome here too — NSFW work is marked per post.</p>
+    <div class="gbtns">
+      <button class="agree" id="enter">I am 18 or older — Enter</button>
+      <a class="leave" href="https://example.com" role="button">Leave this site</a>
+    </div>
+    <div class="legal">By entering you confirm you are of legal age to view adult content in your jurisdiction.
+      We use a cookie to remember this choice. Read our <a href="#" style="color:var(--brand)">terms</a> and <a href="#" style="color:var(--brand)">content policy</a>.</div>
+  </div>
+</div>
+<script>
+  document.getElementById('enter').onclick = () => { try { localStorage.setItem('inkwell.ageOk','1'); } catch(e){} location.href = 'screens-gallery.html'; };
+</script>
+</body>
+</html>

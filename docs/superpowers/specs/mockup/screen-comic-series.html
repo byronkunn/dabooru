@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0b0f">
+<title>Neon After Dark · Inkwell</title>
+<link rel="stylesheet" href="screens.css">
+<style>
+  .sticky{position:sticky;top:0}
+  .series-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line);background:rgba(13,11,15,.92);backdrop-filter:blur(14px);position:sticky;top:0;z-index:14}
+  .series-head .sht{font-size:16px;font-weight:800;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .series-head .shm{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .series-head .shtools{display:flex;gap:8px;flex:none}
+  .ratingline{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+  @media (max-width:900px){
+    .series-head{padding:10px 14px}
+    .series-head .shtools .lbl{display:none}
+    .series-desc{font-size:13.5px}
+    .series-actions .btn-primary,.series-actions .btn-ghost{padding:9px 14px;font-size:13px;min-height:38px}
+    .chapters{margin:12px 12px 0}
+    .chrow{gap:8px;padding:10px 8px}
+    .chrow .num{min-width:48px}
+    .chrow .d{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <main id="main">
+    <div class="series-head">
+      <a class="back" href="screens-gallery.html" aria-label="Back">‹</a>
+      <div style="min-width:0">
+        <div class="sht" id="sTitle">Neon After Dark</div>
+        <div class="shm" id="sMeta">Ongoing · 12 chapters · Explicit</div>
+      </div>
+      <div class="shtools">
+        <a class="btn-ghost lbl" href="screen-reader.html?series=neon-after-dark&chapter=12" style="padding:8px 14px;font-size:13px;min-height:38px">Continue</a>
+        <button class="btn-icon" style="width:38px;height:38px" aria-label="Series options">⋯</button>
+      </div>
+    </div>
+
+    <div class="series-wrap">
+      <img class="series-cover" id="sCover" src="https://picsum.photos/id/1043/600/800" alt="Series cover">
+      <div class="series-info">
+        <div class="ratingline"><span class="rate expl" id="sRate">Explicit</span>
+          <span style="color:var(--muted);font-size:13px">18+ · chapters may contain adult content</span></div>
+        <h2 id="sH2">Neon After Dark</h2>
+        <div class="series-meta" id="sMetaLine">by <a href="screen-profile.html" style="color:var(--brand);font-weight:700">Rin Senpai</a> · Ongoing · 3,204 readers · Updated 2h ago</div>
+        <p class="series-desc" id="sDesc">A barfly manga about two rivals who keep meeting at 2am. Slow burn, then not slow at all. Explicit content from chapter 9.</p>
+        <div class="series-tags tags"><span class="tag">#romance</span><span class="tag">#neon</span><span class="tag">#adult</span><span class="tag">Ongoing</span></div>
+        <div class="series-actions">
+          <a class="btn-primary" id="sContinue" href="screen-reader.html?series=neon-after-dark&chapter=12">Continue Ch. 12</a>
+          <button class="btn-ghost" data-follow style="border-radius:999px">★ Follow series</button>
+          <button class="btn-ghost" data-save-series style="border-radius:999px">Save</button>
+          <button class="btn-ghost" aria-label="More">⋯</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="chapters">
+      <h3>Chapters <span>12</span></h3>
+      <div id="chlist"></div>
+    </div>
+    <div style="padding:20px" class="card" >
+      <h4 style="margin:0 0 8px;font-size:15px">Series comments</h4>
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <img src="https://i.pravatar.cc/80?img=26" alt="" style="width:36px;height:36px;border-radius:50%">
+        <div><div style="font-size:13.5px"><b>Aya</b> <span style="color:var(--muted)">@aya_lines · 3h</span></div>
+          <p style="margin:4px 0 0;font-size:14px;line-height:1.45;color:#dfd7e5">Ch. 11 ending ruined me. In a good way.</p></div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="app.js"></script>
+<script>
+(function(){
+  Ink.mount({active:'Comics'});
+  const params = new URLSearchParams(location.search);
+  const SERIES = {
+    'neon-after-dark': {title:'Neon After Dark', author:'Rin Senpai', authorHref:'screen-profile.html', cover:'https://picsum.photos/id/1043/600/800',
+      rating:'Explicit', ratingCls:'expl', status:'Ongoing', readers:'3,204', updated:'2h ago', last:12, pages:24,
+      desc:'A barfly manga about two rivals who keep meeting at 2am. Slow burn, then not slow at all. Explicit content from chapter 9.'},
+    'paper-lanterns':  {title:'Paper Lanterns', author:'mira.ink', authorHref:'screen-profile.html', cover:'https://picsum.photos/id/1036/600/800',
+      rating:'Suggestive', ratingCls:'sug', status:'Ongoing', readers:'1,870', updated:'3d ago', last:4, pages:16,
+      desc:'A lantern festival, a quiet town, and two people who keep missing each other by one street.'},
+    'wired':           {title:'Wired', author:'Aya', authorHref:'screen-profile.html', cover:'https://picsum.photos/id/1041/600/800',
+      rating:'SFW', ratingCls:'sfw', status:'New', readers:'612', updated:'1d ago', last:1, pages:20,
+      desc:'First chapter of a new series about a city that runs on other people\u2019s dreams.'}
+  };
+  const slug = params.get('series') || 'neon-after-dark';
+  const S = SERIES[slug] || SERIES['neon-after-dark'];
+  const ready = () => {
+    document.title = S.title + ' · Inkwell';
+    document.getElementById('sTitle').textContent = S.title;
+    document.getElementById('sH2').textContent = S.title;
+    document.getElementById('sMeta').textContent = `${S.status} · ${S.last} chapter${S.last===1?'':'s'} · ${S.rating}`;
+    document.getElementById('sCover').src = S.cover;
+    document.getElementById('sCover').alt = 'Cover: ' + S.title;
+    const r = document.getElementById('sRate'); r.textContent = S.rating; r.className = 'rate ' + S.ratingCls;
+    document.getElementById('sMetaLine').innerHTML = `by <a href="${S.authorHref}" style="color:var(--brand);font-weight:700">${S.author}</a> · ${S.status} · ${S.readers} readers · Updated ${S.updated}`;
+    document.getElementById('sDesc').textContent = S.desc;
+    const cont = document.getElementById('sContinue');
+    cont.href = `screen-reader.html?series=${slug}&chapter=${S.last}`;
+    cont.textContent = `Continue Ch. ${S.last}`;
+  };
+  ready();
+  let html = '';
+  const last = S.last;
+  for (let n = last; n >= 1; n--){
+    const read = n < last;
+    html += `<a class="chrow ${read ? 'read' : ''}" href="screen-reader.html?series=${slug}&chapter=${n}">
+      <span class="num">Ch. ${n}</span>
+      <span class="t">${n === last ? 'After hours' : 'Chapter ' + n}</span>
+      ${n === last ? '<span class="cbadge">NEW</span>' : ''}
+      ${read ? '<span class="tick">✓ read</span>' : ''}
+      <span class="d">${n === last ? '2h ago' : (n * 3) + 'd ago'}</span>
+    </a>`;
+  }
+  document.getElementById('chlist').innerHTML = html;
+  document.querySelector('[data-save-series]').onclick = () => Ink.toast('Series saved');
+})();
+</script>
+</body>
+</html>

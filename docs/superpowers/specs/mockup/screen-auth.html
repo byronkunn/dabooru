@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0b0f">
+<title>Log in · Inkwell</title>
+<link rel="stylesheet" href="screens.css">
+<style>
+  .loginwrap{min-height:100vh;display:grid;place-items:center;padding:24px;
+    background:radial-gradient(800px 400px at 50% -10%,rgba(201,82,122,.16),transparent 70%),var(--bg)}
+  .loginwrap .logo{font-size:32px;font-weight:900;letter-spacing:-.03em;text-align:center;margin-bottom:4px}
+  .loginwrap .lead{color:var(--muted);font-size:14px;text-align:center;margin-bottom:22px}
+  .btn-full{width:100%;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#170d13;font-weight:800;border-radius:12px;padding:13px;font-size:15px;min-height:50px}
+  .alt{text-align:center;margin-top:16px;font-size:13.5px;color:var(--muted)}
+  .alt a{color:var(--brand);font-weight:650}
+  .forgot{display:block;text-align:right;font-size:12.5px;color:var(--brand);margin:-6px 0 14px}
+</style>
+</head>
+<body>
+<div class="loginwrap">
+  <div class="authcard">
+    <div class="logo">Inkwell</div>
+    <div class="lead">Welcome back</div>
+    <div class="field"><label for="em">Email or handle</label><input id="em" placeholder="you@example.com"></div>
+    <div class="field"><label for="pw">Password</label><input id="pw" type="password" placeholder="Password"></div>
+    <a class="forgot" href="#">Forgot password?</a>
+    <button class="btn-full" onclick="location.href='screens-gallery.html'">Log in</button>
+    <div class="alt">New here? <a href="screen-signup.html">Create an account</a></div>
+    <div class="alt" style="margin-top:10px"><a href="screen-gate.html">Back to the site</a></div>
+  </div>
+</div>
+</body>
+</html>

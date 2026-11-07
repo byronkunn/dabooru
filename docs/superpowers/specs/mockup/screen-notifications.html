@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0b0f">
+<title>Notifications · Inkwell</title>
+<link rel="stylesheet" href="screens.css">
+<style>
+  .ntabs{display:flex;gap:6px;padding:12px 20px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+  .ntabs::-webkit-scrollbar{display:none}
+  .ntabs button{padding:7px 14px;border-radius:99px;font-size:13.5px;font-weight:650;color:var(--muted);border:1px solid var(--line);white-space:nowrap;min-height:38px}
+  .ntabs button.on{background:var(--brand);border-color:var(--brand);color:#1c1017}
+  @media (max-width:900px){
+    .ntabs{padding:10px 14px;gap:6px}
+    .notif .thumb{width:46px;height:46px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <main>
+    <div class="topbar">
+      <div class="row1"><h1>Notifications</h1>
+        <button class="btn-ghost" style="padding:7px 12px;font-size:12.5px;min-height:36px" id="markread">Mark all read</button>
+        <button class="searchbtn" aria-label="Filter">⚙</button></div>
+    </div>
+    <div class="ntabs" role="tablist">
+      <button class="on" role="tab" aria-selected="true" data-ntab="all">All</button>
+      <button role="tab" aria-selected="false" data-ntab="likes">Likes</button>
+      <button role="tab" aria-selected="false" data-ntab="comments">Comments</button>
+      <button role="tab" aria-selected="false" data-ntab="follows">Follows</button>
+      <button role="tab" aria-selected="false" data-ntab="chapters">New chapters</button>
+    </div>
+    <div id="list"></div>
+  </main>
+</div>
+<script src="app.js"></script>
+<script>
+(function(){
+  Ink.mount({active:'Notifications'});
+  const items = [
+    {kind:'like', who:'Val', avatar:32, text:'liked your work', strong:'After hours', when:'2m', unread:true, thumb:'https://picsum.photos/id/1062/200/260', href:'screen-post.html?id=w08'},
+    {kind:'comment', who:'Aya', avatar:26, text:'commented on', strong:'Study 14', when:'8m', unread:true, body:'the linework on the hands is unreal', href:'screen-post.html?id=w16'},
+    {kind:'chapter', who:'Rin Senpai', avatar:12, text:'published', strong:'Neon After Dark · Ch. 12', when:'2h', unread:true, thumb:'https://picsum.photos/id/1043/200/260', href:'screen-comic-series.html?series=neon-after-dark'},
+    {kind:'follow', who:'Kuro', avatar:5, text:'started following you', strong:'', when:'3h', unread:false, href:'screen-profile.html'},
+    {kind:'like', who:'Rin Senpai', avatar:12, text:'liked your work', strong:'Paper Lanterns · Ch. 4', when:'5h', unread:false, thumb:'https://picsum.photos/id/1036/200/260', href:'screen-post.html?id=w13'},
+    {kind:'comment', who:'Val', avatar:32, text:'commented on', strong:'Late study', when:'1d', unread:false, body:'saving this colour palette', href:'screen-post.html?id=w02'},
+    {kind:'follow', who:'Aya', avatar:26, text:'started following you', strong:'', when:'2d', unread:false, href:'screen-profile.html'}
+  ];
+  const iconFor = {like:'♥', comment:'💬', follow:'＋', chapter:'📖'};
+  const tintFor = {like:'#e8607d', comment:'#6d9bff', follow:'#4ecb8a', chapter:'#e8b04b'};
+
+  function render(filter){
+    const list = items.filter(i => filter === 'all' || i.kind === filter);
+    document.getElementById('list').innerHTML = list.length ? list.map(i => `
+      <a class="notif ${i.unread ? 'unread' : ''}" href="${i.href}">
+        <div class="nicons"><img src="https://i.pravatar.cc/80?img=${i.avatar}" alt="">
+          <span class="tiny" style="color:${tintFor[i.kind]}">${iconFor[i.kind]}</span></div>
+        <div class="ntext"><b>${i.who}</b> ${i.text}${i.strong ? ` <b>${i.strong}</b>` : ''}${i.body ? `<span class="m">“${i.body}”</span>` : ''}</div>
+        ${i.thumb ? `<img class="thumb" src="${i.thumb}" alt="">` : ''}
+        <span class="ntime">${i.when}</span>
+      </a>`).join('') : `<div class="empty">Nothing here yet.</div>`;
+  }
+  render('all');
+  document.querySelectorAll('[data-ntab]').forEach(b => b.onclick = () => {
+    document.querySelectorAll('[data-ntab]').forEach(x => { x.classList.remove('on'); x.setAttribute('aria-selected','false'); });
+    b.classList.add('on'); b.setAttribute('aria-selected','true'); render(b.dataset.ntab);
+  });
+  document.getElementById('markread').onclick = () => {
+    document.querySelectorAll('.notif').forEach(n => n.classList.remove('unread'));
+    const b = document.querySelector('.navlink[href="screen-notifications.html"] .badge');
+    if (b) b.remove();
+    Ink.toast('All caught up');
+  };
+})();
+</script>
+</body>
+</html>

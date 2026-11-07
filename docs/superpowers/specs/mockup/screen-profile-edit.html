@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0b0f">
+<title>Edit profile · Inkwell</title>
+<link rel="stylesheet" href="screens.css">
+<style>
+  .editpage{max-width:680px;margin:0 auto;padding:20px}
+  .editbanner{height:170px;border-radius:16px;background:linear-gradient(120deg,#3a2740,#1d1a24 55%,#3b2a1c);position:relative;margin-bottom:8px}
+  .editbanner button{position:absolute;right:12px;bottom:12px}
+  .editav{width:110px;height:110px;border-radius:50%;border:4px solid var(--bg);object-fit:cover;margin:-64px 0 0 20px;background:#222}
+  .editavwrap{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
+  .editavwrap button{margin-bottom:8px}
+  @media (max-width:900px){ .editpage{padding:14px} .editbanner{height:130px} .editav{width:88px;height:88px;margin:-46px 0 0 12px} }
+</style>
+</head>
+<body>
+<div class="app">
+  <main>
+    <div class="topbar">
+      <div class="row1"><a class="back" href="screen-profile.html" aria-label="Back">‹</a><h1>Edit profile</h1></div>
+    </div>
+    <div class="editpage">
+      <div class="editbanner"><button class="btn-ghost" style="font-size:13px;padding:7px 14px;min-height:36px">Change banner</button></div>
+      <div class="editavwrap">
+        <img class="editav" src="https://i.pravatar.cc/300?img=47" alt="">
+        <button class="btn-ghost" style="font-size:13px;padding:7px 14px;min-height:36px">Change avatar</button>
+      </div>
+      <div class="setsec" style="margin-top:18px">
+        <div class="field"><label for="dn">Display name</label><input id="dn" value="mira.ink" maxlength="40"><div class="hint">Appears on all of your work.</div></div>
+        <div class="field"><label for="bh">Handle</label><input id="bh" value="@mira_ink" maxlength="20"><div class="hint">Your profile lives at /u/mira_ink.</div></div>
+        <div class="field"><label for="bio">Bio</label><textarea id="bio" rows="3" maxlength="240">Comics & character studies. Mostly ink, sometimes colour. NSFW sometimes, marked per post.</textarea></div>
+        <div class="field"><label for="loc">Location</label><input id="loc" value="Portland"></div>
+        <div class="field"><label for="web">Website</label><input id="web" value="miraink.studio"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <a class="btn-ghost" href="screen-profile.html">Cancel</a>
+          <button class="btn-primary" id="save">Save profile</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="app.js"></script>
+<script>
+  Ink.mount({active:'Profile'});
+  document.getElementById('save').onclick = () => { Ink.toast('Profile saved'); setTimeout(() => location.href = 'screen-profile.html', 700); };
+</script>
+</body>
+</html>
