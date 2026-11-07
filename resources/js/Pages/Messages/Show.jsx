@@ -1,6 +1,7 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { Icon } from '@/Components/Icons';
+import SearchBox from '@/Components/SearchBox';
 import { useEffect, useRef } from 'react';
 
 export default function MessagesShow({ conversation }) {
@@ -26,6 +27,12 @@ export default function MessagesShow({ conversation }) {
             <Head title={`Chat with ${conversation.with?.name}`} />
             <div className="flex h-[calc(100vh-64px)] flex-col md:h-screen">
                 <header className="flex min-h-[58px] shrink-0 items-center gap-2.5 border-b border-ink-line px-3 py-2.5">
+                    <div className="hidden w-[260px] lg:block">
+                        <SearchBox />
+                    </div>
+                    <Link href={route('search')} aria-label="Search" className="btn-icon-flat lg:hidden">
+                        <Icon name="search" />
+                    </Link>
                     <Link href={route('messages.index')} aria-label="Back" className="btn-icon-flat -ml-1 md:hidden">
                         <Icon name="back" />
                     </Link>

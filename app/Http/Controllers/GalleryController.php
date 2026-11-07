@@ -25,6 +25,7 @@ class GalleryController extends Controller
 
         $user = $request->user();
         $showExplicit = $user ? (bool) $user->show_explicit : $request->boolean('explicit', false);
+        $term = trim((string) $request->query('q'));
 
         $posts = Post::query()
             ->with(['user', 'media.media', 'chapter.comic'])
@@ -32,6 +33,12 @@ class GalleryController extends Controller
             ->visibleRating($showExplicit)
             ->withinWindow($window)
             ->sorted($sort)
+            ->when(mb_strlen($term) >= 2, function ($q) use ($term) {
+                $like = '%'.str_replace(['\\', '%'], ['\\\\', '\\%'], $term).'%';
+                $q->where(fn ($w) => $w->where('title', 'like', $like)
+                    ->orWhere('caption', 'like', $like)
+                    ->orWhereHas('user', fn ($u) => $u->where('username', 'like', $like)->orWhere('name', 'like', $like)));
+            })
             ->paginate(36)
             ->withQueryString();
 
@@ -44,6 +51,7 @@ class GalleryController extends Controller
                 'sort' => $sort,
                 'window' => $window,
                 'explicit' => $showExplicit,
+                'q' => $term,
             ],
             'stats' => [
                 'works' => Post::count(),

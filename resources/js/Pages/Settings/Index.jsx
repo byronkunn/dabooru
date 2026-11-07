@@ -52,7 +52,7 @@ function Toggle({ checked, onChange, label, description }) {
     );
 }
 
-export default function SettingsIndex({ user, settings }) {
+export default function SettingsIndex({ user, settings, demoAccounts = [] }) {
     const profileForm = useForm({
         name: user.name,
         username: user.username,
@@ -154,6 +154,31 @@ export default function SettingsIndex({ user, settings }) {
                             </div>
                         </section>
                     ))}
+
+                    {demoAccounts.length > 0 && (
+                        <section className="panel mb-4">
+                            <h2 className="text-[17px] font-bold">Demo accounts</h2>
+                            <p className="mb-3 mt-1 text-[13px] text-ink-muted">
+                                Local development only. Jump straight into another account.
+                            </p>
+                            <div className="space-y-1.5">
+                                {demoAccounts.map((account) => (
+                                    <a
+                                        key={account.username}
+                                        href={account.url}
+                                        className="flex items-center gap-2.5 rounded-xl px-2 py-2 hover:bg-ink-raised"
+                                    >
+                                        <img src={account.avatar} alt="" className="h-8 w-8 rounded-full bg-ink-raised object-cover" />
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block truncate text-[13.5px] font-bold">{account.name}</span>
+                                            <span className="block truncate text-[11.5px] text-ink-muted">{account.role}</span>
+                                        </span>
+                                        <span className="text-[12px] font-bold text-ink-brand">Switch</span>
+                                    </a>
+                                ))}
+                            </div>
+                        </section>
+                    )}
 
                     <section className="panel">
                         <h2 className="text-[17px] font-bold">Account</h2>

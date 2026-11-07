@@ -2,6 +2,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import AppLayout, { TopBar, RatingBadge } from '@/Layouts/AppLayout';
 import { PostCard, SeriesCard, WorkCell } from '@/Components/Work';
 import { Icon } from '@/Components/Icons';
+import SearchBox from '@/Components/SearchBox';
 import { compact } from '@/Lib/format';
 import { useState } from 'react';
 
@@ -20,6 +21,22 @@ export default function ProfileShow({ profile, posts, comics, tab, isOwner, isFo
     return (
         <AppLayout>
             <Head title={`${profile.name} (@${profile.username})`} />
+
+            <div className="flex items-center gap-2 border-b border-ink-line bg-ink-bg/90 px-3.5 py-2 backdrop-blur md:px-5">
+                <h1 className="min-w-0 truncate text-[17px] font-bold">{profile.name}</h1>
+                <span className="hidden shrink-0 text-[13px] text-ink-muted sm:inline">{compact(profile.posts_count)} works</span>
+                <div className="ml-auto hidden w-[min(38vw,320px)] lg:block">
+                    <SearchBox />
+                </div>
+                <Link href={route('search')} aria-label="Search" className="btn-icon-flat lg:hidden">
+                    <Icon name="search" />
+                </Link>
+                {isOwner && (
+                    <Link href={route('settings.edit')} aria-label="Settings" className="btn-icon-flat">
+                        <Icon name="settings" />
+                    </Link>
+                )}
+            </div>
 
             <div className="relative h-[140px] overflow-hidden bg-gradient-to-br from-[#3a2740] via-[#1d1a24] to-[#3b2a1c] md:h-[200px]">
                 {profile.banner && <img src={profile.banner} alt="" className="h-full w-full object-cover" />}

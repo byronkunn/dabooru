@@ -166,6 +166,31 @@ The design doc and the static HTML mockups (15 screens at 3 breakpoints) are in
 `mockup/` folder. The HTML screens are static mockups; `resources/js/Pages` is
 the implementation.
 
+## Search
+
+Available on every page:
+
+- **Header box** (desktop): type-ahead suggestions grouped People → Comics → Works,
+  arrow keys + Enter to navigate, Esc to close.
+- **Mobile**: the magnifier in the top bar expands a search field; the bottom nav
+  also has a Search tab.
+- **`/` keyboard shortcut** focuses search from anywhere on a page.
+- **`/search`** results page with Works / Comics / People tabs, artist filter chips,
+  and a live count per tab.
+- The gallery itself also accepts `?q=` — search from the gallery and it filters
+  the grid in place with a "Clear search" chip.
+
+Search matches post titles and captions, artist display names and handles, and
+comic titles and descriptions. Explicit content is excluded for anyone who has
+explicit turned off (the same rule the gallery uses). Terms shorter than 2
+characters are ignored; `%` is escaped so it cannot act as a wildcard.
+
+Controllers: `app/Http/Controllers/SearchController.php` (`/search`,
+`/search/suggest`). UI: `resources/js/Components/SearchBox.jsx`,
+`resources/js/Pages/Search/Index.jsx`. Indexes for the searched columns are in
+`2026_11_06_110000_add_search_indexes.php`; swap the LIKE queries for MySQL
+FULLTEXT or Scout/Meilisearch when the library outgrows `LIKE`.
+
 ## Moving to MySQL or S3
 
 Nothing in the app is SQLite- or local-disk-specific; both are switched through `.env` only.

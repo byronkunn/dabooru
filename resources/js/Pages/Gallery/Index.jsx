@@ -29,6 +29,18 @@ export default function GalleryIndex({ posts, hasMore, filters, stats, sortOptio
                 ))}
             </div>
 
+            {filters.q ? (
+                <div className="flex flex-wrap items-center gap-2 px-4 pb-3 md:px-5">
+                    <span className="chip is-active">“{filters.q}”</span>
+                    <button type="button" onClick={() => navigate({ q: '' })} className="chip">
+                        Clear search ✕
+                    </button>
+                    <Link href={route('search', { q: filters.q })} className="text-[13px] font-semibold text-ink-brand hover:underline">
+                        See all search results →
+                    </Link>
+                </div>
+            ) : null}
+
             <div className="scrollbar-none flex items-center gap-2 overflow-x-auto px-4 pb-3 md:px-5" role="group" aria-label="Sort and filters">
                 <div className="flex shrink-0 rounded-full border border-ink-line bg-ink-raised p-[3px]">
                     {sortOptions.map((opt) => (

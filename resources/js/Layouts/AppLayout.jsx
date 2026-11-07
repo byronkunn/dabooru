@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Icon } from '@/Components/Icons';
+import SearchBox from '@/Components/SearchBox';
 import { RATING_CLASS } from '@/Lib/format';
 
 const FlashContext = createContext(null);
@@ -104,6 +105,15 @@ function Rail() {
                 </Link>
             )}
 
+            <Link
+                href={route('search')}
+                aria-label="Search"
+                className="relative flex min-h-[44px] items-center gap-3 rounded-[11px] px-3 py-2.5 text-[15.5px] font-semibold justify-center text-ink-text hover:bg-ink-raised xl:justify-start"
+            >
+                <Icon name="search" className="h-[22px] w-[22px] shrink-0 opacity-90" />
+                <span className="hidden xl:inline">Search</span>
+            </Link>
+
             <div className="mt-auto">
                 {user ? (
                     <Link href={route('profile.show', user.username)} className="flex items-center gap-2.5 rounded-xl p-2 hover:bg-ink-raised">
@@ -132,10 +142,11 @@ function BottomNav() {
         { label: 'Messages', icon: 'chat', href: user ? route('messages.index') : route('login'), match: 'messages', badge: auth?.unread_messages },
         { label: 'Notifications', icon: 'bell', href: user ? route('notifications.index') : route('login'), match: 'notifications', badge: auth?.unread_notifications },
         { label: 'Profile', icon: 'user', href: user ? route('profile.show', user.username) : route('login'), match: 'profile' },
+        { label: 'Search', icon: 'search', href: route('search'), match: 'search' },
     ];
 
     return (
-        <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-ink-line bg-ink-bg/95 pb-safe backdrop-blur md:hidden" aria-label="Main">
+        <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-ink-line bg-ink-bg/95 pb-safe backdrop-blur md:hidden" aria-label="Main">
             {items.map((item) => {
                 const active = route().current(`${item.match}*`);
                 return (
@@ -178,6 +189,15 @@ function RightRail() {
                     </span>
                 </div>
             </div>
+
+            <Link
+                href={route('search')}
+                className="surface flex items-center gap-2.5 rounded-panel px-4 py-3 text-[13.5px] text-ink-muted hover:text-ink-text"
+            >
+                <Icon name="search" className="h-4 w-4" />
+                Search works, artists and comics
+                <kbd className="ml-auto hidden rounded border border-ink-line px-1.5 py-0.5 text-[11px] xl:block">/</kbd>
+            </Link>
 
             {suggested.length > 0 && (
                 <div className="panel">
@@ -228,7 +248,7 @@ function DemoSwitcher() {
     const current = auth?.user?.username;
 
     return (
-        <div className="fixed bottom-[76px] left-3 z-50 md:bottom-4 md:left-3">
+        <div className="fixed bottom-4 left-3 z-50 hidden md:block">
             {open && (
                 <div className="mb-2 w-[248px] rounded-2xl border border-ink-line bg-ink-surface p-2 shadow-2xl">
                     <p className="px-2 pb-1 pt-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-ink-faint">
@@ -268,8 +288,7 @@ function DemoSwitcher() {
                 <span className="grid h-5 w-5 place-items-center rounded-full bg-ink-brand text-[10px] font-black text-[#1c1017]">
                     ⇄
                 </span>
-                <span className="hidden sm:inline">Demo accounts</span>
-                <span className="sm:hidden">Demo</span>
+                <span>Demo</span>
             </button>
         </div>
     );
@@ -300,6 +319,8 @@ export default function AppLayout({ children, rightRail = true, bare = false }) 
 
 /* ---------------------------------------------------------------- top bar */
 export function TopBar({ title, subtitle, back = null, children, tabs = null, actions = null }) {
+    const [mobileSearch, setMobileSearch] = useState(false);
+
     return (
         <div className="sticky top-0 z-[15] border-b border-ink-line bg-ink-bg/90 backdrop-blur">
             <div className="flex min-h-[56px] items-center gap-3 px-4 pt-3 md:px-5">
@@ -312,16 +333,30 @@ export function TopBar({ title, subtitle, back = null, children, tabs = null, ac
                     {title}
                     {subtitle && <span className="ml-2 hidden text-sm font-medium text-ink-muted md:inline">{subtitle}</span>}
                 </h1>
-                <div className="ml-auto flex items-center gap-2">
+                <div className="ml-auto flex min-w-0 items-center gap-2">
                     {actions}
-                    <Link href={route('gallery', { q: '' })} aria-label="Search" className="btn-icon-flat md:hidden">
+                    <div className="hidden w-[min(42vw,340px)] lg:block">
+                        <SearchBox />
+                    </div>
+                    <button
+                        type="button"
+                        aria-label="Search"
+                        aria-expanded={mobileSearch}
+                        onClick={() => setMobileSearch((v) => !v)}
+                        className="btn-icon-flat lg:hidden"
+                    >
                         <Icon name="search" />
-                    </Link>
-                    <Link href={route('upload.create')} aria-label="Upload work" className="btn-primary md:hidden h-10 w-10 p-0">
+                    </button>
+                    <Link href={route('upload.create')} aria-label="Upload work" className="btn-primary h-10 w-10 p-0 lg:hidden">
                         <Icon name="plus" />
                     </Link>
                 </div>
             </div>
+            {mobileSearch && (
+                <div className="pb-3 pt-1 lg:hidden">
+                    <SearchBox autoFocus />
+                </div>
+            )}
             {tabs}
         </div>
     );

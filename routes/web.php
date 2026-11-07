@@ -14,6 +14,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\UploadController;
 use Illuminate\Support\Facades\Route;
@@ -27,6 +28,11 @@ Route::post('/age-gate/leave', [AgeGateController::class, 'leave'])->name('age-g
 Route::get('/', [GalleryController::class, 'index'])->name('gallery');
 Route::get('/p/{post}', [PostController::class, 'show'])->name('posts.show');
 Route::get('/u/{username}', [ProfileController::class, 'show'])->name('profile.show');
+
+Route::get('/search', [SearchController::class, 'index'])->name('search');
+Route::get('/search/suggest', [SearchController::class, 'suggest'])
+    ->middleware('throttle:120,1')
+    ->name('search.suggest');
 
 Route::get('/comics', [ComicController::class, 'index'])->name('comics.index');
 
