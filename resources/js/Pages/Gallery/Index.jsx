@@ -6,7 +6,7 @@ import { Icon } from '@/Components/Icons';
 import GalleryFilterSheet, { GalleryFilterButton } from '@/Components/GalleryFilterSheet';
 import { useEffect, useRef, useState } from 'react';
 
-export default function GalleryIndex({ posts, page = 1, hasMore, filters, stats, sortOptions, windowOptions, formatOptions, durationBounds = [0, 60] }) {
+export default function GalleryIndex({ posts, page = 1, hasMore, filters, stats, sortOptions, windowOptions, formatOptions, durationBounds = [0, 60], tagSuggestions = [], durationNarrowed = false }) {
     const { auth } = usePage().props;
     const [busy, setBusy] = useState(false);
     const [items, setItems] = useState(posts);
@@ -72,6 +72,10 @@ export default function GalleryIndex({ posts, page = 1, hasMore, filters, stats,
         filters.explicit,
         !!filters.min_duration,
         filters.max_duration != null && filters.max_duration !== '',
+        (filters.tags ?? []).length > 0,
+        (filters.exclude_tags ?? []).length > 0,
+        !!filters.min_likes,
+        !!filters.min_views,
     ].filter(Boolean).length;
 
     const sortLabel = sortOptions.find((o) => o.value === filters.sort)?.label ?? 'Top rated';
@@ -145,6 +149,8 @@ export default function GalleryIndex({ posts, page = 1, hasMore, filters, stats,
                 windowOptions={windowOptions}
                 formatOptions={formatOptions}
                 durationBounds={durationBounds}
+                tagSuggestions={tagSuggestions}
+                durationNarrowed={durationNarrowed}
                 onApply={(next) => navigate(next)}
             />
 
@@ -156,9 +162,13 @@ export default function GalleryIndex({ posts, page = 1, hasMore, filters, stats,
                     {filters.min_duration || (filters.max_duration !== '' && filters.max_duration != null)
                         ? ` · ${filters.min_duration || 0}–${filters.max_duration || durationBounds[1]}s`
                         : ''}
+                    {(filters.tags ?? []).length ? ` · +${filters.tags.join(', +')}` : ''}
+                    {(filters.exclude_tags ?? []).length ? ` · −${filters.exclude_tags.join(', −')}` : ''}
+                    {filters.min_likes ? ` · ${filters.min_likes}+ likes` : ''}
+                    {filters.min_views ? ` · ${filters.min_views}+ views` : ''}
                 </span>
                 {(activeCount > 0) && (
-                    <button type="button" onClick={() => navigate({ sort: 'top', window: 'week', format: 'all', tag: '', q: '', min_duration: '', max_duration: '' })} className="ml-auto shrink-0 text-[12px] font-semibold text-ink-brand hover:underline">
+                    <button type="button" onClick={() => navigate({ sort: 'top', window: 'week', format: 'all', tag: '', q: '', min_duration: '', max_duration: '', tags: [], exclude_tags: [], min_likes: '', min_views: '' })} className="ml-auto shrink-0 text-[12px] font-semibold text-ink-brand hover:underline">
                         Clear
                     </button>
                 )}

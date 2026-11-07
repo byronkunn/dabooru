@@ -140,6 +140,35 @@ class Post extends Model
         };
     }
 
+    /**
+     * Skip works carrying any of the given tag names.
+     *
+     * Tags are user-created and open-ended, so this lives here rather than
+     * being baked into a fixed list: "no gore" or "no gore, no ntr" both work.
+     */
+    public function scopeExcludingTags(Builder $q, array $names): Builder
+    {
+        $names = array_values(array_filter($names, fn ($n) => is_string($n) && $n !== ''));
+
+        return $names === [] ? $q : $q->whereDoesntHave('tags', fn ($tags) => $tags->whereIn('name', $names));
+    }
+
+    /** Restrict to works carrying at least one of the given tag names. */
+    public function scopeIncludingTags(Builder $q, array $names): Builder
+    {
+        $names = array_values(array_filter($names, fn ($n) => is_string($n) && $n !== ''));
+
+        return $names === [] ? $q : $q->whereHas('tags', fn ($tags) => $tags->whereIn('name', $names));
+    }
+
+    /** A quality floor in the only currency the site records: likes and views. */
+    public function scopeAboveThreshold(Builder $q, ?int $minLikes, ?int $minViews): Builder
+    {
+        return $q
+            ->when($minLikes !== null && $minLikes > 0, fn ($q) => $q->where('likes_count', '>=', $minLikes))
+            ->when($minViews !== null && $minViews > 0, fn ($q) => $q->where('views', '>=', $minViews));
+    }
+
     public function scopeSorted(Builder $q, string $sort): Builder
     {
         return match ($sort) {

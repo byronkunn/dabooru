@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Media;
 use App\Models\Post;
 use App\Models\PostMedia;
+use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -107,6 +108,69 @@ class GalleryTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->has('posts', 1)
                 ->where('posts.0.id', $short->id));
+    }
+
+    public function test_tag_include_and_exclude_filters(): void
+    {
+        $artist = User::factory()->create();
+        $tagged = function (string $title, array $tags) use ($artist) {
+            $post = Post::create(['user_id' => $artist->id, 'type' => 'image', 'rating' => 'sfw', 'title' => $title]);
+            Tag::syncFor($post, $tags);
+
+            return $post;
+        };
+        $watercolor = $tagged('Water', ['watercolor']);
+        $fanart = $tagged('Fan', ['fanart']);
+        $both = $tagged('Both', ['watercolor', 'fanart']);
+        $plain = $tagged('Plain', ['sketch']);
+
+        // must include
+        $this->get('/?window=all&tags=watercolor')->assertOk()
+            ->assertInertia(fn ($page) => $page->has('posts', 2)->where('filters.tags', ['watercolor']));
+
+        // must exclude
+        $this->get('/?window=all&exclude_tags=watercolor')->assertOk()
+            ->assertInertia(fn ($page) => $page->has('posts', 2)->where('filters.exclude_tags', ['watercolor']));
+
+        // the array shape Inertia emits must behave the same as the comma shape
+        $this->get('/?window=all&exclude_tags[0]=watercolor')->assertOk()
+            ->assertInertia(fn ($page) => $page->has('posts', 2)->where('filters.exclude_tags', ['watercolor']));
+
+        // include + exclude together
+        $this->get('/?window=all&tags=fanart&exclude_tags=watercolor')->assertOk()
+            ->assertInertia(fn ($page) => $page->has('posts', 1)->where('posts.0.id', $fanart->id));
+    }
+
+    public function test_popularity_thresholds_keep_only_works_above_them(): void
+    {
+        $artist = User::factory()->create();
+        Post::create(['user_id' => $artist->id, 'type' => 'image', 'rating' => 'sfw', 'title' => 'Fresh', 'likes_count' => 1, 'views' => 5]);
+        $popular = Post::create(['user_id' => $artist->id, 'type' => 'image', 'rating' => 'sfw', 'title' => 'Popular', 'likes_count' => 40, 'views' => 300]);
+
+        $this->get('/?window=all&min_likes=10')->assertOk()
+            ->assertInertia(fn ($page) => $page->has('posts', 1)->where('posts.0.id', $popular->id)->where('filters.min_likes', 10));
+
+        $this->get('/?window=all&min_views=100')->assertOk()
+            ->assertInertia(fn ($page) => $page->has('posts', 1)->where('posts.0.id', $popular->id));
+
+        // 0 means "no threshold", not "at least zero likes"
+        $this->get('/?window=all&min_likes=0')->assertOk()
+            ->assertInertia(fn ($page) => $page->has('posts', 2)->where('filters.min_likes', ''));
+    }
+
+    public function test_a_duration_filter_narrows_the_gallery_to_video(): void
+    {
+        $artist = User::factory()->create();
+        Post::create(['user_id' => $artist->id, 'type' => 'image', 'rating' => 'sfw', 'title' => 'Still']);
+
+        $this->get('/?window=all&format=image&min_duration=10')->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('filters.format', 'video')
+                ->where('durationNarrowed', true));
+
+        // without a duration bound the requested format is left alone
+        $this->get('/?window=all&format=image')->assertOk()
+            ->assertInertia(fn ($page) => $page->where('filters.format', 'image')->where('durationNarrowed', false));
     }
 
     public function test_invalid_filters_fall_back_to_defaults(): void

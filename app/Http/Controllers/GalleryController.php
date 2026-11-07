@@ -18,6 +18,42 @@ class GalleryController extends Controller
 
     private const WINDOWS = ['today', 'week', 'month', 'all'];
 
+    /**
+     * Normalise a tag list into canonical names.
+     *
+     * Accepts both shapes a client may send: ?tags=a,b,c (short, shareable) and
+     * ?tags[0]=a&tags[1]=b (what Inertia emits for an array in a router.get).
+     */
+    private function tagList(mixed $value): array
+    {
+        if ($value === null || $value === '' || $value === []) {
+            return [];
+        }
+
+        $raw = is_array($value) ? $value : explode(',', (string) $value);
+
+        return collect($raw)
+            ->filter(fn ($t) => is_string($t))
+            ->map(fn ($t) => Tag::canonicalName(trim($t)))
+            ->filter(fn ($t) => $t !== '' && mb_strlen($t) <= 40)
+            ->unique()
+            ->take(8)
+            ->values()
+            ->all();
+    }
+
+    /** Read a small non-negative count bound (likes, views). */
+    private function countBound(mixed $value): ?int
+    {
+        if ($value === null || $value === '' || ! is_numeric($value)) {
+            return null;
+        }
+
+        $n = (int) $value;
+
+        return $n > 0 ? min($n, 100000) : null;
+    }
+
     /** Read a duration bound from the query, clamped to a sane range. */
     private function durationBound(mixed $value, ?int $default): ?int
     {
@@ -45,9 +81,22 @@ class GalleryController extends Controller
         if ($minDuration !== null && $minDuration <= 0) {
             $minDuration = null;
         }
-        if ($minDuration !== null && $maxDuration !== null && $minDuration > $maxDuration) {
+        if ($maxDuration !== null && $minDuration !== null && $minDuration > $maxDuration) {
             [$minDuration, $maxDuration] = [$maxDuration, $minDuration];
         }
+
+        // A duration bound can only match video. Rather than quietly emptying the
+        // feed, narrow the format to video and say so in the UI.
+        $durationNarrowed = ($minDuration !== null || $maxDuration !== null) && $format !== 'video';
+        if ($durationNarrowed) {
+            $format = 'video';
+        }
+
+        $includeTags = $this->tagList($request->query('tags'));
+        $excludeTags = $this->tagList($request->query('exclude_tags'));
+
+        $minLikes = $this->countBound($request->query('min_likes'));
+        $minViews = $this->countBound($request->query('min_views'));
 
         $term = trim((string) $request->query('q'));
 
@@ -64,6 +113,9 @@ class GalleryController extends Controller
             ->visibleRating($showExplicit)
             ->withinWindow($window)
             ->withinDuration($minDuration, $maxDuration)
+            ->includingTags($includeTags)
+            ->excludingTags($excludeTags)
+            ->aboveThreshold($minLikes, $minViews)
             ->sorted($sort)
             ->when(mb_strlen($term) >= 2, function ($q) use ($term) {
                 $like = '%'.str_replace(['\\', '%'], ['\\\\', '\\%'], $term).'%';
@@ -92,6 +144,10 @@ class GalleryController extends Controller
                 'window' => $window,
                 'min_duration' => $minDuration ?? '',
                 'max_duration' => $maxDuration ?? '',
+                'tags' => $includeTags,
+                'exclude_tags' => $excludeTags,
+                'min_likes' => $minLikes ?? '',
+                'min_views' => $minViews ?? '',
                 'explicit' => $showExplicit,
                 'q' => $term,
                 'tag' => $tag,
@@ -130,6 +186,13 @@ class GalleryController extends Controller
                 ['value' => 'comic', 'label' => 'Comics'],
             ],
             'durationBounds' => [0, 60],
+            'durationNarrowed' => $durationNarrowed,
+            'tagSuggestions' => Tag::query()
+                ->withCount('posts')
+                ->orderByDesc('posts_count')
+                ->take(24)
+                ->pluck('name')
+                ->all(),
             'ratingLabels' => Rating::LABELS,
         ]);
     }

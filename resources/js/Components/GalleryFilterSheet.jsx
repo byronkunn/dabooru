@@ -96,6 +96,106 @@ function DurationRange({ min, max, value, onChange }) {
     );
 }
 
+/* ------------------------------------------------------------------- tags
+   Include and exclude share one component: type a tag, press Enter, it becomes
+   a removable chip. Suggestions come from the tags actually in use. */
+function TagEditor({ label, hint, tone, values, suggestions, onAdd, onRemove }) {
+    const [text, setText] = useState('');
+    const [focused, setFocused] = useState(false);
+
+    const commit = (raw) => {
+        const clean = raw.trim().toLowerCase().replace(/^#/, '').replace(/\s+/g, ' ').slice(0, 40);
+        if (clean) onAdd(clean);
+        setText('');
+    };
+
+    const matches = text.trim()
+        ? suggestions.filter((t) => t.includes(text.trim().toLowerCase().replace(/^#/, '')) && !values.includes(t)).slice(0, 6)
+        : suggestions.filter((t) => !values.includes(t)).slice(0, 8);
+
+    const chipTone = tone === 'exclude'
+        ? 'border-ink-expl/50 bg-ink-expl/15 text-ink-expl'
+        : 'border-ink-brand/50 bg-ink-brand/15 text-ink-brand';
+
+    return (
+        <div>
+            <div className="flex items-baseline justify-between">
+                <h4 className="pb-1 text-[12.5px] font-bold text-ink-muted">{label}</h4>
+                {hint && <span className="text-[11px] text-ink-faint">{hint}</span>}
+            </div>
+
+            {values.length > 0 && (
+                <div className="mb-1.5 flex flex-wrap gap-1.5">
+                    {values.map((t) => (
+                        <span key={t} className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[12.5px] font-semibold ${chipTone}`}>
+                            {tone === 'exclude' ? '−' : '+'} #{t}
+                            <button type="button" onClick={() => onRemove(t)} aria-label={`Remove ${t}`} className="opacity-70 hover:opacity-100">
+                                <Icon name="close" className="h-3 w-3" />
+                            </button>
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            <div className="relative">
+                <input
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    onFocus={() => setFocused(true)}
+                    onBlur={() => setTimeout(() => setFocused(false), 120)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); commit(text); }
+                        if (e.key === 'Backspace' && text === '' && values.length) onRemove(values[values.length - 1]);
+                    }}
+                    placeholder={tone === 'exclude' ? 'Type a tag to hide, then Enter' : 'Type a tag to require, then Enter'}
+                    aria-label={label}
+                    className="field-input min-h-[38px] w-full text-[13.5px]"
+                />
+                {focused && matches.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-ink-line bg-ink-surface shadow-xl">
+                        {matches.map((t) => (
+                            <button
+                                key={t}
+                                type="button"
+                                onMouseDown={(e) => { e.preventDefault(); commit(t); }}
+                                className="block w-full px-3 py-1.5 text-left text-[13px] text-ink-text hover:bg-ink-raised"
+                            >
+                                #{t}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+/** A small numeric floor, e.g. "at least 10 likes". */
+function Threshold({ label, unit, value, onChange, max = 100 }) {
+    const n = Number(value) || 0;
+    return (
+        <li className="flex items-center gap-2 py-2 pl-3 pr-2">
+            <span className="text-[14px]">{label}</span>
+            <div className="ml-auto flex items-center gap-1.5">
+                <button type="button" onClick={() => onChange(Math.max(0, n - 5))} aria-label={`Decrease ${label}`}
+                    className="grid h-7 w-7 place-items-center rounded-lg border border-ink-line text-ink-muted hover:text-ink-text">−</button>
+                <input
+                    type="range" min={0} max={max} step={5} value={n}
+                    onChange={(e) => onChange(Number(e.target.value))}
+                    aria-label={`${label} minimum`}
+                    aria-valuetext={n ? `at least ${n} ${unit}` : 'no minimum'}
+                    className="range-thumb w-[92px] appearance-none bg-transparent"
+                />
+                <button type="button" onClick={() => onChange(Math.min(max, n + 5))} aria-label={`Increase ${label}`}
+                    className="grid h-7 w-7 place-items-center rounded-lg border border-ink-line text-ink-muted hover:text-ink-text">+</button>
+                <span className={`w-[46px] text-right text-[12px] font-semibold ${n ? 'text-ink-brand' : 'text-ink-faint'}`}>
+                    {n ? `${n}+` : 'any'}
+                </span>
+            </div>
+        </li>
+    );
+}
+
 /* ------------------------------------------------------------------- panel
    Changes apply immediately (like the reference, which navigates on click),
    so there is no Apply button. A "Clear" row appears once anything is active. */
@@ -107,6 +207,8 @@ export default function GalleryFilterSheet({
     windowOptions,
     formatOptions,
     durationBounds = [0, 60],
+    tagSuggestions = [],
+    durationNarrowed = false,
     onApply,
 }) {
     const [duration, setDuration] = useState([durationBounds[0], durationBounds[1]]);
@@ -145,6 +247,15 @@ export default function GalleryFilterSheet({
 
     const set = (patch) => onApply({ ...filters, ...patch });
 
+    const addTag = (list, tag) => {
+        const next = [...(filters[list] ?? [])];
+        if (!next.includes(tag)) next.push(tag);
+        // a tag cannot be both required and excluded
+        const opposite = list === 'tags' ? 'exclude_tags' : 'tags';
+        set({ [list]: next, [opposite]: (filters[opposite] ?? []).filter((t) => t !== tag) });
+    };
+    const removeTag = (list, tag) => set({ [list]: (filters[list] ?? []).filter((t) => t !== tag) });
+
     const activeCount = [
         filters.sort !== 'top',
         filters.window !== 'week',
@@ -153,6 +264,10 @@ export default function GalleryFilterSheet({
         filters.explicit,
         !!filters.min_duration,
         filters.max_duration != null && filters.max_duration !== '',
+        (filters.tags ?? []).length > 0,
+        (filters.exclude_tags ?? []).length > 0,
+        !!filters.min_likes,
+        !!filters.min_views,
     ].filter(Boolean).length;
 
     return (
@@ -169,7 +284,7 @@ export default function GalleryFilterSheet({
                                 type="button"
                                 onClick={() => {
                                     durationTouched.current = false;
-                                    onApply({ sort: 'top', window: 'week', format: 'all', tag: '', q: '', explicit: filters.explicit, min_duration: '', max_duration: '' });
+                                    onApply({ sort: 'top', window: 'week', format: 'all', tag: '', q: '', explicit: filters.explicit, min_duration: '', max_duration: '', tags: [], exclude_tags: [], min_likes: '', min_views: '' });
                                 }}
                                 className="ml-1 text-[12.5px] font-semibold text-ink-brand hover:underline"
                             >
@@ -211,8 +326,49 @@ export default function GalleryFilterSheet({
 
                         {/* DURATION — only meaningful for video-ish formats */}
                         <div className="mt-4">
-                            <h4 className="pb-1 text-[12.5px] font-bold text-ink-muted">Duration</h4>
+                            <h4 className="pb-1 text-[12.5px] font-bold text-ink-muted">Video length</h4>
                             <DurationRange min={durationBounds[0]} max={durationBounds[1]} value={duration} onChange={changeDuration} />
+                            <p className="mt-1 px-1.5 text-[11px] text-ink-faint">
+                                {duration[0] === durationBounds[0] && duration[1] >= durationBounds[1]
+                                    ? 'Only videos have a length — setting a range switches the gallery to videos.'
+                                    : durationNarrowed
+                                        ? 'Showing videos only, because only videos have a length.'
+                                        : 'Applies to the videos in the gallery.'}
+                            </p>
+                        </div>
+
+                        {/* TAGS */}
+                        <div className="mt-4 space-y-2.5">
+                            <h4 className="pb-1 text-[12.5px] font-bold text-ink-muted">Tags</h4>
+                            <TagEditor
+                                label="Must include"
+                                tone="include"
+                                values={filters.tags ?? []}
+                                suggestions={tagSuggestions}
+                                onAdd={(t) => addTag('tags', t)}
+                                onRemove={(t) => removeTag('tags', t)}
+                            />
+                            <TagEditor
+                                label="Must exclude"
+                                hint="hides the tag"
+                                tone="exclude"
+                                values={filters.exclude_tags ?? []}
+                                suggestions={tagSuggestions}
+                                onAdd={(t) => addTag('exclude_tags', t)}
+                                onRemove={(t) => removeTag('exclude_tags', t)}
+                            />
+                        </div>
+
+                        {/* QUALITY */}
+                        <div className="mt-4">
+                            <h4 className="pb-1 text-[12.5px] font-bold text-ink-muted">Popularity</h4>
+                            <ul className="divide-y divide-ink-line/70">
+                                <Threshold label="At least this many likes" unit="likes" value={filters.min_likes} onChange={(v) => set({ min_likes: v || '' })} max={50} />
+                                <Threshold label="At least this many views" unit="views" value={filters.min_views} onChange={(v) => set({ min_views: v || '' })} max={150} />
+                            </ul>
+                            <p className="mt-1 px-1.5 text-[11px] text-ink-faint">
+                                Works are scored by likes and views — there are no star ratings yet.
+                            </p>
                         </div>
 
                         {/* CONTENT */}
