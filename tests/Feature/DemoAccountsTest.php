@@ -20,9 +20,13 @@ class DemoAccountsTest extends TestCase
 
     public function test_the_library_is_built_from_the_sfw_files(): void
     {
-        $this->assertSame(49 + 23, Post::count(), '49 images + 23 videos, one post each');
-        $this->assertGreaterThan(0, Post::where('type', 'video')->count());
-        $this->assertSame(0, Post::where('type', 'comic')->count(), 'no invented comic series');
+        // 49 images + 23 videos, plus one feed post per sample comic chapter
+        $this->assertSame(49, Post::where('type', 'image')->count(), 'one image post per file');
+        $this->assertSame(23, Post::where('type', 'video')->count(), 'one video post per file');
+        $this->assertGreaterThan(0, Post::where('type', 'comic')->count(), 'sample comics are built from sfw/ images');
+
+        // every comic feed post points at exactly one chapter
+        $this->assertSame(0, Post::where('type', 'comic')->whereNull('comic_chapter_id')->count());
 
         $post = Post::firstOrFail();
         $url = $post->media->first()->media->url();

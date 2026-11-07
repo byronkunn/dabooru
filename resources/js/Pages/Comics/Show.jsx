@@ -26,7 +26,13 @@ export default function ComicShow({ comic }) {
                 <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                         <RatingBadge rating={comic.rating} label={comic.rating_label} />
-                        <span className="text-[13px] text-ink-muted">18+ · chapters may contain adult content</span>
+                        <span className="text-[13px] text-ink-muted">
+                            {comic.rating === 'explicit'
+                                ? '18+ · some chapters contain adult content'
+                                : comic.rating === 'suggestive'
+                                    ? 'Some chapters are suggestive'
+                                    : 'All chapters are safe for work'}
+                        </span>
                     </div>
                     <h1 className="mt-2 text-[19px] font-bold tracking-[-0.02em] md:text-2xl">{comic.title}</h1>
                     <p className="mt-1 text-[13.5px] text-ink-muted">
