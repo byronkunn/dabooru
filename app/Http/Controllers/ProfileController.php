@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\PostResource;
 use App\Http\Resources\UserResource;
+use App\Models\Block;
 use App\Models\Post;
+use App\Models\StickerPack;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -44,18 +46,19 @@ class ProfileController extends Controller
                 ->latest()
                 ->get()
                 ->map(fn ($c) => [
-                'id' => $c->id,
-                'slug' => $c->slug,
-                'title' => $c->title,
-                'rating' => $c->rating,
-                'chapters' => $c->chapters_count,
-                'cover' => $c->cover()?->thumbUrl(),
-                'url' => route('comics.show', $c->slug, false),
-            ]),
+                    'id' => $c->id,
+                    'slug' => $c->slug,
+                    'title' => $c->title,
+                    'rating' => $c->rating,
+                    'chapters' => $c->chapters_count,
+                    'cover' => $c->cover()?->thumbUrl(),
+                    'url' => route('comics.show', $c->slug, false),
+                ]),
             'tab' => $tab,
             'isOwner' => $viewer && $viewer->id === $profile->id,
             'isFollowing' => $viewer ? $viewer->following()->whereKey($profile->id)->exists() : false,
-            'blockedCount' => $viewer ? \App\Models\Block::where('blocker_id', $viewer->id)->count() : 0,
+            'hasStickerPacks' => $viewer && StickerPack::where('user_id', $profile->id)->exists(),
+            'blockedCount' => $viewer ? Block::where('blocker_id', $viewer->id)->count() : 0,
         ]);
     }
 }

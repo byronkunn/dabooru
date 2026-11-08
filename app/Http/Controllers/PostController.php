@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Resources\PostResource;
 use App\Http\Resources\UserResource;
 use App\Models\ArtistCreditClaim;
+use App\Models\Block;
 use App\Models\Post;
 use App\Models\PostView;
 use App\Models\SavedCollection;
@@ -20,6 +21,7 @@ class PostController extends Controller
         $this->recordView($request, $post);
 
         $viewer = $request->user();
+        $starSummary = $post->starRatings()->selectRaw('COUNT(*) AS votes, AVG(stars) AS average')->first();
         $more = Post::query()
             ->with(['user', 'media.media', 'chapter.comic'])
             ->where('user_id', $post->user_id)
@@ -47,6 +49,13 @@ class PostController extends Controller
                 ]),
             'more' => PostResource::collection($more)->resolve(),
             'liked' => $viewer ? $post->likes()->where('user_id', $viewer->id)->exists() : false,
+            'starRating' => [
+                'average' => $starSummary->average === null ? null : round((float) $starSummary->average, 1),
+                'count' => (int) $starSummary->votes,
+                'mine' => $viewer ? $post->starRatings()->where('user_id', $viewer->id)->value('stars') : null,
+                'canRate' => $viewer && ! $viewer->isBanned()
+                    && (! $post->user_id || ! Block::existsBetween($viewer->id, $post->user_id)),
+            ],
             'collections' => $viewer
                 ? SavedCollection::where('user_id', $viewer->id)->orderBy('name')->get(['id', 'name'])
                 : [],

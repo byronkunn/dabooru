@@ -5,8 +5,9 @@ import { Icon } from '@/Components/Icons';
 import { compact } from '@/Lib/format';
 import { useEffect, useState } from 'react';
 import ReportDialog from '@/Components/ReportDialog';
+import PostStarRating from '@/Components/PostStarRating';
 
-export default function PostShow({ post, comments, more, liked, saved, followedAuthor, creditClaim, collections = [] }) {
+export default function PostShow({ post, comments, more, liked, saved, followedAuthor, creditClaim, starRating, collections = [] }) {
     const { auth } = usePage().props;
     const [revealed, setRevealed] = useState(false);
     const [isLiked, setLiked] = useState(liked);
@@ -270,6 +271,8 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
                     </span>
                     <span className="ml-auto text-xs">{post.rating === 'explicit' ? '18+ · visible with explicit on' : 'All ages'}</span>
                 </div>
+
+                <PostStarRating key={post.id} postId={post.id} rating={starRating} />
 
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                     <button

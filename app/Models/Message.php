@@ -7,7 +7,28 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Message extends Model
 {
-    protected $fillable = ['conversation_id', 'user_id', 'body', 'media_id', 'rating'];
+    protected $fillable = [
+        'conversation_id', 'user_id', 'body', 'media_id', 'rating', 'reply_to_id',
+        'shared_post_id', 'forwarded_from', 'edited_at', 'pinned_at', 'removed_at', 'expires_at', 'silent', 'interactive', 'spoiler', 'attachment_name', 'sticker_pack_id',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'edited_at' => 'datetime', 'pinned_at' => 'datetime', 'removed_at' => 'datetime', 'expires_at' => 'datetime',
+            'silent' => 'boolean', 'spoiler' => 'boolean', 'interactive' => 'array',
+        ];
+    }
+
+    public function stickerPack(): BelongsTo
+    {
+        return $this->belongsTo(StickerPack::class);
+    }
+
+    public function sharedPost(): BelongsTo
+    {
+        return $this->belongsTo(Post::class, 'shared_post_id');
+    }
 
     public function conversation(): BelongsTo
     {

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,16 +10,35 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Conversation extends Model
 {
-    protected $fillable = ['last_message_at'];
+    public const MESSAGING_KINDS = ['direct', 'saved'];
+
+    public const PIVOT_FIELDS = [
+        'last_read_at', 'last_read_message_id',
+        'muted', 'archived', 'pinned', 'marked_unread', 'folder', 'typing_until',
+    ];
+
+    protected $attributes = [
+        'kind' => 'direct',
+        'request_status' => 'accepted',
+    ];
+
+    protected $fillable = [
+        'last_message_at', 'kind', 'title', 'request_status', 'requested_by', 'auto_delete_seconds',
+    ];
 
     protected function casts(): array
     {
         return ['last_message_at' => 'datetime'];
     }
 
+    public function scopeForMessaging(Builder $query): Builder
+    {
+        return $query->whereIn('conversations.kind', self::MESSAGING_KINDS);
+    }
+
     public function participants(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'conversation_participants')->withPivot(['last_read_at', 'last_read_message_id']);
+        return $this->belongsToMany(User::class, 'conversation_participants')->withPivot(self::PIVOT_FIELDS);
     }
 
     public function messages(): HasMany
@@ -38,7 +58,7 @@ class Conversation extends Model
 
     public static function existingBetween(int $a, int $b): ?self
     {
-        return static::whereHas('participants', fn ($q) => $q->where('users.id', $a))
+        return static::where('kind', 'direct')->whereHas('participants', fn ($q) => $q->where('users.id', $a))
             ->whereHas('participants', fn ($q) => $q->where('users.id', $b))
             ->first();
     }

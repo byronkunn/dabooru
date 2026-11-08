@@ -6,7 +6,9 @@ use App\Models\Conversation;
 use App\Models\Media;
 use App\Models\Message;
 use App\Models\User;
+use App\Support\SampleContent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\Feature\Concerns\MakesImages;
 use Tests\TestCase;
@@ -59,6 +61,29 @@ class MessageMediaTest extends TestCase
         $message = Message::latest('id')->firstOrFail();
         $this->assertSame('See attached.', $message->body);
         $this->assertNotNull($message->media_id);
+    }
+
+    public function test_a_message_can_carry_a_video_and_text(): void
+    {
+        [$sender, $recipient, $conversation] = $this->pair();
+        $video = SampleContent::videos()[0];
+        $path = base_path('sfw/video/'.$video['file']);
+
+        $this->actingAs($sender)->post(route('messages.store'), [
+            'conversation_id' => $conversation->id,
+            'body' => 'Please see this clip.',
+            'file' => new UploadedFile($path, basename($path), 'video/mp4', null, true),
+        ])->assertRedirect();
+
+        $message = Message::where('conversation_id', $conversation->id)->latest('id')->firstOrFail();
+        $this->assertSame('Please see this clip.', $message->body);
+        $this->assertSame('video', $message->media->kind);
+        Storage::disk('local')->assertExists($message->media->path);
+
+        $this->actingAs($recipient)
+            ->get(route('messages.attachment', [$message, 'original']))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'video/mp4');
     }
 
     public function test_a_message_needs_text_or_an_attachment(): void

@@ -20,29 +20,36 @@ class MessageAttachments
         return $media->disk === self::DISK && str_starts_with($media->path, 'dm/');
     }
 
-    public static function store(User $sender, UploadedFile $file): Media
+    public static function store(User $sender, UploadedFile $file, bool $original = false): Media
     {
         $directory = "dm/{$sender->id}/".bin2hex(random_bytes(16));
         $disk = Storage::disk(self::DISK);
-        $isVideo = str_starts_with((string) $file->getMimeType(), 'video/');
+        $mime = (string) $file->getMimeType();
+        $kind = match (true) {
+            in_array($mime, ['application/pdf', 'application/zip', 'application/x-zip-compressed'], true) => 'file',
+            str_starts_with($mime, 'audio/'), $mime === 'application/ogg',
+            in_array($mime, ['video/mp4', 'video/webm'], true) && str_starts_with($file->getClientMimeType(), 'audio/') => 'audio',
+            str_starts_with($mime, 'video/') => 'video',
+            default => 'image',
+        };
 
         try {
-            $path = $isVideo
-                ? $file->store($directory, self::DISK)
-                : ImageProcessor::storeClean($file->getRealPath(), $directory, self::DISK);
-            $thumb = $isVideo ? null : ImageProcessor::storeThumbnail($file->getRealPath(), $directory, self::DISK);
+            $path = $kind === 'image' && ! $original
+                ? ImageProcessor::storeClean($file->getRealPath(), $directory, self::DISK)
+                : $file->store($directory, self::DISK);
+            $thumb = $kind === 'image' ? ImageProcessor::storeThumbnail($file->getRealPath(), $directory, self::DISK) : null;
             if (! $path || ! $disk->exists($path) || ($thumb && ! $disk->exists($thumb))) {
                 throw new RuntimeException('Could not store the message attachment.');
             }
 
-            [$width, $height] = ImageProcessor::dimensions($file->getRealPath());
+            [$width, $height] = $kind === 'image' ? ImageProcessor::dimensions($file->getRealPath()) : [null, null];
 
             return Media::create([
                 'user_id' => $sender->id,
                 'disk' => self::DISK,
                 'path' => $path,
                 'thumb_path' => $thumb,
-                'kind' => $isVideo ? 'video' : 'image',
+                'kind' => $kind,
                 'width' => $width,
                 'height' => $height,
                 'size_bytes' => $file->getSize(),
@@ -152,7 +159,9 @@ class MessageAttachments
 
     private static function inUse(Media $media): bool
     {
-        return Message::where('media_id', $media->id)->exists() || self::usedOutsideMessaging($media);
+        return Message::where('media_id', $media->id)->exists()
+            || DB::table('reports')->where('evidence_media_id', $media->id)->exists()
+            || self::usedOutsideMessaging($media);
     }
 
     private static function usedOutsideMessaging(Media $media): bool

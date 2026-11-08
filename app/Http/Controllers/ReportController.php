@@ -2,14 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Report;
 use App\Models\AppNotification;
+use App\Models\Comment;
+use App\Models\Message;
+use App\Models\Post;
+use App\Models\Report;
+use App\Models\User;
 use App\Notifications\UrgentReportAlert;
+use App\Support\ChatAccess;
 use App\Support\StaffAccess;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 
 class ReportController extends Controller
 {
@@ -23,19 +28,30 @@ class ReportController extends Controller
         ]);
 
         $map = [
-            'post' => \App\Models\Post::class,
-            'comment' => \App\Models\Comment::class,
-            'user' => \App\Models\User::class,
-            'message' => \App\Models\Message::class,
+            'post' => Post::class,
+            'comment' => Comment::class,
+            'user' => User::class,
+            'message' => Message::class,
         ];
 
         $target = $map[$data['reportable_type']]::findOrFail($data['reportable_id']);
-        if ($target instanceof \App\Models\Message) {
-            abort_unless($target->conversation->participants()->whereKey($request->user()->id)->exists(), 404);
+        if ($target instanceof Message) {
+            $member = ChatAccess::membership($target->conversation, $request->user());
+            abort_unless($member && ChatAccess::readable($target->conversation, $request->user())
+                ->whereKey($target->id)->exists(), 404);
         }
 
         $report = DB::transaction(function () use ($request, $data, $target) {
-            $report = Report::create([
+            $evidence = [];
+            if ($target instanceof Message) {
+                $target = Message::lockForUpdate()->findOrFail($target->id);
+                abort_if($target->removed_at || ($target->expires_at && $target->expires_at->isPast()), 404);
+                $evidence = [
+                    'message_evidence' => $target->body ?? $target->interactive['title'] ?? '',
+                    'evidence_media_id' => $target->media_id,
+                ];
+            }
+            $report = Report::create($evidence + [
                 'reporter_id' => $request->user()->id,
                 'reportable_type' => $target::class,
                 'reportable_id' => $target->id,

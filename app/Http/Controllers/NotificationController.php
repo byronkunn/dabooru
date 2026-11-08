@@ -17,7 +17,7 @@ class NotificationController extends Controller
             ? $request->query('tab')
             : 'all';
 
-        $query = AppNotification::where('user_id', $request->user()->id)->with('actor')->latest();
+        $query = AppNotification::where('user_id', $request->user()->id)->where('type', '!=', 'chat_mention')->with('actor')->latest();
 
         if (! in_array('moderator', StaffAccess::permissions($request->user()), true)) {
             $query->where('type', '!=', 'urgent_report');

@@ -70,6 +70,11 @@ class Post extends Model
         return $this->hasMany(Like::class);
     }
 
+    public function starRatings(): HasMany
+    {
+        return $this->hasMany(PostRating::class);
+    }
+
     public function comments(): HasMany
     {
         return $this->hasMany(Comment::class);
@@ -172,10 +177,10 @@ class Post extends Model
     public function scopeSorted(Builder $q, string $sort): Builder
     {
         return match ($sort) {
-            'views' => $q->orderByDesc('views'),
-            'newest' => $q->orderByDesc('created_at'),
+            'views' => $q->orderByDesc('views')->orderByDesc('created_at')->orderByDesc('id'),
+            'newest' => $q->orderByDesc('created_at')->orderByDesc('id'),
             // "top rated" in v1 is likes, with recency as the tie-breaker
-            default => $q->orderByDesc('likes_count')->orderByDesc('created_at'),
+            default => $q->orderByDesc('likes_count')->orderByDesc('created_at')->orderByDesc('id'),
         };
     }
 

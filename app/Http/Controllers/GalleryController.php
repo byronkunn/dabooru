@@ -61,7 +61,7 @@ class GalleryController extends Controller
             return $default;
         }
 
-        return max(1, min(3600, (int) $value));
+        return (int) $value > 0 ? min(86400, (int) $value) : $default;
     }
 
     public function index(Request $request)
@@ -167,7 +167,7 @@ class GalleryController extends Controller
                     ->get()
             )->resolve(),
             'sortOptions' => [
-                ['value' => 'top', 'label' => 'Top rated'],
+                ['value' => 'top', 'label' => 'Most liked'],
                 ['value' => 'views', 'label' => 'Most viewed'],
                 ['value' => 'newest', 'label' => 'Newest'],
             ],
@@ -185,7 +185,6 @@ class GalleryController extends Controller
                 ['value' => 'album', 'label' => 'Albums'],
                 ['value' => 'comic', 'label' => 'Comics'],
             ],
-            'durationBounds' => [0, 60],
             'durationNarrowed' => $durationNarrowed,
             'tagSuggestions' => Tag::query()
                 ->withCount('posts')

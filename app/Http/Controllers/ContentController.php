@@ -6,10 +6,14 @@ use App\Models\Comment;
 use App\Models\Message;
 use App\Models\Post;
 use App\Models\Tag;
+use App\Support\ChatAccess;
 use App\Support\MessageAttachments;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
+use Inertia\Response;
 
 /**
  * Owners editing and deleting their own worked content.
@@ -21,11 +25,11 @@ class ContentController extends Controller
 {
     /* ---------------------------------------------------------------- posts */
 
-    public function edit(Request $request, Post $post): \Inertia\Response
+    public function edit(Request $request, Post $post): Response
     {
         $this->authorizeOwner($request, $post->user_id);
 
-        return \Inertia\Inertia::render('Posts/Edit', [
+        return Inertia::render('Posts/Edit', [
             'post' => [
                 'id' => $post->id,
                 'type' => $post->type,
@@ -71,10 +75,10 @@ class ContentController extends Controller
             $data['source_url'] = null;
         }
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($post, $data, $tags, $baseTagVersion) {
+        DB::transaction(function () use ($post, $data, $tags, $baseTagVersion) {
             $post = Post::lockForUpdate()->findOrFail($post->id);
             if ($tags !== null && $baseTagVersion !== null && $post->tag_version !== $baseTagVersion) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
+                throw ValidationException::withMessages([
                     'base_tag_version' => 'Tags changed since you opened this form. Reload and compare the latest tags before saving.',
                 ]);
             }
@@ -122,8 +126,12 @@ class ContentController extends Controller
         DB::transaction(function () use ($request, $message) {
             $current = Message::lockForUpdate()->findOrFail($message->id);
             $this->authorizeOwner($request, $current->user_id);
+            ChatAccess::requireMessage($current, $request->user());
             $mediaId = $current->media_id;
-            $current->forceFill(['body' => '[deleted]', 'media_id' => null])->save();
+            $current->update([
+                'body' => '[deleted]', 'media_id' => null, 'shared_post_id' => null, 'interactive' => null,
+                'forwarded_from' => null, 'reply_to_id' => null, 'spoiler' => false, 'attachment_name' => null, 'sticker_pack_id' => null, 'pinned_at' => null, 'removed_at' => now(),
+            ]);
             MessageAttachments::purgeAfterCommit($mediaId);
         });
 

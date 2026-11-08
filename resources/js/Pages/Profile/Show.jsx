@@ -6,7 +6,7 @@ import SearchBox from '@/Components/SearchBox';
 import { compact } from '@/Lib/format';
 import { useState } from 'react';
 
-export default function ProfileShow({ profile, posts, comics, tab, isOwner, isFollowing, blockedCount = 0 }) {
+export default function ProfileShow({ profile, posts, comics, tab, isOwner, isFollowing, blockedCount = 0, hasStickerPacks = false }) {
     const { auth } = usePage().props;
     const [following, setFollowing] = useState(isFollowing);
 
@@ -60,6 +60,7 @@ export default function ProfileShow({ profile, posts, comics, tab, isOwner, isFo
                     <p className="truncate text-sm text-ink-muted">@{profile.username}</p>
                 </div>
                 <div className="col-span-2 flex flex-wrap items-center gap-2 pt-1 md:col-span-1 md:pt-14">
+                    {(isOwner || hasStickerPacks) && <Link href={route('messages.stickers.index', { artist: profile.username })} className="btn-ghost">Sticker packs</Link>}
                     {isOwner ? (
                         <>
                             <Link href={route('settings.edit')} className="btn-ghost">

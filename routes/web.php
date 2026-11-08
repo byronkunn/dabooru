@@ -21,6 +21,9 @@ use App\Http\Controllers\FollowingController;
 use App\Http\Controllers\GalleryController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\KnowledgeController;
+use App\Http\Controllers\ChatMessageController;
+use App\Http\Controllers\ChatRoomController;
+use App\Http\Controllers\StickerPackController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PostController;
@@ -129,6 +132,8 @@ Route::middleware('auth')->group(function () {
 
     // engagement
     Route::post('/p/{post}/like', [LikeController::class, 'store'])->name('posts.like');
+    Route::put('/p/{post}/stars', [\App\Http\Controllers\PostRatingController::class, 'update'])
+        ->middleware('throttle:30,1')->name('posts.stars');
     Route::delete('/p/{post}/like', [LikeController::class, 'destroy'])->name('posts.unlike');
     Route::post('/p/{post}/save', [BookmarkController::class, 'store'])->name('posts.save');
     Route::delete('/p/{post}/save', [BookmarkController::class, 'destroy'])->name('posts.unsave');
@@ -152,10 +157,31 @@ Route::middleware('auth')->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
-    Route::get('/messages/{conversation}', [MessageController::class, 'show'])->name('messages.show');
+    Route::get('/messages/stickers', [StickerPackController::class, 'index'])->name('messages.stickers.index');
+    Route::get('/messages/stickers/picker', [StickerPackController::class, 'picker'])->name('messages.stickers.picker');
+    Route::post('/messages/stickers', [StickerPackController::class, 'store'])->middleware('throttle:10,1')->name('messages.stickers.store');
+    Route::delete('/messages/stickers/{stickerPack}', [StickerPackController::class, 'destroy'])->name('messages.stickers.destroy');
+    Route::get('/messages/{conversation}', [MessageController::class, 'show'])->whereNumber('conversation')->name('messages.show');
     Route::get('/messages/attachments/{message}/{variant}', [MessageController::class, 'attachment'])
         ->whereIn('variant', ['original', 'thumb'])->name('messages.attachment');
     Route::post('/messages', [MessageController::class, 'store'])->middleware('throttle:30,1')->name('messages.store');
+    Route::post('/messages/rooms', [ChatRoomController::class, 'store'])->middleware('throttle:12,1')->name('messages.rooms.store');
+    Route::put('/messages/quick-replies', [ChatRoomController::class, 'quickReplies'])->name('messages.quick-replies');
+    Route::put('/messages/privacy', [ChatRoomController::class, 'privacy'])->name('messages.privacy');
+    Route::prefix('messages/{conversation}')->name('messages.')->middleware('throttle:60,1')->group(function () {
+        Route::post('/request', [ChatRoomController::class, 'requestDecision'])->name('request');
+        Route::patch('/preferences', [ChatRoomController::class, 'preferences'])->name('preferences');
+        Route::patch('/settings', [ChatRoomController::class, 'settings'])->name('settings');
+        Route::post('/typing', [ChatMessageController::class, 'typing'])->name('typing');
+        Route::delete('/scheduled/{scheduled}', [ChatMessageController::class, 'unschedule'])->whereNumber('scheduled')->name('scheduled.destroy');
+    });
+    Route::prefix('messages/message/{message}')->name('messages.')->middleware('throttle:60,1')->group(function () {
+        Route::patch('/', [ChatMessageController::class, 'edit'])->name('edit');
+        Route::post('/hide', [ChatMessageController::class, 'hide'])->name('hide');
+        Route::put('/pin', [ChatMessageController::class, 'pin'])->name('pin');
+        Route::put('/reaction', [ChatMessageController::class, 'react'])->name('react');
+        Route::put('/choice', [ChatMessageController::class, 'choice'])->name('choice');
+    });
 
     // settings
     Route::get('/settings', [SettingsController::class, 'edit'])->name('settings.edit');
@@ -188,6 +214,8 @@ Route::middleware('auth')->group(function () {
         });
         Route::middleware('admin:moderator')->group(function () {
             Route::get('/', [AdminReportController::class, 'index'])->name('reports');
+            Route::get('/reports/{report}/message', [AdminReportController::class, 'messageEvidence'])->name('reports.message');
+            Route::get('/reports/{report}/message/attachment', [AdminReportController::class, 'messageAttachment'])->name('reports.message.attachment');
             Route::post('/reports/{report}/remove', [AdminReportController::class, 'remove'])->name('reports.remove');
             Route::post('/reports/{report}/dismiss', [AdminReportController::class, 'dismiss'])->name('reports.dismiss');
             Route::post('/reports/{report}/assign', [AdminReportController::class, 'assign'])->name('reports.assign');

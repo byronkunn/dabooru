@@ -1,13 +1,16 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 import { Masonry } from '@/Components/Work';
 import GalleryAdSlot from '@/Components/GalleryAdSlot';
 import { Icon } from '@/Components/Icons';
 import GalleryFilterSheet, { GalleryFilterButton } from '@/Components/GalleryFilterSheet';
 import { useEffect, useRef, useState } from 'react';
+import { clearedGalleryFilters, galleryFilterChips, patchGalleryFilters } from '@/Lib/galleryFilters';
 
-export default function GalleryIndex({ posts, page = 1, hasMore, filters, stats, sortOptions, windowOptions, formatOptions, durationBounds = [0, 60], tagSuggestions = [], durationNarrowed = false }) {
-    const { auth } = usePage().props;
+export default function GalleryIndex({ posts, page = 1, hasMore, filters: serverFilters, stats, sortOptions, windowOptions, formatOptions, tagSuggestions = [] }) {
+    const [filters, setFilters] = useState(serverFilters);
+    const filtersRef = useRef(serverFilters);
+    const visitRef = useRef(0);
     const [busy, setBusy] = useState(false);
     const [items, setItems] = useState(posts);
     const [currentPage, setCurrentPage] = useState(page);
@@ -16,6 +19,11 @@ export default function GalleryIndex({ posts, page = 1, hasMore, filters, stats,
     const [loadError, setLoadError] = useState(false);
     const requestRef = useRef(null);
     const [sheetOpen, setSheetOpen] = useState(false);
+
+    useEffect(() => {
+        filtersRef.current = serverFilters;
+        setFilters(serverFilters);
+    }, [serverFilters]);
 
     useEffect(() => {
         setItems(posts);
@@ -57,28 +65,28 @@ export default function GalleryIndex({ posts, page = 1, hasMore, filters, stats,
 
     const navigate = (patch) => {
         requestRef.current?.abort();
-        const next = { ...filters, ...patch };
-        router.get(route('gallery'), next, { preserveScroll: true, preserveState: true, replace: true, onStart: () => setBusy(true), onFinish: () => setBusy(false) });
+        requestRef.current = null;
+        const next = patchGalleryFilters(filtersRef.current, patch);
+        const visit = ++visitRef.current;
+        filtersRef.current = next;
+        setFilters(next);
+        setBusy(true);
+        router.get(route('gallery'), next, {
+            preserveScroll: true, preserveState: true,
+            onError: () => {
+                if (visit !== visitRef.current) return;
+                filtersRef.current = serverFilters;
+                setFilters(serverFilters);
+            },
+            onFinish: () => { if (visit === visitRef.current) setBusy(false); },
+        });
     };
 
     const visibleTags = [...new Set(items.flatMap((post) => post.tags ?? []))].slice(0, 12);
 
-    // how many non-default choices are active — shown as the badge on the icon
-    const activeCount = [
-        filters.sort !== 'top',
-        filters.window !== 'week',
-        filters.format !== 'all',
-        !!filters.tag,
-        filters.explicit,
-        !!filters.min_duration,
-        filters.max_duration != null && filters.max_duration !== '',
-        (filters.tags ?? []).length > 0,
-        (filters.exclude_tags ?? []).length > 0,
-        !!filters.min_likes,
-        !!filters.min_views,
-    ].filter(Boolean).length;
+    const chips = galleryFilterChips(filters, formatOptions, windowOptions);
+    const activeCount = chips.length;
 
-    const sortLabel = sortOptions.find((o) => o.value === filters.sort)?.label ?? 'Top rated';
     const windowLabel = windowOptions.find((w) => w.value === filters.window)?.label ?? 'This week';
     const tabs = (
         <>
@@ -103,31 +111,34 @@ export default function GalleryIndex({ posts, page = 1, hasMore, filters, stats,
                 </Link>
             )}
 
-            {(filters.tag || visibleTags.length > 0) && (
+            {!filters.tag && visibleTags.length > 0 && (
                 <nav className="scrollbar-none flex gap-2 overflow-x-auto px-4 pb-3 md:px-5" aria-label="Browse tags">
-                    {filters.tag ? (
-                        <button type="button" className="chip is-active" onClick={() => navigate({ tag: '' })}>
-                            #{filters.tag} <span aria-label="Clear tag">×</span>
-                        </button>
-                    ) : visibleTags.map((tag) => (
-                        <button type="button" key={tag} className="chip" onClick={() => navigate({ tag, window: 'all' })}>#{tag}</button>
+                    {visibleTags.map((tag) => (
+                        <button type="button" key={tag} className="chip" onClick={() => navigate({ tag })}>#{tag}</button>
                     ))}
                 </nav>
             )}
 
             {filters.q ? (
                 <div className="flex flex-wrap items-center gap-2 px-4 pb-3 md:px-5">
-                    <span className="chip is-active">“{filters.q}”</span>
-                    <button type="button" onClick={() => navigate({ q: '' })} className="chip">
-                        Clear search ✕
-                    </button>
                     <Link href={route('search', { q: filters.q })} className="text-[13px] font-semibold text-ink-brand hover:underline">
                         See all search results →
                     </Link>
                 </div>
             ) : null}
 
-            {/* sort + filters live behind the icon in the top bar */}
+            <div className="flex flex-wrap items-center gap-2 px-4 pb-3 md:px-5">
+                <label className="flex items-center gap-1.5 rounded-lg border border-ink-line px-2 text-[13px]">
+                    <Icon name="sort" className="h-4 w-4 text-ink-muted" />
+                    <select aria-label="Sort by" value={filters.sort} onChange={(e) => navigate({ sort: e.target.value })}
+                        className="min-h-10 border-0 bg-ink-bg py-1 pl-0 pr-8 text-[13px] font-semibold focus:ring-ink-brand">
+                        {sortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                </label>
+                <GalleryFilterButton onClick={() => setSheetOpen(true)} activeCount={activeCount} expanded={sheetOpen} />
+                <span className="text-[12px] text-ink-muted">{windowLabel}</span>
+                {filters.sort !== 'top' && <button type="button" onClick={() => navigate({ sort: 'top' })} className="ml-auto text-[12px] font-semibold text-ink-brand hover:underline">Reset sort</button>}
+            </div>
         </>
     );
 
@@ -138,41 +149,25 @@ export default function GalleryIndex({ posts, page = 1, hasMore, filters, stats,
                 title="Gallery"
                 subtitle={`${stats.works.toLocaleString()} works · ${stats.artists.toLocaleString()} artists`}
                 tabs={tabs}
-                actions={<GalleryFilterButton onClick={() => setSheetOpen((v) => !v)} activeCount={activeCount} expanded={sheetOpen} />}
             />
 
             <GalleryFilterSheet
                 open={sheetOpen}
                 onClose={() => setSheetOpen(false)}
                 filters={filters}
-                sortOptions={sortOptions}
                 windowOptions={windowOptions}
                 formatOptions={formatOptions}
-                durationBounds={durationBounds}
                 tagSuggestions={tagSuggestions}
-                durationNarrowed={durationNarrowed}
+                activeCount={activeCount}
                 onApply={(next) => navigate(next)}
             />
 
-            <div className="flex items-center gap-2 px-3.5 pb-1 pt-2.5 text-[12.5px] text-ink-muted md:px-5">
-                <Icon name="filter" className="h-3.5 w-3.5 shrink-0 opacity-70" />
-                <span className="truncate">
-                    {sortLabel} · {windowLabel}
-                    {filters.tag ? ` · #${filters.tag}` : ''}
-                    {filters.min_duration || (filters.max_duration !== '' && filters.max_duration != null)
-                        ? ` · ${filters.min_duration || 0}–${filters.max_duration || durationBounds[1]}s`
-                        : ''}
-                    {(filters.tags ?? []).length ? ` · +${filters.tags.join(', +')}` : ''}
-                    {(filters.exclude_tags ?? []).length ? ` · −${filters.exclude_tags.join(', −')}` : ''}
-                    {filters.min_likes ? ` · ${filters.min_likes}+ likes` : ''}
-                    {filters.min_views ? ` · ${filters.min_views}+ views` : ''}
-                </span>
-                {(activeCount > 0) && (
-                    <button type="button" onClick={() => navigate({ sort: 'top', window: 'week', format: 'all', tag: '', q: '', min_duration: '', max_duration: '', tags: [], exclude_tags: [], min_likes: '', min_views: '' })} className="ml-auto shrink-0 text-[12px] font-semibold text-ink-brand hover:underline">
-                        Clear
-                    </button>
-                )}
-            </div>
+            {activeCount > 0 && <div className="flex flex-wrap items-center gap-2 px-4 pt-3 text-[12.5px] md:px-5" aria-label="Active filters">
+                {chips.map((chip) => <button type="button" key={chip.key} onClick={() => navigate(chip.patch)} className="chip is-active" aria-label={`Remove filter: ${chip.label}`}>
+                    {chip.label} <Icon name="close" className="h-3 w-3 shrink-0" />
+                </button>)}
+                <button type="button" onClick={() => navigate(clearedGalleryFilters)} className="ml-auto text-[12px] font-semibold text-ink-brand hover:underline">Clear filters</button>
+            </div>}
 
             <div className="px-2.5 pb-16 pt-2 md:px-5 md:pt-3">
                 {items.length === 0 ? (

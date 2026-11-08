@@ -3,17 +3,23 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\MessageController;
+use App\Models\Comment;
+use App\Models\Media;
+use App\Models\Message;
 use App\Models\ModerationAction;
 use App\Models\Post;
-use App\Support\Moderation;
-use App\Support\MessageAttachments;
 use App\Models\Report;
 use App\Models\User;
+use App\Support\MessageAttachments;
+use App\Support\Moderation;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ReportController extends Controller
 {
@@ -68,7 +74,7 @@ class ReportController extends Controller
     }
 
     /** Remove the reported thing and close the report. */
-    public function remove(Request $request, Report $report): \Illuminate\Http\RedirectResponse
+    public function remove(Request $request, Report $report): RedirectResponse
     {
         $data = $request->validate([
             'reason' => ['nullable', 'string', 'max:500'],
@@ -82,8 +88,8 @@ class ReportController extends Controller
             $action = match (true) {
                 $target instanceof User => 'ban_user',
                 $target instanceof Post => 'remove_post',
-                $target instanceof \App\Models\Comment => 'remove_comment',
-                $target instanceof \App\Models\Message => 'remove_message',
+                $target instanceof Comment => 'remove_comment',
+                $target instanceof Message => 'remove_message',
             };
 
             if ($target instanceof Post) {
@@ -92,10 +98,10 @@ class ReportController extends Controller
                 Moderation::ban($request->user(), $target, $data['reason'] ?? null);
             } else {
                 $target->delete();
-                if ($target instanceof \App\Models\Message) {
+                if ($target instanceof Message) {
                     MessageAttachments::purgeAfterCommit($target->media_id);
                 }
-                if ($target instanceof \App\Models\Comment) {
+                if ($target instanceof Comment) {
                     $target->post?->decrement('comments_count');
                 }
             }
@@ -106,7 +112,7 @@ class ReportController extends Controller
         return back()->with('success', 'Removed and report closed.');
     }
 
-    public function dismiss(Request $request, Report $report): \Illuminate\Http\RedirectResponse
+    public function dismiss(Request $request, Report $report): RedirectResponse
     {
         $data = $request->validate(['reason' => ['nullable', 'string', 'max:500']]);
 
@@ -117,7 +123,7 @@ class ReportController extends Controller
         return back()->with('success', 'Report dismissed.');
     }
 
-    public function assign(Request $request, Report $report): \Illuminate\Http\RedirectResponse
+    public function assign(Request $request, Report $report): RedirectResponse
     {
         $data = $request->validate(['claim' => ['required', 'boolean']]);
 
@@ -135,7 +141,7 @@ class ReportController extends Controller
         return back();
     }
 
-    public function rating(Request $request, Report $report): \Illuminate\Http\RedirectResponse
+    public function rating(Request $request, Report $report): RedirectResponse
     {
         $data = $request->validate(['rating' => ['required', Rule::in(User::RATINGS)], 'reason' => ['required', 'string', 'max:500']]);
         DB::transaction(function () use ($request, $report, $data) {
@@ -153,6 +159,38 @@ class ReportController extends Controller
         return back()->with('success', 'Work rating updated and report closed.');
     }
 
+    public function messageEvidence(Request $request, Report $report): \Symfony\Component\HttpFoundation\Response
+    {
+        $evidence = $this->reportedMessage($request, $report, 'view_message_evidence');
+
+        Inertia::encryptHistory();
+
+        return Inertia::render('Admin/MessageEvidence', [
+            'reportId' => $report->id,
+            'body' => $evidence->body,
+            'attachment' => $evidence->media ? [
+                'url' => route('admin.reports.message.attachment', $report, false),
+                'kind' => $evidence->media->kind,
+            ] : null,
+        ])->toResponse($request)->header('Cache-Control', 'private, no-store');
+    }
+
+    public function messageAttachment(Request $request, Report $report, MessageController $messages): BinaryFileResponse
+    {
+        return $messages->attachmentResponse($this->reportedMessage($request, $report, 'view_message_attachment'), 'original');
+    }
+
+    private function reportedMessage(Request $request, Report $report, string $action): Message
+    {
+        abort_unless($report->status === 'open' && $report->reportable_type === Message::class, 404);
+        $message = $report->message_evidence !== null
+            ? (new Message(['body' => $report->message_evidence]))->setRelation('media', Media::find($report->evidence_media_id))
+            : Message::findOrFail($report->reportable_id);
+        ModerationAction::record($request->user(), $action, Message::class, $report->reportable_id, $report->id);
+
+        return $message;
+    }
+
     private function openReport(Report $report): Report
     {
         $report = Report::lockForUpdate()->findOrFail($report->id);
@@ -163,7 +201,12 @@ class ReportController extends Controller
 
     private function resolve(Report $report, User $actor, string $status, string $action, ?string $reason): void
     {
-        $report->forceFill(['status' => $status, 'handled_by' => $actor->id, 'resolved_at' => now()])->save();
+        $evidenceMedia = $report->evidence_media_id;
+        $report->forceFill([
+            'status' => $status, 'handled_by' => $actor->id, 'resolved_at' => now(),
+            'message_evidence' => null, 'evidence_media_id' => null,
+        ])->save();
+        MessageAttachments::purgeAfterCommit($evidenceMedia);
         ModerationAction::record($actor, $action, $report->reportable_type, $report->reportable_id, $report->id, $reason);
     }
 
@@ -181,7 +224,7 @@ class ReportController extends Controller
             $image = $sensitive ? null : $target->cover()?->thumbUrl();
             $author = $target->user ? ['name' => $target->user->name, 'username' => $target->user->username] : null;
             $url = $target->trashed() ? null : route('posts.show', $target->id, false);
-        } elseif ($target instanceof \App\Models\Comment) {
+        } elseif ($target instanceof Comment) {
             $preview = mb_strimwidth((string) $target->body, 0, 100, '…');
             $author = ['name' => $target->user->name, 'username' => $target->user->username];
             $url = route('posts.show', $target->post_id, false);
@@ -189,8 +232,9 @@ class ReportController extends Controller
             $preview = $target->name.' @'.$target->username;
             $image = $target->avatarUrl();
             $url = route('profile.show', $target->username, false);
-        } elseif ($target instanceof \App\Models\Message) {
-            $preview = mb_strimwidth((string) $target->body, 0, 100, '…');
+        }
+        if ($r->reportable_type === Message::class && $r->status === 'open' && ($r->message_evidence !== null || $target)) {
+            $url = route('admin.reports.message', $r, false);
         }
 
         return [
@@ -200,7 +244,7 @@ class ReportController extends Controller
             'assigned_to' => $r->assigned_to,
             'assignee' => $r->assignee?->username,
             'related_open' => (int) $r->related_open,
-            'available' => $target !== null && (! $target instanceof Post && ! $target instanceof \App\Models\Comment || ! $target->trashed()),
+            'available' => $target !== null && (! $target instanceof Post && ! $target instanceof Comment || ! $target->trashed()),
             'rating' => $target instanceof Post && ! $target->trashed() ? $target->rating : null,
             'can_restore' => $target instanceof Post && $target->trashed() && $target->moderation_hidden_at !== null,
             'reason_label' => Report::REASONS[$r->reason] ?? $r->reason,

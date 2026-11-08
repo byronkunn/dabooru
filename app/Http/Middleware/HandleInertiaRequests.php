@@ -2,9 +2,13 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\AppNotification;
 use App\Support\AgeGate;
+use App\Support\ChatAccess;
+use App\Support\DemoAccounts;
 use App\Support\StaffAccess;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -27,8 +31,8 @@ class HandleInertiaRequests extends Middleware
         return array_merge(parent::share($request), [
             'ageConfirmed' => AgeGate::confirmed(),
             // local development only: the one-click demo switcher
-            'demoAccounts' => \Illuminate\Support\Facades\Route::has('demo.login')
-                ? \App\Support\DemoAccounts::users()
+            'demoAccounts' => Route::has('demo.login')
+                ? DemoAccounts::users()
                 : [],
             'auth' => [
                 'user' => $user ? [
@@ -42,25 +46,12 @@ class HandleInertiaRequests extends Middleware
                     'show_explicit' => $user->show_explicit,
                     'email_verified' => (bool) $user->email_verified_at,
                 ] : null,
-                'unread_notifications' => $user ? \App\Models\AppNotification::where('user_id', $user->id)
+                'unread_notifications' => $user ? AppNotification::where('user_id', $user->id)
+                    ->where('type', '!=', 'chat_mention')
                     ->whereNull('read_at')
                     ->when(! in_array('moderator', $staffPermissions, true), fn ($query) => $query->where('type', '!=', 'urgent_report'))
                     ->count() : 0,
-                'unread_messages' => fn () => $user ? (int) \DB::table('messages')
-                    ->join('conversation_participants', function ($j) use ($user) {
-                        $j->on('conversation_participants.conversation_id', '=', 'messages.conversation_id')
-                            ->where('conversation_participants.user_id', $user->id);
-                    })
-                    ->where('messages.user_id', '!=', $user->id)
-                    ->where(function ($q) {
-                        $q->whereColumn('messages.id', '>', 'conversation_participants.last_read_message_id')
-                            ->orWhere(function ($legacy) {
-                                $legacy->whereNull('conversation_participants.last_read_message_id')
-                                    ->where(fn ($time) => $time->whereNull('conversation_participants.last_read_at')
-                                        ->orWhereColumn('messages.created_at', '>', 'conversation_participants.last_read_at'));
-                            });
-                    })
-                    ->count() : 0,
+                'unread_messages' => fn () => $user ? ChatAccess::unreadCount($user) : 0,
             ],
             'flash' => [
                 'success' => fn () => $request->session()->pull('success'),

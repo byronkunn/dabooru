@@ -1,19 +1,12 @@
-import { Dialog, DialogPanel } from '@headlessui/react';
+import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/Components/Icons';
+import { clearedGalleryFilters, durationAtPosition, durationLabel, durationPosition, durationStops } from '@/Lib/galleryFilters';
 
 /* --------------------------------------------------------------- primitives
    The reference panel is a flat list, not a grid of cards: a small section
    heading, then rows separated by hairlines, with the active row marked by a
    left accent bar and brand-coloured text. */
-
-function SectionHeading({ children }) {
-    return (
-        <h3 className="flex items-center gap-1.5 border-b border-ink-line pb-1.5 text-[11px] font-bold uppercase tracking-[0.11em] text-ink-faint">
-            {children}
-        </h3>
-    );
-}
 
 function OptionList({ name, options, value, onChange }) {
     return (
@@ -49,50 +42,118 @@ function OptionList({ name, options, value, onChange }) {
 /* ------------------------------------------------------------ duration slider
    A real two-handle range so it behaves like the reference: keyboard-accessible,
    clamped so the handles cannot cross. */
-function DurationRange({ min, max, value, onChange }) {
-    const [from, to] = value;
-    const step = 5;
-    const pct = (n) => ((n - min) / (max - min)) * 100;
+function DurationRange({ filters, onApply, disabled }) {
+    const [value, setValue] = useState([filters.min_duration, filters.max_duration]);
+    const [error, setError] = useState('');
+    const draft = useRef(value);
+    const dirty = useRef(false);
+
+    useEffect(() => {
+        draft.current = [filters.min_duration, filters.max_duration];
+        setValue(draft.current);
+        dirty.current = false;
+        setError('');
+    }, [filters.min_duration, filters.max_duration, filters.format]);
+
+    const change = (next) => {
+        draft.current = next;
+        dirty.current = true;
+        setValue(next);
+        setError('');
+    };
+    const commit = () => {
+        if (!dirty.current || disabled) return;
+        const [min, max] = draft.current;
+        if ([min, max].some((n) => n !== '' && (!Number.isInteger(Number(n)) || Number(n) < 1 || Number(n) > 86400))) {
+            setError('Enter whole seconds from 1 to 86400, or leave blank for Any.');
+            return;
+        }
+        if (max !== '' && Number(min) > Number(max)) {
+            setError('Minimum length must not exceed maximum length.');
+            return;
+        }
+        dirty.current = false;
+        onApply({ min_duration: min === '' ? '' : Number(min), max_duration: max === '' ? '' : Number(max) });
+    };
+    const from = durationPosition(value[0]);
+    const to = durationPosition(value[1], true);
+    const tickLabels = ['Any', '15s', '30s', '1m', '2m', '5m', '10m', '25m', 'Any'];
+    const moveHandle = (index, position) => {
+        const limited = index === 0
+            ? Math.min(position, to, durationPosition(86400))
+            : Math.max(position, from, durationPosition(1));
+        const seconds = durationAtPosition(limited);
+        change(index === 0 ? [seconds, value[1]] : [value[0], seconds]);
+    };
+    const moveWithKeyboard = (index, event) => {
+        const position = index === 0 ? from : to;
+        const next = {
+            ArrowRight: Math.floor(position) + 1, ArrowUp: Math.floor(position) + 1,
+            ArrowLeft: Math.ceil(position) - 1, ArrowDown: Math.ceil(position) - 1,
+            Home: 0, End: 8,
+        }[event.key];
+        if (next === undefined) return;
+        event.preventDefault();
+        moveHandle(index, Math.max(0, Math.min(8, next)));
+    };
 
     return (
-        <div className="px-1.5 pt-1">
-            <div className="relative h-7">
+        <fieldset disabled={disabled} className="min-w-0 px-1.5 pt-1 disabled:opacity-40">
+            <p className="mb-2 text-[13px] font-semibold text-ink-brand" aria-live="polite">{durationLabel(value[0], value[1])}</p>
+            <div className="relative mx-2 h-7">
                 <div className="absolute top-1/2 h-1 w-full -translate-y-1/2 rounded-full bg-[#3a3242]" />
                 <div
                     className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-ink-brand"
-                    style={{ left: `${pct(from)}%`, width: `${Math.max(0, pct(to) - pct(from))}%` }}
+                    style={{ left: `${from / 8 * 100}%`, width: `${Math.max(0, to - from) / 8 * 100}%` }}
                 />
+                {durationStops.map((_, index) => <span key={index} aria-hidden="true" className="absolute top-2 h-3 w-px bg-ink-muted" style={{ left: `${index / 8 * 100}%` }} />)}
                 <input
                     type="range"
-                    min={min}
-                    max={max}
-                    step={step}
+                    min={0}
+                    max={8}
+                    step="any"
                     value={from}
                     aria-label="Shortest duration"
-                    aria-valuetext={`${from} seconds or more`}
-                    onChange={(e) => onChange([Math.min(Number(e.target.value), to - step), to])}
+                    aria-valuetext={value[0] ? `${value[0]} seconds or more` : 'No minimum'}
+                    onChange={(e) => moveHandle(0, Number(e.target.value))}
+                    onKeyDown={(e) => moveWithKeyboard(0, e)}
+                    onPointerUp={commit}
+                    onKeyUp={commit}
+                    onBlur={commit}
                     className="range-thumb absolute inset-0 w-full appearance-none bg-transparent"
                 />
                 <input
                     type="range"
-                    min={min}
-                    max={max}
-                    step={step}
+                    min={0}
+                    max={8}
+                    step="any"
                     value={to}
                     aria-label="Longest duration"
-                    aria-valuetext={to >= max ? `${max} seconds or more` : `up to ${to} seconds`}
-                    onChange={(e) => onChange([from, Math.max(Number(e.target.value), from + step)])}
+                    aria-valuetext={value[1] ? `Up to ${value[1]} seconds` : 'No maximum'}
+                    onChange={(e) => moveHandle(1, Number(e.target.value))}
+                    onKeyDown={(e) => moveWithKeyboard(1, e)}
+                    onPointerUp={commit}
+                    onKeyUp={commit}
+                    onBlur={commit}
                     className="range-thumb absolute inset-0 w-full appearance-none bg-transparent"
                 />
             </div>
-            <div className="mt-1 flex items-center justify-between text-[11px] text-ink-faint">
-                <span>{min}s</span>
-                <span className="font-semibold text-ink-muted">
-                    {from === min ? 'Any' : `${from}s`} – {to >= max ? 'any' : `${to}s`}
-                </span>
-                <span>{max}s</span>
+            <div className="relative mx-2 mb-5 h-4 text-[10px] text-ink-faint">
+                {tickLabels.map((label, index) => <span key={index} className="absolute -translate-x-1/2 whitespace-nowrap" style={{ left: `${index / 8 * 100}%` }}>{label}</span>)}
             </div>
-        </div>
+            <div className="grid grid-cols-2 gap-3">
+                {['Minimum seconds', 'Maximum seconds'].map((label, index) => (
+                    <label key={label} className="text-[12px] text-ink-muted">
+                        {label}
+                        <input type="number" min="1" max="86400" step="1" placeholder="Any" value={value[index]}
+                            onChange={(e) => change(index === 0 ? [e.target.value, value[1]] : [value[0], e.target.value])}
+                            onBlur={commit} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }}
+                            className="field-input mt-1 w-full" />
+                    </label>
+                ))}
+            </div>
+            {error && <p role="alert" className="mt-2 text-xs text-ink-expl">{error}</p>}
+        </fieldset>
     );
 }
 
@@ -203,49 +264,13 @@ export default function GalleryFilterSheet({
     open,
     onClose,
     filters,
-    sortOptions,
     windowOptions,
     formatOptions,
-    durationBounds = [0, 60],
     tagSuggestions = [],
-    durationNarrowed = false,
+    activeCount = 0,
     onApply,
 }) {
-    const [duration, setDuration] = useState([durationBounds[0], durationBounds[1]]);
-    const durationTouched = useRef(false);
-
-    // seed the slider from the URL when the panel opens
-    useEffect(() => {
-        if (!open) return;
-        const [lo, hi] = durationBounds;
-        setDuration([
-            Number(filters.min_duration ?? lo),
-            filters.max_duration === '' || filters.max_duration == null ? hi : Number(filters.max_duration),
-        ]);
-        durationTouched.current = false;
-    }, [open, durationBounds, filters.min_duration, filters.max_duration]);
-
-    // push a duration change once the visitor stops dragging
-    useEffect(() => {
-        if (!open || !durationTouched.current) return;
-        const [lo, hi] = durationBounds;
-        const t = setTimeout(() => {
-            onApply({
-                ...filters,
-                min_duration: duration[0] > lo ? duration[0] : '',
-                max_duration: duration[1] < hi ? duration[1] : '',
-            });
-        }, 450);
-        return () => clearTimeout(t);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [duration]);
-
-    const changeDuration = (next) => {
-        durationTouched.current = true;
-        setDuration(next);
-    };
-
-    const set = (patch) => onApply({ ...filters, ...patch });
+    const set = onApply;
 
     const addTag = (list, tag) => {
         const next = [...(filters[list] ?? [])];
@@ -256,20 +281,6 @@ export default function GalleryFilterSheet({
     };
     const removeTag = (list, tag) => set({ [list]: (filters[list] ?? []).filter((t) => t !== tag) });
 
-    const activeCount = [
-        filters.sort !== 'top',
-        filters.window !== 'week',
-        filters.format !== 'all',
-        !!filters.tag,
-        filters.explicit,
-        !!filters.min_duration,
-        filters.max_duration != null && filters.max_duration !== '',
-        (filters.tags ?? []).length > 0,
-        (filters.exclude_tags ?? []).length > 0,
-        !!filters.min_likes,
-        !!filters.min_views,
-    ].filter(Boolean).length;
-
     return (
         <Dialog open={open} onClose={onClose} className="relative z-[80]">
             <div className="fixed inset-0 bg-black/70" aria-hidden="true" />
@@ -278,17 +289,15 @@ export default function GalleryFilterSheet({
                 <DialogPanel className="flex max-h-full w-full max-w-[640px] flex-col border-x border-b border-ink-line bg-ink-surface shadow-2xl md:max-h-[calc(100vh-4rem)] md:rounded-xl md:border">
                     {/* header bar */}
                     <header className="flex shrink-0 items-center gap-2 border-b border-ink-line px-3 py-2.5">
-                        <span className="text-[15px] font-bold tracking-[-0.01em]">Sort &amp; filter</span>
+                        <Icon name="adjustments" />
+                        <DialogTitle className="text-[15px] font-bold tracking-[-0.01em]">Filters</DialogTitle>
                         {activeCount > 0 && (
                             <button
                                 type="button"
-                                onClick={() => {
-                                    durationTouched.current = false;
-                                    onApply({ sort: 'top', window: 'week', format: 'all', tag: '', q: '', explicit: filters.explicit, min_duration: '', max_duration: '', tags: [], exclude_tags: [], min_likes: '', min_views: '' });
-                                }}
+                                onClick={() => onApply(clearedGalleryFilters)}
                                 className="ml-1 text-[12.5px] font-semibold text-ink-brand hover:underline"
                             >
-                                Clear all
+                                Clear filters
                             </button>
                         )}
                         <button type="button" onClick={onClose} aria-label="Close" className="btn-icon-flat ml-auto h-8 w-8">
@@ -297,21 +306,6 @@ export default function GalleryFilterSheet({
                     </header>
 
                     <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-5 pt-3">
-                        {/* SORT BY */}
-                        <SectionHeading>
-                            <Icon name="filter" className="h-3.5 w-3.5" />
-                            Sort by
-                        </SectionHeading>
-                        <OptionList name="Sort by" options={sortOptions} value={filters.sort} onChange={(v) => set({ sort: v })} />
-
-                        {/* FILTERS heading, matching the reference's second block */}
-                        <div className="mt-5">
-                            <SectionHeading>
-                                <Icon name="filter" className="h-3.5 w-3.5" />
-                                Filters
-                            </SectionHeading>
-                        </div>
-
                         {/* FORMAT */}
                         <div className="mt-4">
                             <h4 className="pb-1 text-[12.5px] font-bold text-ink-muted">Format</h4>
@@ -327,21 +321,18 @@ export default function GalleryFilterSheet({
                         {/* DURATION — only meaningful for video-ish formats */}
                         <div className="mt-4">
                             <h4 className="pb-1 text-[12.5px] font-bold text-ink-muted">Video length</h4>
-                            <DurationRange min={durationBounds[0]} max={durationBounds[1]} value={duration} onChange={changeDuration} />
+                            <DurationRange filters={filters} onApply={set} disabled={filters.format !== 'video'} />
                             <p className="mt-1 px-1.5 text-[11px] text-ink-faint">
-                                {duration[0] === durationBounds[0] && duration[1] >= durationBounds[1]
-                                    ? 'Only videos have a length — setting a range switches the gallery to videos.'
-                                    : durationNarrowed
-                                        ? 'Showing videos only, because only videos have a length.'
-                                        : 'Applies to the videos in the gallery.'}
+                                Filters all matching videos, including works not loaded yet. Any maximum means no length limit.
                             </p>
+                            {filters.format !== 'video' && <button type="button" onClick={() => set({ format: 'video' })} className="mt-2 text-[13px] font-semibold text-ink-brand hover:underline">Switch to videos</button>}
                         </div>
 
                         {/* TAGS */}
                         <div className="mt-4 space-y-2.5">
                             <h4 className="pb-1 text-[12.5px] font-bold text-ink-muted">Tags</h4>
                             <TagEditor
-                                label="Must include"
+                                label="Include any of"
                                 tone="include"
                                 values={filters.tags ?? []}
                                 suggestions={tagSuggestions}
@@ -367,7 +358,7 @@ export default function GalleryFilterSheet({
                                 <Threshold label="At least this many views" unit="views" value={filters.min_views} onChange={(v) => set({ min_views: v || '' })} max={150} />
                             </ul>
                             <p className="mt-1 px-1.5 text-[11px] text-ink-faint">
-                                Works are scored by likes and views — there are no star ratings yet.
+                                These filters use likes and views. Star ratings are shown on each work.
                             </p>
                         </div>
 
@@ -413,18 +404,18 @@ export default function GalleryFilterSheet({
     );
 }
 
-/** The icon that opens the panel — a funnel, with a count when filters are on. */
+/** Counts filtering categories, independently of sorting and content preference. */
 export function GalleryFilterButton({ onClick, activeCount = 0, expanded = false }) {
     return (
         <button
             type="button"
             onClick={onClick}
             aria-expanded={expanded}
-            aria-label={activeCount ? `Sort and filter, ${activeCount} active` : 'Sort and filter'}
-            title="Sort and filter"
+            aria-label={activeCount ? `Filters, ${activeCount} active` : 'Filters'}
+            title="Filters"
             className={`btn-icon-flat relative h-10 w-10 shrink-0 ${activeCount ? 'text-ink-brand' : ''}`}
         >
-            <Icon name="filter" className="h-[20px] w-[20px]" />
+            <Icon name="adjustments" className="h-[20px] w-[20px]" />
             {activeCount > 0 && (
                 <span className="absolute right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-ink-brand px-1 text-[10px] font-extrabold leading-none text-[#1c1017]">
                     {activeCount}

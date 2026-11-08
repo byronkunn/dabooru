@@ -120,13 +120,15 @@ Write actions (all under `auth`, several throttled) live in `routes/web.php`: `P
 
 - **18+ age gate** — every request without confirmation redirects to `/age-gate`; accepting sets the `inkwell_age_ok` cookie for one year and stamps `age_confirmed_at` on the user. Auth and the gate itself always stay reachable.
 - **Per-post ratings** — SFW / Suggestive / Explicit, stored on posts, chapters and series. Explicit posts are filtered out server-side (not hidden in the client) for guests and for logged-in users who turned explicit off.
-- **Gallery** — masonry grid, 36 per page, filtered by **format** (all / image / gif / video / album / comic) × **sort** (top rated = likes, most viewed, newest) × **time window** (today / week / month / all time), plus a show-explicit toggle, trending tags and suggested artists.
+- **Gallery** — masonry grid, 36 per page. Up/down arrows control **sort** (most liked / most viewed / newest); the **adjustments** icon opens format, time period, tags, popularity floors, and explicit-content controls. Sorting and filtering share URL state, and each change starts at page 1. The badge counts active filtering categories, excluding sort and the explicit preference. Clear filters preserves those two settings; Reset sort preserves filters. Format tabs and the panel stay synchronized, and tag selection preserves the time period.
+- **Video length** — a two-handle, nonlinear slider with labeled ticks from 15 seconds through 25 minutes, plus exact whole-second inputs (1–86400). Blank/Any bounds mean no minimum or maximum, not a cap on video length. The slider is enabled for Videos; other formats offer **Switch to videos**. Selecting a non-video format clears duration bounds. Filtering happens across the whole library before pagination, not just loaded works. Include tags matches **any** selected tag; exclude tags hides works matching **any** excluded tag.
 - **Following feed** and follows between artists.
 - **Post detail** — likes, saves/bookmarks, comments, and view counting with de-duplication (one view per viewer per post, using the `post_views` table).
+- **Star ratings** — five selectable stars on each work page, with the average, rating count, and your selected score. Signed-in, unrestricted users can submit or change one whole-number 1–5 rating per work. Guests can see the summary and are prompted to sign in. Ratings remain separate from content-safety labels, likes, and gallery sorting.
 - **Comics** — series index, series page with chapter list and continue-reading, and a reader with **page mode** and **vertical scroll mode**. Reading progress is persisted per user per series.
-- **DMs** — conversation list with previews and unread counts, conversation view, sending messages, new conversation from a profile via `/messages?to=name`.
+- **Messaging** — direct chats with requests and privacy controls and private Saved Messages. The inbox supports search, unread filters, pinning, muting, archiving, and folders. Chats include replies, reactions, forwards, private attachments, voice and video notes, artwork cards, stickers, polls, checklists, and scheduled sends.
 - **Notifications** — likes, comments and follows, with unread badge and mark-all-read.
-- **Settings** — profile (name, handle, bio, location, website, avatar, banner uploads) and content/media/notification/privacy toggles (show explicit, mature preview, autoplay videos, animate GIFs, reduce motion, reader mode, email notifications, DM requests, read receipts).
+- **Settings** — profile and content and notification preferences. In Messages, Privacy controls new DMs, read receipts, and forwarding.
 - **Real uploads** — images (jpg/png/webp/avif, 40 MB), GIFs, videos (mp4/mov/webm, 500 MB), albums (2–20 images) and comic chapters (up to 60 pages, 15 MB each) stored on the `public` disk, with server-side validation of type and rating.
 - **Auth** — register, login, logout, password reset and email verification flows (Laravel Breeze).
 - **Themes** — custom dark "ink" Tailwind palette and responsive layout from mobile to a 1560px shell.
@@ -134,13 +136,20 @@ Write actions (all under `auth`, several throttled) live in `routes/web.php`: `P
 ### Not yet
 
 - **Video transcoding (HLS) is stubbed.** Video uploads are stored as-is and marked `processing`; nothing transcodes or generates a poster/derivatives yet.
-- **No real-time.** There is no Reverb / websocket broadcasting; DMs and notifications update on normal requests only.
 - **Seeded media is external.** Demo posts point at placeholder URLs (`picsum.photos`, `i.pravatar.cc`), so they need network access to render. Uploaded media is local.
 - **Ads are placeholders.** There is one labelled sidebar ad slot with no network tags or tracking.
 - **No moderation admin panel.** `reports` table and a report endpoint exist, and users have `is_admin` / `banned_at` fields, but there is no admin UI to act on them.
 - **DMCA page is not built.**
 - **No blocking UI.** A `blocks` table exists but nothing in the UI creates blocks.
 - **No search.** Tag chips on the gallery are static, not queryable.
+
+## Messaging deployment
+
+Run `php artisan migrate` and `npm run build` when deploying messaging. Existing conversations are kept as accepted direct chats. New senders who aren't followed start with one text-only request.
+
+Run the Laravel scheduler every minute to deliver scheduled messages and purge expired messages and unused attachments. For local testing, run `php artisan schedule:work`. Scheduled messages are rechecked against permissions at delivery time. Open moderation reports retain a copy of the reported message and attachment until the report is closed.
+
+The inbox and open chat refresh by polling. Former groups, channels, and channel inboxes are retired. Their records stay in the database and their scheduled messages are paused.
 
 ## Project structure
 
@@ -299,4 +308,3 @@ The **Accounts** button in the bottom-left (desktop) lists the credited library
 artists, so you can look at the site as different people. It only renders when
 the server sends `demoAccounts`, which happens only when the `demo.login` route
 exists (`APP_ENV=local` or `testing`). On mobile it lives in Settings.
-

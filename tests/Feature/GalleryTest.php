@@ -183,6 +183,65 @@ class GalleryTest extends TestCase
                 ->where('filters.window', 'week'));
     }
 
+    public function test_zero_duration_bounds_mean_no_duration_filter(): void
+    {
+        $this->seedPosts();
+        $this->get('/?min_duration=0&max_duration=0')
+            ->assertInertia(fn ($page) => $page->has('posts', 2)
+                ->where('filters.format', 'all')
+                ->where('filters.min_duration', '')
+                ->where('filters.max_duration', ''));
+    }
+
+    public function test_long_video_filters_and_sort_apply_before_pagination(): void
+    {
+        $artist = User::factory()->create();
+        $ids = [];
+        for ($i = 0; $i < 40; $i++) {
+            $post = Post::create([
+                'user_id' => $artist->id, 'type' => 'video', 'rating' => 'sfw',
+                'title' => 'Study', 'views' => 100 + $i, 'likes_count' => 10,
+                'created_at' => now()->subDays(15),
+            ]);
+            $media = Media::create([
+                'user_id' => $artist->id, 'disk' => 'public', 'path' => "uploads/long-{$i}.mp4",
+                'kind' => 'video', 'status' => 'ready', 'duration_seconds' => 4000 + $i,
+            ]);
+            PostMedia::create(['post_id' => $post->id, 'media_id' => $media->id, 'position' => 0]);
+            Tag::syncFor($post, ['study']);
+            $ids[] = $post->id;
+        }
+        $query = '/?format=video&window=month&sort=views&tags=study&min_duration=1500&max_duration=5400&min_likes=10&min_views=100';
+        $this->get($query)->assertInertia(fn ($page) => $page
+            ->has('posts', 36)->where('posts.0.id', $ids[39])
+            ->where('filters.sort', 'views')->where('filters.window', 'month')
+            ->where('filters.min_duration', 1500)->where('filters.max_duration', 5400)
+            ->where('hasMore', true));
+        $this->getJson($query.'&page=2')->assertOk()
+            ->assertJsonCount(4, 'posts')
+            ->assertJsonPath('posts.0.id', $ids[3])
+            ->assertJsonPath('page', 2)->assertJsonPath('hasMore', false);
+        $this->get('/?format=video&window=all&min_duration=1500')->assertInertia(fn ($page) => $page
+            ->has('posts', 36)->where('filters.max_duration', ''));
+        $this->get($query.'&max_duration=3600')->assertInertia(fn ($page) => $page->has('posts', 0));
+    }
+
+    public function test_tied_sort_results_have_stable_pagination(): void
+    {
+        $artist = User::factory()->create();
+        $ids = [];
+        for ($i = 0; $i < 40; $i++) {
+            $ids[] = Post::create([
+                'user_id' => $artist->id, 'type' => 'image', 'rating' => 'sfw',
+                'created_at' => now()->startOfDay(), 'likes_count' => 5, 'views' => 10,
+            ])->id;
+        }
+        foreach (['top', 'views', 'newest'] as $sort) {
+            $this->getJson('/?sort='.$sort)->assertJsonPath('posts.0.id', $ids[39])->assertJsonPath('hasMore', true);
+            $this->getJson('/?sort='.$sort.'&page=2')->assertJsonCount(4, 'posts')->assertJsonPath('posts.0.id', $ids[3]);
+        }
+    }
+
     public function test_logged_in_user_with_explicit_enabled_sees_explicit_posts(): void
     {
         ['explicit' => $explicit] = $this->seedPosts();

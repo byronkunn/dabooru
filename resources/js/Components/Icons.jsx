@@ -62,6 +62,10 @@ export function Icon({ name, className = 'w-5 h-5' }) {
         close: <path d="M6 6l12 12M18 6L6 18" />,
         // funnel — the sort/filter control
         filter: <path d="M3 4.5h18l-7 8.2v6.3l-4 2.5v-8.8L3 4.5z" />,
+        adjustments: <><path d="M3 6h4m4 0h10M3 12h10m4 0h4M3 18h4m4 0h10" /><circle cx="9" cy="6" r="2" /><circle cx="15" cy="12" r="2" /><circle cx="9" cy="18" r="2" /></>,
+        sort: <path d="M8 20V4M4 8l4-4 4 4M16 4v16m-4-4 4 4 4-4" />,
+        star: <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3z" />,
+        starFilled: <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3z" fill="currentColor" />,
         check: <path d="M4 12.5l5 5L20 6.5" />,
         plus: <path d="M12 5v14M5 12h14" />,
         send: <path d="M4 12l16-8-6 16-3-6-7-2z" />,

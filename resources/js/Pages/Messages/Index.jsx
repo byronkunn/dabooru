@@ -1,46 +1,21 @@
-import { Head, Link, router } from '@inertiajs/react';
-import AppLayout, { TopBar } from '@/Layouts/AppLayout';
+import { Head, usePoll } from '@inertiajs/react';
+import AppLayout from '@/Layouts/AppLayout';
 import { Icon } from '@/Components/Icons';
+import Inbox from './Inbox';
 
-export default function MessagesIndex({ conversations, activeId }) {
-    const active = conversations.find((c) => c.id === activeId);
+export default function MessagesIndex(props) {
+    usePoll(6000, { only: ['conversations', 'auth', 'hasMore', 'requestCount'], preserveScroll: true });
 
     return (
-        <AppLayout>
+        <AppLayout rightRail={false} footer={false}>
             <Head title="Messages" />
-            <div className="grid h-[calc(100vh-64px)] grid-cols-1 md:h-screen md:grid-cols-[320px_minmax(0,1fr)]">
-                <div className="border-r border-ink-line md:overflow-y-auto">
-                    <TopBar title="Messages" />
-                    {conversations.length === 0 ? (
-                        <p className="px-5 py-16 text-center text-sm text-ink-muted">
-                            No messages yet. Visit an artist&apos;s profile and hit Message.
-                        </p>
-                    ) : (
-                        conversations.map((c) => (
-                            <Link
-                                key={c.id}
-                                href={route('messages.show', c.id)}
-                                className={`flex min-h-[68px] items-center gap-2.5 border-b border-ink-line px-4 py-3 ${c.id === active?.id ? 'bg-ink-raised' : ''}`}
-                            >
-                                <img src={c.with?.avatar} alt="" className="h-11 w-11 rounded-full object-cover" />
-                                <div className="min-w-0 flex-1">
-                                    <p className="flex items-center gap-1.5 text-sm font-bold">
-                                        {c.with?.name}
-                                        <span className="truncate text-[12.5px] font-medium text-ink-muted">@{c.with?.username}</span>
-                                    </p>
-                                    <p className="truncate text-[13px] text-ink-muted">{c.preview}</p>
-                                </div>
-                                <span className="shrink-0 text-[11.5px] text-ink-faint">{c.last_message_human}</span>
-                            </Link>
-                        ))
-                    )}
-                </div>
-
-                <div className="hidden md:grid md:place-items-center md:text-center">
-                    <div className="max-w-xs">
+            <div className="grid h-[calc(100dvh-70px)] min-w-0 grid-cols-1 lg:h-screen lg:grid-cols-[minmax(240px,300px)_minmax(0,1fr)]">
+                <Inbox {...props} key={props.filters?.q ?? ''} />
+                <div className="hidden place-items-center text-center lg:grid">
+                    <div className="p-6">
                         <Icon name="chat" className="mx-auto h-10 w-10 text-ink-faint" />
-                        <p className="mt-3 text-[15px] font-semibold">Select a conversation</p>
-                        <p className="mt-1 text-[13px] text-ink-muted">Messages between you and other artists live here.</p>
+                        <p className="mt-3 text-base font-semibold">Open a conversation</p>
+                        <p className="mt-1 text-sm text-ink-muted">Direct messages and Saved Messages.</p>
                     </div>
                 </div>
             </div>
