@@ -110,11 +110,18 @@ Route::middleware(['auth', 'admin:curator', 'throttle:60,1'])->prefix('admin/com
 
 /* legal: public, reachable even before the age gate */
 Route::get('/terms', [LegalController::class, 'terms'])->name('legal.terms');
+Route::get('/tip', [\App\Http\Controllers\TipController::class, 'show'])->name('tip');
+Route::patch('/tip', [\App\Http\Controllers\TipController::class, 'update'])->middleware('auth')->name('tip.update');
 Route::get('/privacy', [LegalController::class, 'privacy'])->name('legal.privacy');
 Route::get('/content-policy', [LegalController::class, 'policy'])->name('legal.policy');
 Route::get('/dmca', [DmcaController::class, 'show'])->name('dmca');
 Route::post('/dmca', [DmcaController::class, 'submit'])->middleware('throttle:5,1')->name('dmca.submit');
 Route::get('/dmca/sent', [DmcaController::class, 'submitted'])->name('dmca.submitted');
+
+// Bug reports are open to signed-out visitors: some bugs only appear there.
+Route::get('/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap');
+Route::get('/bug', [\App\Http\Controllers\BugReportController::class, 'show'])->name('bug.index');
+Route::post('/bug', [\App\Http\Controllers\BugReportController::class, 'store'])->middleware('throttle:5,1')->name('bug.store');
 
 Route::get('/comics', [ComicController::class, 'index'])->name('comics.index');
 

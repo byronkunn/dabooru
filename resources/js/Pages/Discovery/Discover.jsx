@@ -6,7 +6,7 @@ import { WorkCell } from '@/Components/Work';
 import { AdminPagination } from '@/Components/AdminUi';
 import AdSlot from '@/Components/AdSlot';
 
-export default function Discover({ posts, personalized, staffPicks = [], nextPage, previousPage }) {
+export default function Discover({ posts, personalized, staffPicks = [], nextPage, previousPage, auth }) {
     return (
         <AppLayout>
             <Head title="Discover" />
@@ -41,6 +41,19 @@ export default function Discover({ posts, personalized, staffPicks = [], nextPag
                         </div>
                     </details>)}
                 </section>}
+                {!auth?.user && (
+                    <section className="mb-3 rounded-2xl border border-ink-brand/35 bg-ink-brand/[0.07] px-4 py-3.5">
+                        <p className="text-[14px] font-bold">Follow the artists you like</p>
+                        <p className="mt-1 text-[13px] text-ink-muted">
+                            Make an account to follow artists and tags, save work, and get a feed built around what you
+                            actually look at. It takes about a minute.
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            <Link href={route('register')} className="btn-primary min-h-10 px-4 text-[13px]">Create an account</Link>
+                            <Link href={route('login')} className="btn-ghost min-h-10 px-4 text-[13px]">Log in</Link>
+                        </div>
+                    </section>
+                )}
                 <div className="columns-2 gap-2.5 md:columns-3 md:gap-3.5">
                     {posts.map((post) => <div key={post.id} className="break-inside-avoid">
                         <p className="mb-1 flex items-center gap-1.5 px-1 text-[11px] text-ink-muted">

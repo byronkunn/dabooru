@@ -16,7 +16,7 @@ import { shouldBlurMedia } from '@/Lib/mediaVisibility';
 import PostComments from '@/Components/PostComments';
 import SaveWorkActions from '@/Components/SaveWorkActions';
 
-export default function PostShow({ post, comments, canComment, commentPagination, more, liked, saved, followedAuthor, creditClaim, starRating, tagEditing }) {
+export default function PostShow({ post, comments, canComment, commentPagination, commentSort = 'newest', more, liked, saved, followedAuthor, creditClaim, starRating, tagEditing }) {
     const { auth } = usePage().props;
     const [revealed, setRevealed] = useState(false);
     const [isLiked, setLiked] = useState(liked);
@@ -292,7 +292,7 @@ export default function PostShow({ post, comments, canComment, commentPagination
             </article>
             <AdSlot className="mx-4 my-3 max-w-[720px] xl:hidden" placement="post-mobile" compact />
 
-            <PostComments key={`${post.id}-${auth.user?.id}`} post={post} comments={comments} canComment={canComment} pagination={commentPagination} />
+            <PostComments key={`${post.id}-${auth.user?.id}`} post={post} comments={comments} canComment={canComment} pagination={commentPagination} sort={commentSort} />
 
             {reporting && <ReportDialog type="post" id={post.id} onClose={() => setReporting(false)} />}
 

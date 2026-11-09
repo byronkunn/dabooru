@@ -36,6 +36,9 @@ class EnsureAgeConfirmed
         if ($request->is(
             'age-gate*', 'login', 'register', 'forgot-password*', 'reset-password*',
             'terms', 'privacy', 'content-policy', 'dmca*',
+            // crawler-facing files must be reachable, or a search engine only ever
+            // sees the gate and the site never gets indexed
+            'sitemap.xml', 'robots.txt',
             'up', 'build/*', 'storage/*', 'sfw/*',
         )) {
             return $next($request);

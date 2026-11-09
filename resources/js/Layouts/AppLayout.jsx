@@ -90,6 +90,8 @@ const NAV = [
     { label: 'Create', href: 'create', icon: 'plus', matches: CREATE, auth: true },
     { label: 'Creator Studio', shortLabel: 'Studio', href: 'studio.index', icon: 'upload', matches: ['studio*'], auth: true },
     { label: 'Inbox', href: 'messages.index', icon: 'chat', matches: INBOX, auth: true },
+    { label: 'Tip', href: 'tip', icon: 'heart', matches: ['tip'] },
+    { label: 'Report a bug', shortLabel: 'Bug', href: 'bug.index', icon: 'flag', matches: ['bug*'] },
     { label: 'Library', href: 'collections.index', icon: 'save', matches: LIBRARY, auth: true, rememberGroup: 'library-sections', rememberTabs: [['Collections', 'collections.index'], ['Saved Searches', 'saved-searches.index']] },
 ];
 
@@ -251,6 +253,16 @@ function BottomNav({ menuOpen, setMenuOpen }) {
                 { label: 'Creator Studio', href: route('studio.index') },
                 { label: 'Upload work', href: route('upload.create') },
                 { label: 'New comic chapter', href: route('comics.chapters.create') },
+            ],
+        },
+        {
+            label: 'Help',
+            items: [
+                { label: 'Tip the site', href: route('tip') },
+                { label: 'Report a bug', href: route('bug.index') },
+                { label: 'Copyright / DMCA', href: route('dmca') },
+                { label: 'Terms', href: route('legal.terms') },
+                { label: 'Privacy', href: route('legal.privacy') },
             ],
         },
         {

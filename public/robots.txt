@@ -1,2 +1,13 @@
 User-agent: *
-Disallow:
+# The age gate and private areas should never be indexed
+Disallow: /age-gate
+Disallow: /settings
+Disallow: /messages
+Disallow: /notifications
+Disallow: /studio
+Disallow: /admin
+Disallow: /upload
+Disallow: /saved
+Disallow: /bug
+
+Sitemap: /sitemap.xml

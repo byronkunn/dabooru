@@ -24,11 +24,17 @@ class PostController extends Controller
         $post->load(['user', 'media.media', 'chapter.comic', 'tags', 'creditedArtist:id,username,name,banned_at,email_verified_at']);
         $this->recordView($request, $post);
 
+        // readers can choose newest first or the thread with the most replies on top
+        $commentSort = in_array($request->query('comment_sort'), ['newest', 'top'], true)
+            ? $request->query('comment_sort') : 'newest';
+
         $comments = $post->comments()->withTrashed()
             ->whereNull('parent_id')
             ->where(fn ($query) => $query->whereNull('deleted_at')->orWhereHas('replies'))
             ->with(['user', 'post', 'replies' => fn ($query) => $query->with(['user', 'post'])->oldest('id')])
-            ->latest('id')->simplePaginate(20, ['*'], 'comment_page')->withQueryString();
+            ->when($commentSort === 'top', fn ($q) => $q->withCount('replies')->orderByDesc('replies_count')->orderByDesc('id'))
+            ->when($commentSort === 'newest', fn ($q) => $q->latest('id'))
+            ->simplePaginate(20, ['*'], 'comment_page')->withQueryString();
         $starSummary = $post->starRatings()->selectRaw('COUNT(*) AS votes, AVG(stars) AS average')->first();
         $more = Post::query()
             ->with(['user', 'media.media', 'chapter.comic'])
@@ -51,6 +57,7 @@ class PostController extends Controller
                 ? ['status' => ArtistCreditClaim::where('user_id', $viewer->id)->where('post_id', $post->id)->value('status')]
                 : null,
             'comments' => CommentResource::collection($comments->items())->resolve(),
+            'commentSort' => $commentSort,
             'commentPagination' => [
                 'nextPage' => $comments->nextPageUrl() ? $comments->nextPageUrl().'#comments' : null,
                 'previousPage' => $comments->previousPageUrl() ? $comments->previousPageUrl().'#comments' : null,

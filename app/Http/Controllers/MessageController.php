@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Support\AgeGate;
 use App\Support\ChatAccess;
 use App\Support\MessageAttachments;
+use App\Support\MessagePayload;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -39,7 +40,7 @@ class MessageController extends Controller
         if ($request->filled('to')) {
             $data = $request->validate(['to' => ['required', 'string']]);
             $other = User::where('username', $data['to'])->firstOrFail();
-            $this->rejectSelf($viewer, $other);
+            MessagePayload::rejectSelf($viewer, $other);
             $thread = DB::transaction(fn () => ChatAccess::direct($viewer, $other));
 
             return redirect()->route('messages.show', $thread);
@@ -55,7 +56,7 @@ class MessageController extends Controller
             $filters['tab'] = $tab;
         }
         $page = (int) ($filters['page'] ?? 1);
-        $conversations = $this->conversationList($viewer, $filters);
+        $conversations = MessagePayload::conversationList($viewer, $filters);
 
         Inertia::encryptHistory();
 
@@ -99,7 +100,7 @@ class MessageController extends Controller
 
         $messages = (clone $readable)->with(['media', 'user', 'sharedPost.media.media', 'stickerPack'])
             ->when($before, fn ($query) => $query->where('messages.id', '<', $before))
-            ->when($search !== null, fn ($query) => $query->whereNull('removed_at')->whereLike('body', $this->likePattern($search)))
+            ->when($search !== null, fn ($query) => $query->whereNull('removed_at')->whereLike('body', MessagePayload::likePattern($search)))
             ->orderByDesc('messages.id')->limit(61)->get();
         $hasOlder = $messages->count() > 60;
         $messages = $messages->take(60)->reverse()->values();
@@ -122,7 +123,7 @@ class MessageController extends Controller
                 'id' => $chat->id,
                 'title' => $chat->title ?? $other?->name ?? 'Deleted account',
                 'kind' => $chat->kind,
-                'with' => $this->person($other),
+                'with' => MessagePayload::person($other),
                 'canSend' => $state['canSend'],
                 'readPosition' => (int) $member->last_read_message_id,
                 'markedUnread' => (bool) $member->marked_unread,
@@ -136,7 +137,7 @@ class MessageController extends Controller
                 ] : null,
                 'typing' => $state['typing'],
                 'readThrough' => $state['readThrough'],
-                'pinned' => $pinned ? ['id' => $pinned->id, 'label' => $this->preview($pinned)] : null,
+                'pinned' => $pinned ? ['id' => $pinned->id, 'label' => MessagePayload::preview($pinned)] : null,
                 'messages' => $messages->map(fn (Message $message) => [
                     'id' => $message->id,
                     'body' => $message->body,
@@ -151,11 +152,11 @@ class MessageController extends Controller
                     'canForward' => ! $message->expires_at && ! $message->interactive
                         && ($message->user_id === $viewer->id || $canForwardOthers),
                     'spoiler' => $message->spoiler,
-                    'media' => $this->attachmentResource($message),
+                    'media' => MessagePayload::attachmentResource($message),
                     'media_group' => $message->media_group,
                     'media_group_position' => $message->media_group_position,
-                    'post' => $message->shared_post_id ? $this->sharedWork($message, $viewer) : null,
-                    'reply' => $message->reply_to_id ? $this->replyPreview($replies->get($message->reply_to_id)) : null,
+                    'post' => $message->shared_post_id ? MessagePayload::sharedWork($message, $viewer) : null,
+                    'reply' => $message->reply_to_id ? MessagePayload::replyPreview($replies->get($message->reply_to_id)) : null,
                     'reactions' => $reactions->get($message->id, collect())->values(),
                     'interactive' => $message->interactive ? $message->interactive + [
                         'votes' => $choices->get($message->id, collect())->values(),
@@ -173,7 +174,7 @@ class MessageController extends Controller
                     ->whereIn('status', ['pending', 'failed'])->orderBy('send_at')->limit(30)->get(['id', 'body', 'send_at', 'status']),
                 'hasOlder' => $hasOlder,
             ],
-            'conversations' => fn () => array_slice($this->conversationList($viewer), 0, 50),
+            'conversations' => fn () => array_slice(MessagePayload::conversationList($viewer), 0, 50),
             'quickReplies' => fn () => json_decode(Setting::where('user_id', $viewer->id)
                 ->where('key', 'chat_quick_replies')->value('value') ?? '[]', true) ?? [],
             'filters' => $filters,
@@ -261,7 +262,7 @@ class MessageController extends Controller
             $other = $thread ? $thread->participants()->where('users.id', '!=', $viewer->id)->first()
                 : User::where('username', $data['to'])->firstOrFail();
             abort_unless($other, 403, 'This conversation is unavailable.');
-            $this->rejectSelf($viewer, $other);
+            MessagePayload::rejectSelf($viewer, $other);
         }
 
         $attachment = null;
@@ -345,7 +346,7 @@ class MessageController extends Controller
                 }
 
                 if ($postId) {
-                    abort_unless($this->visiblePost(Post::find($postId), $viewer), 404);
+                    abort_unless(MessagePayload::visiblePost(Post::find($postId), $viewer), 404);
                 }
                 $album = [];
                 if ($request->hasFile('file')) {
@@ -442,154 +443,4 @@ class MessageController extends Controller
         return $response;
     }
 
-    private function attachmentResource(Message $message): ?array
-    {
-        if ($message->removed_at || ! $message->media || ! MessageAttachments::isPrivate($message->media)) {
-            return null;
-        }
-
-        $media = (new MediaResource($message->media))->resolve();
-        $media['url'] = route('messages.attachment', [$message, 'original'], false);
-        $media['name'] = $message->attachment_name;
-        $media['thumb'] = $message->media->thumb_path ? route('messages.attachment', [$message, 'thumb'], false) : null;
-        if ($message->sticker_pack_id) {
-            $media['thumb'] = null;
-            $media['sticker'] = true;
-        }
-
-        return $media;
-    }
-
-    private function conversationList(User $viewer, array $filters = []): array
-    {
-        $tab = $filters['tab'] ?? 'all';
-        $visible = Message::query()->whereColumn('messages.conversation_id', 'conversations.id')
-            ->where(fn ($expiry) => ChatAccess::notExpired($expiry))
-            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('message_hides')
-                ->whereColumn('message_hides.message_id', 'messages.id')->where('user_id', $viewer->id));
-        $unread = (clone $visible)->where('messages.user_id', '!=', $viewer->id);
-        ChatAccess::unread($unread, 'membership');
-        $incoming = fn ($query) => $query->where('request_status', 'pending')->where('requested_by', '!=', $viewer->id);
-        $query = Conversation::forMessaging()->join('conversation_participants as membership', 'membership.conversation_id', '=', 'conversations.id')
-            ->where('membership.user_id', $viewer->id)
-            ->where(fn ($visibleDrafts) => $visibleDrafts->where('request_status', '!=', 'draft')->orWhere('requested_by', $viewer->id))
-            ->where('membership.archived', $tab === 'archived')
-            ->select('conversations.*', 'membership.marked_unread', 'membership.pinned', 'membership.muted')
-            ->addSelect([
-                'last_visible_id' => (clone $visible)->select('messages.id')->latest('messages.created_at')->orderByDesc('messages.id')->limit(1),
-                'unread_count' => (clone $unread)->selectRaw('count(*)'),
-            ])->orderByDesc('membership.pinned')->latest('conversations.last_message_at')->orderByDesc('conversations.id');
-
-        if ($tab === 'requests') {
-            $query->where($incoming);
-        } elseif ($tab !== 'archived') {
-            $query->whereNot($incoming);
-        }
-        if ($tab === 'direct') {
-            $query->where('conversations.kind', $tab);
-        }
-        if ($tab === 'unread') {
-            $query->where(fn ($filter) => $filter->where('membership.marked_unread', true)
-                ->orWhereExists((clone $unread)->selectRaw('1')->toBase()));
-        }
-        if (isset($filters['folder'])) {
-            $query->where('membership.folder', $filters['folder']);
-        }
-        if (isset($filters['q'])) {
-            $like = $this->likePattern($filters['q']);
-            $match = (clone $visible)->whereNull('removed_at')->whereLike('messages.body', $like);
-            $query->addSelect(['matched_message_id' => (clone $match)->select('messages.id')->latest('messages.id')->limit(1)]);
-            $query->where(fn ($search) => $search->whereLike('conversations.title', $like)
-                ->orWhere(fn ($direct) => $direct->where('conversations.kind', 'direct')
-                    ->whereHas('participants', fn ($people) => $people->where('users.id', '!=', $viewer->id)
-                        ->where(fn ($name) => $name->whereLike('users.name', $like)->orWhereLike('users.username', $like))))
-                ->orWhereExists((clone $match)->selectRaw('1')->toBase()));
-        }
-
-        $rows = $query->offset(((int) ($filters['page'] ?? 1) - 1) * 50)->limit(51)->get();
-        $rows->filter(fn (Conversation $chat) => $chat->kind === 'direct')->load('participants');
-        $messages = Message::whereKey($rows->pluck('last_visible_id')->filter()->all())->get()->keyBy('id');
-
-        return $rows->map(function (Conversation $chat) use ($viewer, $messages) {
-            $other = $chat->kind === 'direct' ? $chat->participants->firstWhere('id', '!=', $viewer->id) : null;
-            $last = $messages->get($chat->last_visible_id);
-
-            return [
-                'id' => $chat->id, 'kind' => $chat->kind, 'with' => $this->person($other),
-                'title' => $chat->title ?? $other?->name ?? 'Deleted account',
-                'preview' => mb_strimwidth($this->preview($last), 0, 160, '…'),
-                'last_message_human' => $last?->created_at->diffForHumans(short: true),
-                'unread' => (int) $chat->unread_count,
-                'markedUnread' => (bool) $chat->marked_unread, 'pinned' => (bool) $chat->pinned,
-                'muted' => (bool) $chat->muted,
-                'request' => $chat->request_status === 'pending',
-                'searchMessages' => $last !== null && $chat->matched_message_id !== null,
-            ];
-        })->all();
-    }
-
-    private function preview(?Message $message): string
-    {
-        if ($message?->spoiler && ! $message->removed_at) {
-            return 'Spoiler message';
-        }
-
-        return $message?->body ?? $message?->interactive['title'] ?? match (true) {
-            (bool) $message?->sticker_pack_id => 'Sent a sticker',
-            (bool) $message?->media_id => 'Sent an attachment',
-            (bool) $message?->shared_post_id => 'Shared an ModernBooru work',
-            default => '',
-        };
-    }
-
-    private function replyPreview(?Message $message): ?array
-    {
-        return $message ? [
-            'id' => $message->id,
-            'sender' => $message->user?->name,
-            'label' => mb_strimwidth($this->preview($message), 0, 100, '…'),
-        ] : null;
-    }
-
-    private function sharedWork(Message $message, User $viewer): ?array
-    {
-        $post = $message->sharedPost;
-        if (! $this->visiblePost($post, $viewer)) {
-            return null;
-        }
-
-        $card = ['title' => $post->title ?: 'ModernBooru work', 'url' => route('posts.show', $post, false)];
-        $pack = $message->stickerPack;
-        if ($pack && $post->user_id === $pack->user_id && $post->rating === 'sfw' && $post->is_original && $post->type === 'image') {
-            return $card + [
-                'sticker' => $post->cover()?->thumbUrl() ?: $post->cover()?->url(),
-                'pack' => route('messages.stickers.index', ['pack' => $pack->id], false),
-            ];
-        }
-
-        return $card;
-    }
-
-    private function visiblePost(?Post $post, User $viewer): bool
-    {
-        return $post && ($post->user_id === null || ! Block::existsBetween($viewer->id, $post->user_id))
-            && ($post->rating !== 'explicit' || ($viewer->show_explicit && AgeGate::confirmed()));
-    }
-
-    private function likePattern(string $input): string
-    {
-        return '%'.$input.'%';
-    }
-
-    private function person(?User $user): ?array
-    {
-        return $user ? $user->only(['id', 'name', 'username']) + ['avatar' => $user->avatarUrl()] : null;
-    }
-
-    private function rejectSelf(User $viewer, User $other): void
-    {
-        if ($viewer->id === $other->id) {
-            throw ValidationException::withMessages(['to' => 'You cannot message yourself.']);
-        }
-    }
 }

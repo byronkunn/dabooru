@@ -1,4 +1,4 @@
-import { Link, useForm, usePage } from '@inertiajs/react';
+import { Link, router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { AdminErrors } from '@/Components/AdminUi';
 import ReportDialog from '@/Components/ReportDialog';
@@ -70,12 +70,27 @@ function CommentItem({ comment, postId, canComment, root = comment }) {
     );
 }
 
-export default function PostComments({ post, comments, canComment, pagination = {} }) {
+export default function PostComments({ post, comments, canComment, pagination = {}, sort = 'newest' }) {
     const { auth } = usePage().props;
     const form = useForm({ body: '' });
     return (
         <section id="comments" className="mx-auto max-w-[720px]" aria-label="Comments">
-            <h2 className="px-4 pt-4 font-bold">Comments ({post.comments})</h2>
+            <div className="flex flex-wrap items-center gap-2 px-4 pt-4">
+                <h2 className="font-bold">Comments ({post.comments})</h2>
+                <div className="ml-auto flex gap-1 rounded-full border border-ink-line bg-ink-raised p-[3px]" role="group" aria-label="Sort comments">
+                    {[['newest', 'Newest'], ['top', 'Top']].map(([value, label]) => (
+                        <button
+                            key={value}
+                            type="button"
+                            aria-pressed={sort === value}
+                            onClick={() => router.get(route('posts.show', post.id), { comment_sort: value }, { preserveScroll: true, preserveState: true })}
+                            className={`min-h-8 rounded-full px-3 text-[12.5px] font-semibold ${sort === value ? 'bg-ink-brand text-[#1c1017]' : 'text-ink-muted hover:text-ink-text'}`}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+            </div>
             {canComment ? <form className="space-y-2 border-b border-ink-line px-4 py-3.5 md:px-5" onSubmit={(event) => {
                 event.preventDefault();
                 form.post(route('comments.store', post.id), { preserveScroll: true, onSuccess: () => form.reset() });
