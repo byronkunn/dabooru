@@ -173,7 +173,7 @@ class HandleInertiaRequests extends Middleware
                 ->withExists(['bookmarks as viewer_saved' => fn ($query) => $query->where('user_id', $viewer?->id ?? 0)])
                 ->with(['user', 'media.media', 'chapter.comic', 'creditedArtist'])
                 ->orderByDesc('week_likes')
-                ->orderByRaw('CASE WHEN lifetime_likes > posts.likes_count THEN lifetime_likes ELSE posts.likes_count END DESC')
+                ->orderByRaw('CASE WHEN (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.id) > posts.likes_count THEN (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.id) ELSE posts.likes_count END DESC')
                 ->limit(3)->get()
                 ->map(fn (Post $post) => (new PostResource($post))->resolve($request) + [
                     'lifetime_likes' => max((int) $post->lifetime_likes, (int) $post->likes_count),
