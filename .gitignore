@@ -29,3 +29,13 @@ browser-screenshots/
 storage/framework/testing/
 database/database.sqlite
 /public/storage
+
+# Media assets are not stored in git — they are large binaries.
+# Copy your own files into sfw/ and run `php artisan db:seed`;
+# database/data/sfw/manifest.json (the dimensions index) IS tracked.
+/sfw/image/*
+/sfw/video/*
+/sfw/thumbs/*
+/database/data/sfw/image/
+/database/data/sfw/video/
+/database/data/sfw/thumbs/

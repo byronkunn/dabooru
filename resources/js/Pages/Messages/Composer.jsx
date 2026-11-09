@@ -60,7 +60,7 @@ export default function Composer({ conversation, reply, onClearReply, quickRepli
         if (form.processing || recording || (!form.data.body.trim() && !attachment && !post && !interactive && !sticker)) return;
         const postId = post.match(/(?:\/posts\/)?(\d+)\/?(?:[?#].*)?$/)?.[1];
         if (post && !postId) {
-            form.setError('shared_post_id', 'Enter a work ID or an ModernBooru work link.');
+            form.setError('shared_post_id', 'Enter a work ID or an Dabooru work link.');
             return;
         }
         form.transform((data) => ({
@@ -267,7 +267,7 @@ function ComposerTool({ tool, post, sendAt, interactive, onClose, onSave }) {
     const [options, setOptions] = useState(interactive?.options.join('\n') ?? '');
     const lines = options.split('\n').map((line) => line.trim()).filter(Boolean);
     return (
-        <ChatDialog title={{ work: 'Share an ModernBooru work', schedule: 'Schedule a text message', interactive: 'Poll or checklist' }[tool]} onClose={onClose}>
+        <ChatDialog title={{ work: 'Share an Dabooru work', schedule: 'Schedule a text message', interactive: 'Poll or checklist' }[tool]} onClose={onClose}>
             <form className="space-y-3" onSubmit={(event) => {
                 event.preventDefault();
                 onSave(tool === 'interactive' ? { type, title: value.trim(), options: lines } : value.trim());

@@ -242,7 +242,7 @@ form.post(route('upload.store'), { forceFormData: true });
                                         </div>
                                     </div>
                                     <p className="text-[12px] text-ink-faint">
-                                        The site will reflect that this work was created by an external artist who is not on ModernBooru and link to their source.
+                                        The site will reflect that this work was created by an external artist who is not on Dabooru and link to their source.
                                     </p>
                                 </div>
                             )}

@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title inertia>{{ config('app.name', 'ModernBooru') }}</title>
+        <title inertia>{{ config('app.name', 'Dabooru') }}</title>
 
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="theme-color" content="#0d0b0f">
@@ -12,7 +12,7 @@
         {{-- Share previews. Pages that know better override these via <Head>. --}}
         @php
             $share = $page['props']['share'] ?? [];
-            $siteName = config('app.name', 'ModernBooru');
+            $siteName = config('app.name', 'Dabooru');
         @endphp
         <meta name="description" content="{{ $share['description'] ?? $siteName.' — a gallery and social home for artists who draw what they draw.' }}">
         <meta property="og:site_name" content="{{ $siteName }}">

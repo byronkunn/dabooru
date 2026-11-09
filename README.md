@@ -1,6 +1,6 @@
-# ModernBooru
+# Dabooru
 
-**ModernBooru** is a gallery-first portfolio site for artists who post mature work: a 129-work gallery of images, GIFs, videos, albums and comic chapters, built for people who want their NSFW work in the same place as their SFW work instead of split across two accounts. Every post carries an explicit **SFW / Suggestive / Explicit** rating, the whole site sits behind an 18+ age gate, and a viewer who hasn't opted in never sees explicit content. Around the media it has the social basics — following feed, likes, star
+**Dabooru** is a gallery-first portfolio site for artists who post mature work: a 129-work gallery of images, GIFs, videos, albums and comic chapters, built for people who want their NSFW work in the same place as their SFW work instead of split across two accounts. Every post carries an explicit **SFW / Suggestive / Explicit** rating, the whole site sits behind an 18+ age gate, and a viewer who hasn't opted in never sees explicit content. Around the media it has the social basics — following feed, likes, star
 ratings, saves, threaded comments, follows, DMs with attachments and stickers,
 notifications, a series/reader view for comics — plus real file uploads for
 images, GIFs, videos, albums and comic pages.
@@ -38,11 +38,18 @@ php artisan serve --port=8001
 
 Then open **http://127.0.0.1:8001** and log in with the demo account.
 
-> Port note: `php artisan serve` defaults to port 8000. During development that port was already in use, so ModernBooru ran on **8001** — pass `--port=8001` if you want the same. Any free port works.
+> Port note: `php artisan serve` defaults to port 8000. During development that port was already in use, so Dabooru ran on **8001** — pass `--port=8001` if you want the same. Any free port works.
 
 `composer setup` also exists as a one-shot bootstrap, but it appends a second `DB_` block to `.env`; the explicit steps above are what was actually used to get this build running.
 
 ## Where the content comes from
+
+> **Media is not in this repository.** The image and video binaries under
+> `sfw/` are large, so they are gitignored. A fresh clone starts with no
+> artwork: drop your own files into `sfw/image/`, `sfw/video/` and
+> `sfw/thumbs/`, regenerate the manifest, then seed.
+> `database/data/sfw/manifest.json` (the dimensions index) *is* tracked, so the
+> seeder knows what to expect.
 
 The library is built **entirely from the files in `sfw/`** — nothing is
 invented. Running `php artisan migrate:fresh --seed` gives you:

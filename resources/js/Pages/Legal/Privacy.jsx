@@ -37,7 +37,7 @@ export default function Privacy({ updated }) {
             <section className="space-y-3">
                 <H2>3. Cookies</H2>
                 <UL>
-                    <li><strong className="text-ink-text">modernbooru_age_ok</strong> — remembers that you confirmed you are 18 or older. One year.</li>
+                    <li><strong className="text-ink-text">dabooru_age_ok</strong> — remembers that you confirmed you are 18 or older. One year.</li>
                     <li><strong className="text-ink-text">Session</strong> — keeps you logged in.</li>
                 </UL>
                 <P>

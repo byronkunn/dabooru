@@ -7,13 +7,13 @@ const SLIDESHOW_INTERVALS = [3, 5, 10, 15];
 
 export default function ComicRead({ comic, chapter, pages, startPage = 1, defaultMode = 'page' }) {
     const { auth } = usePage().props;
-    const [mode, setMode] = useState(localStorage.getItem('modernbooru.readerMode') || defaultMode);
+    const [mode, setMode] = useState(localStorage.getItem('dabooru.readerMode') || defaultMode);
     const [page, setPage] = useState(startPage);
     const [showChrome, setShowChrome] = useState(true);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [slideshow, setSlideshow] = useState(false);
     const [intervalSeconds, setIntervalSeconds] = useState(() => {
-        const saved = Number(localStorage.getItem('modernbooru.readerInterval'));
+        const saved = Number(localStorage.getItem('dabooru.readerInterval'));
         return SLIDESHOW_INTERVALS.includes(saved) ? saved : 10;
     });
     const [loadedSource, setLoadedSource] = useState(null);
@@ -32,7 +32,7 @@ export default function ComicRead({ comic, chapter, pages, startPage = 1, defaul
     }, []);
 
     useEffect(() => {
-        localStorage.setItem('modernbooru.readerInterval', String(intervalSeconds));
+        localStorage.setItem('dabooru.readerInterval', String(intervalSeconds));
     }, [intervalSeconds]);
 
     useEffect(() => {
@@ -72,7 +72,7 @@ export default function ComicRead({ comic, chapter, pages, startPage = 1, defaul
     };
 
     useEffect(() => {
-        localStorage.setItem('modernbooru.readerMode', mode);
+        localStorage.setItem('dabooru.readerMode', mode);
     }, [mode]);
 
     useEffect(() => {

@@ -16,7 +16,7 @@ export default function Terms({ updated }) {
             <section className="space-y-3">
                 <H2>1. What this is</H2>
                 <P>
-                    ModernBooru is a gallery and social site for artists, including adult work. By creating an
+                    Dabooru is a gallery and social site for artists, including adult work. By creating an
                     account or using the site you agree to these terms, to the content policy and to the
                     privacy policy.
                 </P>

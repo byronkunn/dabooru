@@ -5,7 +5,7 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 
-const appName = import.meta.env.VITE_APP_NAME || 'ModernBooru';
+const appName = import.meta.env.VITE_APP_NAME || 'Dabooru';
 
 /**
  * Carry over preferences saved under the old brand's storage keys.
@@ -13,8 +13,8 @@ const appName = import.meta.env.VITE_APP_NAME || 'ModernBooru';
  */
 (function migrateLocalStorage() {
     const moved = [
-        ['inkwell.readerMode', 'modernbooru.readerMode'],
-        ['inkwell.readerInterval', 'modernbooru.readerInterval'],
+        ['inkwell.readerMode', 'dabooru.readerMode'],
+        ['inkwell.readerInterval', 'dabooru.readerInterval'],
     ];
     try {
         for (const [from, to] of moved) {
@@ -28,7 +28,7 @@ const appName = import.meta.env.VITE_APP_NAME || 'ModernBooru';
         for (let i = window.localStorage.length - 1; i >= 0; i--) {
             const key = window.localStorage.key(i);
             if (key && key.startsWith('inkwell.tab.')) {
-                const next = key.replace('inkwell.tab.', 'modernbooru.tab.');
+                const next = key.replace('inkwell.tab.', 'dabooru.tab.');
                 const value = window.localStorage.getItem(key);
                 if (value !== null && window.localStorage.getItem(next) === null) {
                     window.localStorage.setItem(next, value);

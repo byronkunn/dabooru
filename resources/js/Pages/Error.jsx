@@ -7,7 +7,7 @@ const COPY = {
     419: ['Session expired', 'Your session timed out while you were away. Go back and try the action again.'],
     429: ['Slow down', 'Too many requests in a short time. Wait a moment and try again.'],
     500: ['Something broke', 'The problem has been recorded. Try again in a minute; if it keeps happening, let us know.'],
-    503: ['Down for maintenance', 'ModernBooru is being updated and will be back shortly.'],
+    503: ['Down for maintenance', 'Dabooru is being updated and will be back shortly.'],
 };
 
 export default function Error({ status }) {
