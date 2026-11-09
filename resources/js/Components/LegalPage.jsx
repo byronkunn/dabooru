@@ -6,7 +6,7 @@ export function LegalPage({ title, updated, children, intro }) {
         <AppLayout rightRail={false}>
             <Head title={title} />
             <article className="mx-auto max-w-[720px] px-4 pb-24 pt-8 md:px-6">
-                <p className="text-[11.5px] font-extrabold uppercase tracking-[0.14em] text-ink-faint">Inkwell</p>
+                <p className="text-[11.5px] font-extrabold uppercase tracking-[0.14em] text-ink-faint">ModernBooru</p>
                 <h1 className="mt-1 text-[28px] font-extrabold tracking-[-0.03em] md:text-[34px]">{title}</h1>
                 <p className="mt-1 text-[13px] text-ink-faint">Last updated {updated}</p>
                 {intro && <p className="mt-5 rounded-xl border border-ink-line bg-ink-surface px-4 py-3 text-[13.5px] leading-relaxed text-ink-muted">{intro}</p>}

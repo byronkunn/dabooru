@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Cookie;
 
 class AgeGate
 {
-    public const COOKIE = 'inkwell_age_ok';
+    public const COOKIE = 'modernbooru_age_ok';
 
     /** How long the confirmation lasts, in minutes (one year). */
     public const MINUTES = 60 * 24 * 365;

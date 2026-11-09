@@ -434,8 +434,8 @@ class MessageController extends Controller
             'Content-Type' => $mime, 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff',
         ]);
         if ($media->kind === 'file') {
-            $name = $message->attachment_name ?: 'Inkwell attachment';
-            $fallback = str_replace(['%', '/', '\\'], '_', Str::ascii($name)) ?: 'Inkwell attachment';
+            $name = $message->attachment_name ?: 'ModernBooru attachment';
+            $fallback = str_replace(['%', '/', '\\'], '_', Str::ascii($name)) ?: 'ModernBooru attachment';
             $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_ATTACHMENT, $name, $fallback);
         }
 
@@ -537,7 +537,7 @@ class MessageController extends Controller
         return $message?->body ?? $message?->interactive['title'] ?? match (true) {
             (bool) $message?->sticker_pack_id => 'Sent a sticker',
             (bool) $message?->media_id => 'Sent an attachment',
-            (bool) $message?->shared_post_id => 'Shared an Inkwell work',
+            (bool) $message?->shared_post_id => 'Shared an ModernBooru work',
             default => '',
         };
     }
@@ -558,7 +558,7 @@ class MessageController extends Controller
             return null;
         }
 
-        $card = ['title' => $post->title ?: 'Inkwell work', 'url' => route('posts.show', $post, false)];
+        $card = ['title' => $post->title ?: 'ModernBooru work', 'url' => route('posts.show', $post, false)];
         $pack = $message->stickerPack;
         if ($pack && $post->user_id === $pack->user_id && $post->rating === 'sfw' && $post->is_original && $post->type === 'image') {
             return $card + [

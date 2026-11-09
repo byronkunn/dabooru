@@ -18,7 +18,7 @@ class AdminSeeder extends Seeder
             ['username' => 'moderator'],
             [
                 'name' => 'Moderator',
-                'email' => 'mod@inkwell.test',
+                'email' => 'mod@modernbooru.test',
                 'password' => Hash::make('password'),
                 'bio' => 'Site moderator.',
             ]
@@ -30,6 +30,6 @@ class AdminSeeder extends Seeder
             'is_admin' => true,
         ])->save();
 
-        $this->command?->info('Admin login: mod@inkwell.test / password');
+        $this->command?->info('Admin login: mod@modernbooru.test / password');
     }
 }

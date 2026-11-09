@@ -6,7 +6,7 @@ export function useRememberedTab(group, current) {
     useEffect(() => {
         if (!current) return;
         try {
-            window.localStorage.setItem(`inkwell.tab.${group}`, current);
+            window.localStorage.setItem(`modernbooru.tab.${group}`, current);
         } catch {
             /* storage disabled — remembering is a nicety, not a requirement */
         }
@@ -17,7 +17,7 @@ export function useRememberedTab(group, current) {
 export function rememberedTabHref(group, items, fallbackDestination) {
     let saved = null;
     try {
-        saved = window.localStorage.getItem(`inkwell.tab.${group}`);
+        saved = window.localStorage.getItem(`modernbooru.tab.${group}`);
     } catch {
         saved = null;
     }

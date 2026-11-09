@@ -7,7 +7,7 @@ export default function Gate() {
         <div className="grid min-h-screen place-items-center bg-[radial-gradient(900px_500px_at_50%_-10%,rgba(201,82,122,0.18),transparent_70%)] px-4 py-6">
             <Head title="Age confirmation" />
             <div className="w-full max-w-[520px] rounded-[22px] border border-ink-line bg-ink-surface p-6 text-center md:p-8">
-                <p className="text-[26px] font-black tracking-[-0.03em]">Inkwell</p>
+                <p className="text-[26px] font-black tracking-[-0.03em]">ModernBooru</p>
                 <p className="mt-1 text-[13px] font-bold uppercase tracking-[0.14em] text-ink-muted">Adult content warning</p>
                 <p className="mx-auto mt-4 max-w-[420px] text-sm leading-relaxed text-ink-muted">
                     This site hosts artwork for adults, including explicit illustrations, comics and GIFs. You must be{' '}

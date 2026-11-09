@@ -15,7 +15,7 @@ globalThis.window = { localStorage: new MemoryStorage() };
 const LIBRARY_TABS = [['Collections', 'collections.index'], ['Saved Searches', 'saved-searches.index']];
 
 function remembered(group, tabs, fallback) {
-    const saved = window.localStorage.getItem(`inkwell.tab.${group}`);
+    const saved = window.localStorage.getItem(`modernbooru.tab.${group}`);
     const known = tabs.some(([, destination]) => destination === saved);
     return known ? saved : fallback;
 }
@@ -26,13 +26,13 @@ test('falls back to Collections before the reader has chosen', () => {
 });
 
 test('remembers Saved Searches as the last Library section', () => {
-    window.localStorage.setItem('inkwell.tab.library-sections', 'saved-searches.index');
+    window.localStorage.setItem('modernbooru.tab.library-sections', 'saved-searches.index');
     assert.equal(remembered('library-sections', LIBRARY_TABS, 'collections.index'), 'saved-searches.index');
 });
 
 test('a stale remembered tab that no longer exists falls back safely', () => {
     // e.g. New Chapters was removed from Library
-    window.localStorage.setItem('inkwell.tab.library-sections', 'chapters.inbox');
+    window.localStorage.setItem('modernbooru.tab.library-sections', 'chapters.inbox');
     assert.equal(remembered('library-sections', LIBRARY_TABS, 'collections.index'), 'collections.index');
 });
 
@@ -48,7 +48,7 @@ test('a disabled localStorage does not break navigation', () => {
     window.localStorage = broken;
     let href;
     try {
-        const saved = window.localStorage.getItem('inkwell.tab.library-sections');
+        const saved = window.localStorage.getItem('modernbooru.tab.library-sections');
         href = saved ?? 'collections.index';
     } catch {
         href = 'collections.index';
