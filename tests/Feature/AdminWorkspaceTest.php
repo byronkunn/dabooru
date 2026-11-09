@@ -19,6 +19,8 @@ class AdminWorkspaceTest extends TestCase
 
     public function test_admin_can_assign_and_revoke_limited_roles_but_cannot_grant_full_access(): void
     {
+        // pin the owner so the local .env cannot decide who the owner is
+        config(['admin.owner_id' => 0]);
         $admin = User::factory()->admin()->create();
         $staff = User::factory()->create();
         $route = route('admin.users.roles', $staff);
