@@ -1,6 +1,6 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import usePageVisibility from './usePageVisibility';
 import AppLayout from '@/Layouts/AppLayout';
@@ -55,19 +55,84 @@ function Attachment({ media, onOpen }) {
     );
 }
 
-function Lightbox({ media, onClose }) {
+/**
+ * Full-screen viewer with pagination across every image in the conversation.
+ *
+ * Opening one image from an album, or from a single-photo message, lets the
+ * reader step through the rest without closing and reopening: arrows, keyboard,
+ * swipe, and a counter all read from the same ordered list.
+ */
+function Lightbox({ items, index, onNavigate, onClose }) {
+    const touch = useRef(null);
+    const total = items.length;
+    const current = items[index];
+
+    const go = (delta) => {
+        if (total < 2) return;
+        onNavigate((index + delta + total) % total);
+    };
+
     useEffect(() => {
-        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        const onKey = (e) => {
+            if (e.key === 'Escape') onClose();
+            if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+            if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+        };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [onClose]);
+    });
+
+    if (!current) return null;
 
     return (
-        <div className="fixed inset-0 z-[90] grid place-items-center bg-black/85 p-4" role="dialog" aria-modal="true" onClick={onClose}>
-            <button type="button" onClick={onClose} aria-label="Close" className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white">
+        <div
+            className="fixed inset-0 z-[90] grid place-items-center bg-black/95 p-4 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-label={total > 1 ? `Image ${index + 1} of ${total}` : 'Image'}
+            onClick={onClose}
+            onTouchStart={(e) => { touch.current = e.touches[0].clientX; }}
+            onTouchEnd={(e) => {
+                if (touch.current === null) return;
+                const dx = e.changedTouches[0].clientX - touch.current;
+                if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+                touch.current = null;
+            }}
+        >
+            <button type="button" onClick={onClose} aria-label="Close" className="absolute right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full bg-black/70 text-white ring-1 ring-white/20 hover:bg-black/90">
                 <Icon name="close" />
             </button>
-            <img src={media.url} alt="" className="max-h-full max-w-full rounded-lg object-contain" onClick={(e) => e.stopPropagation()} />
+
+            {total > 1 && (
+                <>
+                    <span className="absolute left-1/2 top-4 z-10 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-xs font-semibold text-white ring-1 ring-white/20">
+                        {index + 1} / {total}
+                    </span>
+                    <button
+                        type="button"
+                        aria-label="Previous image"
+                        onClick={(e) => { e.stopPropagation(); go(-1); }}
+                        className="absolute left-2 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-black/70 text-white ring-1 ring-white/20 hover:bg-black/90 md:left-4"
+                    >
+                        <Icon name="back" />
+                    </button>
+                    <button
+                        type="button"
+                        aria-label="Next image"
+                        onClick={(e) => { e.stopPropagation(); go(1); }}
+                        className="absolute right-2 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-black/70 text-white ring-1 ring-white/20 hover:bg-black/90 md:right-4"
+                    >
+                        <Icon name="back" className="rotate-180" />
+                    </button>
+                </>
+            )}
+
+            <img
+                src={current.url}
+                alt=""
+                className="max-h-full max-w-full rounded-lg object-contain"
+                onClick={(e) => e.stopPropagation()}
+            />
         </div>
     );
 }
@@ -222,6 +287,24 @@ function Thread({ conversation: chat, conversations, filters, quickReplies }) {
     const { auth } = usePage().props;
     const [report, setReport] = useState(null);
     const [lightbox, setLightbox] = useState(null);
+
+    // every image in the thread, in order, so the viewer can page through them
+    const gallery = useMemo(() => {
+        const out = [];
+        for (const message of chat.messages ?? []) {
+            if (message.removed) continue;
+            const list = message.album?.length ? message.album : (message.media ? [message.media] : []);
+            for (const media of list) {
+                if (media && (media.kind === 'image' || media.kind === 'gif' || !media.kind)) out.push(media);
+            }
+        }
+        return out;
+    }, [chat.messages]);
+
+    const openMedia = (media) => {
+        const at = gallery.findIndex((item) => item.url === media.url);
+        setLightbox(at === -1 ? null : at);
+    };
     const [settings, setSettings] = useState(false);
     const [action, setAction] = useState(null);
     const [reply, setReply] = useState(null);
@@ -383,7 +466,7 @@ function Thread({ conversation: chat, conversations, filters, quickReplies }) {
                         {chat.hasOlder && <div className="text-center"><Link href={show({ before: chat.messages[0]?.id })} className="btn-ghost text-xs">Earlier messages</Link></div>}
                         {!chat.messages.length && <p className="text-center text-sm text-ink-muted">{filters.q ? 'No matching messages.' : 'No messages yet.'}</p>}
                         {groupMessages(chat.messages).map((message) => <MessageBubble key={message.id} message={message} chat={chat}
-                            onOpen={setLightbox} onReply={setReply} onReport={setReport} onAction={(type, item) => setAction({ type, item })} messageUrl={messageUrl} />)}
+                            onOpen={openMedia} onReply={setReply} onReport={setReport} onAction={(type, item) => setAction({ type, item })} messageUrl={messageUrl} />)}
                     </div>
                     {chat.typing.length > 0 && <p className="shrink-0 truncate px-3 pb-1 text-xs text-ink-muted" role="status">{chat.typing.join(', ')} typing…</p>}
                     {chat.scheduled.length > 0 && <details className="shrink-0 border-t border-ink-line px-3 py-1.5 text-xs">
@@ -417,7 +500,7 @@ function Thread({ conversation: chat, conversations, filters, quickReplies }) {
             </div>
             {settings && <ChatSettings conversation={chat} onClose={() => setSettings(false)} />}
             {action && <MessageDialog action={action.type} message={action.item} conversations={conversations} conversation={chat} onClose={() => setAction(null)} />}
-            {lightbox && <Lightbox media={lightbox} onClose={() => setLightbox(null)} />}
+            {lightbox !== null && gallery.length > 0 && <Lightbox items={gallery} index={lightbox} onNavigate={setLightbox} onClose={() => setLightbox(null)} />}
             {report && auth?.user && <ReportDialog type={report.type} id={report.id} onClose={() => setReport(null)} />}
         </AppLayout>
     );
