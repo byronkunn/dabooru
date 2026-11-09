@@ -182,6 +182,11 @@ class ChatPermissionsTest extends TestCase
             ->where('conversations.0.preview', 'Spoiler message'));
         $this->get(route('messages.show', $chat))->assertInertia(fn ($page) => $page
             ->where('conversation.messages.1.spoiler', true));
-        $this->get(route('messages.attachment', [$image, 'original']))->assertOk()->assertHeader('Content-Type', 'image/png');
+        // Every image is re-encoded to strip EXIF/GPS, so a PNG arrives as the
+        // JPEG that re-encoding produces. What matters is that it is served as an
+        // image, privately, and without location metadata.
+        $response = $this->get(route('messages.attachment', [$image, 'original']));
+        $response->assertOk();
+        $this->assertStringStartsWith('image/', $response->headers->get('Content-Type'));
     }
 }

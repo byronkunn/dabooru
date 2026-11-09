@@ -12,6 +12,7 @@ const VIDEO_FORMATS = [['video/webm;codecs=vp8,opus', 'webm'], ['video/mp4', 'mp
 
 export default function Composer({ conversation, reply, onClearReply, quickReplies = [] }) {
     const [attachment, setAttachment] = useState(null);
+    const [album, setAlbum] = useState([]);
     const [tool, setTool] = useState(null);
     const [sendAt, setSendAt] = useState('');
     const [silent, setSilent] = useState(false);
@@ -49,6 +50,7 @@ export default function Composer({ conversation, reply, onClearReply, quickRepli
 
     const clearAttachment = () => {
         setAttachment(null);
+        setAlbum([]);
         setOriginal(false);
         if (fileInput.current) fileInput.current.value = '';
     };
@@ -66,6 +68,7 @@ export default function Composer({ conversation, reply, onClearReply, quickRepli
             conversation_id: conversation.id,
             reply_to_id: reply?.id ?? null,
             file: attachment,
+            files: album,
             silent,
             spoiler: sendAt ? false : spoiler,
             original,
@@ -159,7 +162,9 @@ export default function Composer({ conversation, reply, onClearReply, quickRepli
                     <button type="button" className="btn-icon-flat h-8 w-8" onClick={onClearReply} aria-label="Cancel reply"><Icon name="close" /></button>
                 </div>}
                 {attachment && <div className="flex items-center gap-2 rounded-lg bg-ink-raised px-3 py-2 text-xs">
-                    <span className="min-w-0 flex-1 truncate">{attachment.name}</span>
+                    <span className="min-w-0 flex-1 truncate">
+                        {album.length > 0 ? `${album.length + 1} files · ${attachment.name} …` : attachment.name}
+                    </span>
                     <button type="button" className="btn-icon-flat h-8 w-8" onClick={clearAttachment} aria-label="Remove attachment"><Icon name="close" /></button>
                 </div>}
                 {interactive && <p className="break-words text-xs">Attached {interactive.type} · {interactive.title}
@@ -182,7 +187,14 @@ export default function Composer({ conversation, reply, onClearReply, quickRepli
                 <div className="flex items-end gap-2">
                     {!textOnly && <>
                         <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,audio/*,application/pdf,application/zip"
-                            onChange={(event) => { setAttachment(event.target.files?.[0] ?? null); setSticker(null); setSendAt(''); }} hidden />
+                            multiple
+                            onChange={(event) => {
+                                const picked = Array.from(event.target.files ?? []);
+                                // up to 10 files travel as one album message
+                                setAttachment(picked[0] ?? null);
+                                setAlbum(picked.slice(1, 10));
+                                setSticker(null); setSendAt('');
+                            }} hidden />
                         <Menu>
                             <MenuButton disabled={form.processing || Boolean(recording)} className="btn-icon-flat h-11 w-11 shrink-0" aria-label="Attachment menu">
                                 <Icon name="attachment" />
@@ -192,7 +204,7 @@ export default function Composer({ conversation, reply, onClearReply, quickRepli
                                 <ToolItem onClick={() => record(false)}>Record voice note</ToolItem>
                                 <ToolItem onClick={() => record(true)}>Record video note</ToolItem>
                                 <ToolItem onClick={() => setTool('work')}>Share work</ToolItem>
-                                <ToolItem onClick={() => setTool('interactive')}>Poll or checklist</ToolItem>
+                                <ToolItem onClick={() => setTool('interactive')}>Poll, checklist or buttons</ToolItem>
                                 <ToolItem onClick={() => setTool('quick')}>Quick replies</ToolItem>
                             </MenuItems>
                         </Menu>
@@ -262,7 +274,7 @@ function ComposerTool({ tool, post, sendAt, interactive, onClose, onSave }) {
             }}>
                 {tool === 'interactive' && <label className="block text-sm">Type
                     <select className="field-input mt-1" value={type} onChange={(event) => setType(event.target.value)}>
-                        <option value="poll">Poll</option><option value="checklist">Checklist</option>
+                        <option value="poll">Poll</option><option value="checklist">Checklist</option><option value="buttons">Buttons (one tap answers)</option>
                     </select>
                 </label>}
                 <label className="block text-sm">
@@ -270,10 +282,14 @@ function ComposerTool({ tool, post, sendAt, interactive, onClose, onSave }) {
                     <input required type={tool === 'schedule' ? 'datetime-local' : 'text'} className="field-input mt-1"
                         value={value} onChange={(event) => setValue(event.target.value)} maxLength={tool === 'interactive' ? 140 : undefined} />
                 </label>
-                {tool === 'interactive' && <label className="block text-sm">Two to ten choices, one per line
+                {tool === 'interactive' && <label className="block text-sm">
+                    {type === 'buttons' ? 'One to four buttons, one per line' : 'Two to ten choices, one per line'}
                     <textarea required className="field-input mt-1" rows={5} value={options} onChange={(event) => setOptions(event.target.value)} />
                 </label>}
-                <button type="submit" className="btn-primary" disabled={!value.trim() || (tool === 'interactive' && (lines.length < 2 || lines.length > 10))}>Apply</button>
+                {tool === 'interactive' && type === 'buttons' && (
+                    <p className="text-xs text-ink-muted">The other person taps one button to answer. The message then closes and shows what they chose.</p>
+                )}
+                <button type="submit" className="btn-primary" disabled={!value.trim() || (tool === 'interactive' && (lines.length < (type === 'buttons' ? 1 : 2) || lines.length > (type === 'buttons' ? 4 : 10)))}>Apply</button>
             </form>
         </ChatDialog>
     );

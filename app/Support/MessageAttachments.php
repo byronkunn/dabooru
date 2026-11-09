@@ -20,6 +20,30 @@ class MessageAttachments
         return $media->disk === self::DISK && str_starts_with($media->path, 'dm/');
     }
 
+    /**
+     * Best-effort poster frame for a DM video, so the bubble shows an image
+     * immediately instead of a grey box. Returns null when ffmpeg is absent.
+     */
+    private static function videoPoster(string $path, string $directory): ?string
+    {
+        if (! function_exists('exec')) {
+            return null;
+        }
+
+        $target = $directory.'/poster.jpg';
+        $ffmpeg = trim((string) @shell_exec('command -v ffmpeg 2>/dev/null'));
+        if ($ffmpeg === '') {
+            return null;
+        }
+
+        $source = Storage::disk(self::DISK)->path($path);
+        @exec(sprintf('%s -y -loglevel error -i %s -frames:v 1 -vf scale=480:-2 %s 2>/dev/null',
+            escapeshellarg($ffmpeg), escapeshellarg($source),
+            escapeshellarg(Storage::disk(self::DISK)->path($target))), $out, $status);
+
+        return $status === 0 && Storage::disk(self::DISK)->exists($target) ? $target : null;
+    }
+
     public static function store(User $sender, UploadedFile $file, bool $original = false): Media
     {
         $directory = "dm/{$sender->id}/".bin2hex(random_bytes(16));
@@ -34,10 +58,18 @@ class MessageAttachments
         };
 
         try {
-            $path = $kind === 'image' && ! $original
+            // Images are ALWAYS re-encoded, even when the sender asks for the
+            // original: re-encoding is what strips EXIF/GPS, and a location leak
+            // is not something a sender should be able to opt into by accident.
+            // "original" now means "do not downscale", not "keep metadata".
+            $path = $kind === 'image'
                 ? ImageProcessor::storeClean($file->getRealPath(), $directory, self::DISK)
                 : $file->store($directory, self::DISK);
-            $thumb = $kind === 'image' ? ImageProcessor::storeThumbnail($file->getRealPath(), $directory, self::DISK) : null;
+            $thumb = match ($kind) {
+                'image' => ImageProcessor::storeThumbnail($file->getRealPath(), $directory, self::DISK),
+                'video' => self::videoPoster($path, $directory),
+                default => null,
+            };
             if (! $path || ! $disk->exists($path) || ($thumb && ! $disk->exists($thumb))) {
                 throw new RuntimeException('Could not store the message attachment.');
             }

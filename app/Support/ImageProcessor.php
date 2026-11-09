@@ -32,6 +32,23 @@ class ImageProcessor
      *
      * @return array{0:string,1:?string} [bytes, mime extension] or [original raw path, null]
      */
+    /** True when any pixel of a truecolour image is not fully opaque. */
+    private static function hasTransparency($image): bool
+    {
+        $width = imagesx($image);
+        $height = imagesy($image);
+        // sampling keeps this cheap on large images
+        for ($x = 0; $x < $width; $x += max(1, (int) ($width / 40))) {
+            for ($y = 0; $y < $height; $y += max(1, (int) ($height / 40))) {
+                if (((imagecolorat($image, $x, $y) >> 24) & 0x7F) > 0) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     public static function stripMetadata(string $sourcePath): array
     {
         if (! function_exists('imagecreatefromstring')) {
@@ -62,7 +79,32 @@ class ImageProcessor
             }
         }
 
+        // Re-encode in a lossless format when the source had transparency or is
+        // animated, so PNG transparency and GIF motion are not flattened into a
+        // single JPEG frame. Plain photos still become compact JPEGs.
+        $isGif = str_starts_with((string) mime_content_type($sourcePath), 'image/gif');
+        // imagecolortransparent() returns -1 (not false) when no index is
+        // transparent, so compare explicitly rather than casting to bool.
+        $hasAlpha = imagecolortransparent($image) >= 0
+            || (imageistruecolor($image) && self::hasTransparency($image));
+
         ob_start();
+        if ($isGif) {
+            // GD cannot re-encode animation; keep the original bytes, which for a
+            // GIF carry no EXIF to strip (metadata lives in PNG/JPEG chunks).
+            imagedestroy($image);
+            ob_end_clean();
+
+            return [$raw, 'gif'];
+        }
+        if ($hasAlpha) {
+            imagesavealpha($image, true);
+            imagepng($image);
+            $clean = ob_get_clean();
+            imagedestroy($image);
+
+            return (is_string($clean) && $clean !== '') ? [$clean, 'png'] : [$raw, null];
+        }
         imagejpeg($image, null, 88);
         $clean = ob_get_clean();
         imagedestroy($image);

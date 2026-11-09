@@ -127,6 +127,24 @@ class ChatMessageController extends Controller
             $current = Message::lockForUpdate()->findOrFail($message->id);
             ChatAccess::requireMessage($current, $viewer);
             abort_if(! ChatAccess::canInteract($current->conversation, $viewer) || $current->removed_at || ! isset($current->interactive['options'][$data['index']]), 403);
+
+            // an inline-button message is answered once and then settles; a poll or
+            // checklist stays open for changes
+            if (($current->interactive['type'] ?? null) === 'buttons') {
+                abort_if($current->interactive['answered_by'] ?? false, 409, 'This message has already been answered.');
+                $interactive = $current->interactive;
+                $interactive['answered_by'] = $viewer->id;
+                $interactive['answer_index'] = $data['index'];
+                $interactive['answered_at'] = now()->toIso8601String();
+                $current->forceFill(['interactive' => $interactive])->save();
+                DB::table('message_choices')->insertOrIgnore([
+                    'message_id' => $current->id, 'user_id' => $viewer->id, 'option_index' => $data['index'],
+                ]);
+                Conversation::bumpMessageRevision($current->conversation_id);
+
+                return;
+            }
+
             Conversation::bumpMessageRevision($current->conversation_id);
             $choices = DB::table('message_choices')->where('message_id', $current->id)->where('user_id', $viewer->id);
             if ($current->interactive['type'] === 'checklist') {

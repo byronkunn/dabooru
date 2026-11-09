@@ -46,4 +46,53 @@ final class FakeImage
     {
         return pack('N', strlen($data)).$type.$data.pack('N', crc32($type.$data));
     }
+
+    /**
+     * A JPEG with a real APP1/EXIF segment carrying a GPS tag.
+     * Used to prove that stored images never keep location metadata.
+     */
+    public static function jpegWithExif(string $name = 'geo.jpg', int $width = 200, int $height = 150): UploadedFile
+    {
+        $image = imagecreatetruecolor($width, $height);
+        imagefill($image, 0, 0, imagecolorallocate($image, 120, 80, 200));
+        ob_start();
+        imagejpeg($image, null, 90);
+        $jpeg = ob_get_clean();
+        imagedestroy($image);
+
+        // minimal APP1 Exif block: "Exif\0\0" + a GPS IFD pointer marker we can grep for
+        $payload = "Exif\x00\x00" . "GPSLatitude=" . bin2hex('52.5200N');
+        $segment = "\xFF\xE1" . pack('n', strlen($payload) + 2) . $payload;
+        $withExif = substr($jpeg, 0, 2) . $segment . substr($jpeg, 2);
+
+        $dir = storage_path('framework/testing');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0777, true);
+        }
+
+        $path = $dir.'/'.uniqid('exif-', true).'.jpg';
+        file_put_contents($path, $withExif);
+
+        return new UploadedFile($path, $name, 'image/jpeg', null, true);
+    }
+
+    /** A PNG with a genuinely transparent region, for sticker tests. */
+    public static function transparentPng(string $name = 'sticker.png', int $width = 64, int $height = 64): UploadedFile
+    {
+        $dir = storage_path('framework/testing');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0777, true);
+        }
+
+        $image = imagecreatetruecolor($width, $height);
+        imagesavealpha($image, true);
+        imagefill($image, 0, 0, imagecolorallocatealpha($image, 0, 0, 0, 127));
+        imagefilledellipse($image, (int) ($width / 2), (int) ($height / 2), (int) ($width / 2), (int) ($height / 2), imagecolorallocate($image, 220, 90, 140));
+
+        $path = $dir.'/'.uniqid('sticker-', true).'.png';
+        imagepng($image, $path);
+        imagedestroy($image);
+
+        return new UploadedFile($path, $name, 'image/png', null, true);
+    }
 }

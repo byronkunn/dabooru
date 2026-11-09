@@ -10,6 +10,7 @@ class Message extends Model
     protected $fillable = [
         'conversation_id', 'user_id', 'body', 'media_id', 'rating', 'reply_to_id',
         'shared_post_id', 'forwarded_from', 'edited_at', 'pinned_at', 'removed_at', 'expires_at', 'silent', 'interactive', 'spoiler', 'attachment_name', 'sticker_pack_id',
+        'media_group', 'media_group_position',
     ];
 
     protected function casts(): array

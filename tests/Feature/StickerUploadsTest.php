@@ -41,7 +41,7 @@ class StickerUploadsTest extends TestCase
         $gif = base64_decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
         $this->actingAs($owner)->post(route('messages.stickers.store'), [
             'title' => 'Private reactions', 'is_public' => false,
-            'files' => [$this->pngUpload('wave.png'), UploadedFile::fake()->createWithContent('dance.gif', $gif)],
+            'files' => [\Tests\Support\FakeImage::transparentPng('wave.png'), UploadedFile::fake()->createWithContent('dance.gif', $gif)],
         ])->assertRedirect();
         $pack = StickerPack::sole();
         $this->assertFalse($pack->is_public);
@@ -79,7 +79,7 @@ class StickerUploadsTest extends TestCase
         Storage::fake('local');
         [$owner, $viewer] = User::factory()->count(2)->create();
         $this->actingAs($owner)->post(route('messages.stickers.store'), [
-            'title' => 'Moon dance', 'is_public' => true, 'files' => [$this->pngUpload('wave.png')],
+            'title' => 'Moon dance', 'is_public' => true, 'files' => [\Tests\Support\FakeImage::transparentPng('wave.png')],
         ])->assertRedirect();
         $pack = StickerPack::sole();
         $sticker = $pack->stickers()->sole();

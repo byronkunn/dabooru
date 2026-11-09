@@ -152,11 +152,20 @@ class MessageController extends Controller
                         && ($message->user_id === $viewer->id || $canForwardOthers),
                     'spoiler' => $message->spoiler,
                     'media' => $this->attachmentResource($message),
+                    'media_group' => $message->media_group,
+                    'media_group_position' => $message->media_group_position,
                     'post' => $message->shared_post_id ? $this->sharedWork($message, $viewer) : null,
                     'reply' => $message->reply_to_id ? $this->replyPreview($replies->get($message->reply_to_id)) : null,
                     'reactions' => $reactions->get($message->id, collect())->values(),
                     'interactive' => $message->interactive ? $message->interactive + [
                         'votes' => $choices->get($message->id, collect())->values(),
+                        // who resolved an inline-button message, for display
+                        'answered_by_name' => ($message->interactive['answered_by'] ?? null)
+                            ? \App\Models\User::whereKey($message->interactive['answered_by'])->value('name')
+                            : null,
+                        'answer_label' => isset($message->interactive['answer_index'])
+                            ? ($message->interactive['options'][$message->interactive['answer_index']] ?? null)
+                            : null,
                     ] : null,
                 ]),
                 'options' => $chat->only(['auto_delete_seconds']),
@@ -217,6 +226,9 @@ class MessageController extends Controller
             'to' => ['required_without:conversation_id', 'nullable', 'string', 'exists:users,username'],
             'body' => ['nullable', 'string', 'max:4000', 'required_without_all:file,shared_post_id,forward_id,interactive,sticker_post_id,sticker_upload_id'],
             'file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,gif,mp4,webm,mp3,m4a,ogg,wav,opus,pdf,zip', 'max:40960'],
+            // extra files that travel with the first one as a single album message
+            'files' => ['nullable', 'array', 'max:9'],
+            'files.*' => ['file', 'mimes:jpg,jpeg,png,webp,gif,mp4,webm', 'max:40960'],
             'reply_to_id' => ['nullable', 'integer'],
             'shared_post_id' => ['nullable', 'integer', 'prohibits:forward_id'],
             'sticker_pack_id' => ['nullable', 'integer', 'required_with:sticker_post_id,sticker_upload_id', 'prohibits:shared_post_id,forward_id,file,interactive'],
@@ -227,12 +239,18 @@ class MessageController extends Controller
             'spoiler' => ['sometimes', 'boolean'],
             'original' => ['sometimes', 'boolean'],
             'interactive' => ['nullable', 'array:type,title,options', 'prohibits:forward_id'],
-            'interactive.type' => ['required_with:interactive', Rule::in(['poll', 'checklist'])],
+            // Telegram-style inline keyboard: 2-4 buttons that resolve the message
+            'interactive.type' => ['required_with:interactive', Rule::in(['poll', 'checklist', 'buttons'])],
             'interactive.title' => ['required_with:interactive', 'string', 'max:140'],
-            'interactive.options' => ['required_with:interactive', 'array', 'list', 'min:2', 'max:10'],
+            'interactive.options' => ['required_with:interactive', 'array', 'list', 'min:1', 'max:10'],
             'interactive.options.*' => ['required', 'string', 'max:100', 'distinct'],
             'send_at' => ['nullable', 'date', 'after:now', 'before:+1 year', 'prohibits:file,forward_id,shared_post_id,reply_to_id,interactive,sticker_post_id,sticker_upload_id'],
         ]);
+        // a poll needs at least two answers; inline buttons can be a single action
+        if (($data['interactive']['type'] ?? null) === 'poll' && count($data['interactive']['options']) < 2) {
+            throw ValidationException::withMessages(['interactive.options' => 'A poll needs at least two options.']);
+        }
+
         $viewer = $request->user();
         $thread = isset($data['conversation_id']) ? Conversation::findOrFail($data['conversation_id']) : null;
         $other = null;
@@ -329,14 +347,24 @@ class MessageController extends Controller
                 if ($postId) {
                     abort_unless($this->visiblePost(Post::find($postId), $viewer), 404);
                 }
+                $album = [];
                 if ($request->hasFile('file')) {
                     $file = $request->file('file');
                     $attachment = MessageAttachments::store($viewer, $file, (bool) ($data['original'] ?? false));
                     $attachmentName = mb_substr(preg_replace('/[\x00-\x1F\x7F]/u', '', str_replace(['/', '\\'], '_', $file->getClientOriginalName())) ?? 'Attachment', 0, 150);
+                    $album[] = $attachment;
                 }
+                foreach ($request->file('files', []) as $extra) {
+                    $album[] = MessageAttachments::store($viewer, $extra, (bool) ($data['original'] ?? false));
+                }
+                // several files become one album: a shared group id, one message each
+                $groupId = count($album) > 1 ? (string) Str::uuid() : null;
+
                 $message = $chat->messages()->create([
                     'user_id' => $viewer->id, 'body' => $body,
                     'media_id' => $attachment?->id ?? $forwardedMedia?->id,
+                    'media_group' => $groupId,
+                    'media_group_position' => $groupId ? 0 : null,
                     'reply_to_id' => $reply?->id,
                     'shared_post_id' => $postId, 'forwarded_from' => $forwarded,
                     'silent' => $data['silent'] ?? false, 'interactive' => $data['interactive'] ?? null,
@@ -346,6 +374,23 @@ class MessageController extends Controller
                     $chat->update(['request_status' => 'accepted']);
                     $chat->participants()->updateExistingPivot($viewer->id, ['archived' => false]);
                 }
+                if ($groupId) {
+                    foreach (array_slice($album, 1) as $index => $media) {
+                        $extra = $chat->messages()->create([
+                            'user_id' => $viewer->id,
+                            'body' => null,
+                            'media_id' => $media->id,
+                            'media_group' => $groupId,
+                            'media_group_position' => $index + 1,
+                            'reply_to_id' => $reply?->id,
+                            'silent' => $data['silent'] ?? false,
+                            'spoiler' => $spoiler,
+                            'attachment_name' => null,
+                        ]);
+                        ChatAccess::messageSent($chat, $viewer, $extra);
+                    }
+                }
+
                 ChatAccess::messageSent($chat, $viewer, $message);
 
                 return $chat;

@@ -72,6 +72,33 @@ function Lightbox({ media, onClose }) {
     );
 }
 
+/**
+ * Collapse a media group into a single bubble.
+ *
+ * Several photos sent together arrive as separate messages sharing a group id.
+ * The first one carries an `album` array; the rest are dropped from the list so
+ * they render as one grid instead of a stack of bubbles.
+ */
+function groupMessages(messages) {
+    const albums = new Map();
+    for (const message of messages) {
+        if (message.media_group) {
+            if (!albums.has(message.media_group)) albums.set(message.media_group, []);
+            albums.get(message.media_group).push(message);
+        }
+    }
+
+    const out = [];
+    for (const message of messages) {
+        if (!message.media_group) { out.push(message); continue; }
+        const members = albums.get(message.media_group).slice().sort((a, b) => (a.media_group_position ?? 0) - (b.media_group_position ?? 0));
+        if (members[0]?.id !== message.id) continue;
+        out.push({ ...message, album: members.map((m) => m.media).filter(Boolean) });
+    }
+
+    return out;
+}
+
 function MessageBubble({ message, chat, onOpen, onReply, onReport, onAction, messageUrl }) {
     const [revealed, setRevealed] = useState(false);
     const covered = message.spoiler && !revealed;
@@ -95,7 +122,17 @@ function MessageBubble({ message, chat, onOpen, onReply, onReport, onAction, mes
             {covered ? <button type="button" className="rounded-lg border border-ink-line px-3 py-2 text-sm text-ink-brand" onClick={() => setRevealed(true)}>Reveal spoiler</button> : <>
             {message.body && <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{message.body.split(/(?<![\p{L}\p{M}\p{N}_.@-])(@[\p{L}\p{M}\p{N}_.-]{3,30})(?![\p{L}\p{M}\p{N}_-])/u).map((piece, index) =>
                 index % 2 ? <strong className="text-ink-brand" key={index}>{piece}</strong> : piece)}</p>}
-            <Attachment media={message.media} onOpen={onOpen} />
+            {message.album?.length > 1 ? (
+                <div className={`mt-1 grid gap-1 ${message.album.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                    {message.album.map((media, index) => (
+                        <button key={index} type="button" onClick={() => onOpen(media)} className="overflow-hidden rounded-lg" aria-label={`Open image ${index + 1} of ${message.album.length}`}>
+                            <img src={media.thumb || media.url} alt="" loading="lazy" className="h-24 w-full bg-ink-raised object-cover" />
+                        </button>
+                    ))}
+                </div>
+            ) : (
+                <Attachment media={message.media} onOpen={onOpen} />
+            )}
             {message.post?.sticker ? <Link href={`${message.post.pack}&return_chat=${chat.id}`} className="mt-1 block w-fit">
                 <img src={message.post.sticker} alt={message.post.title} loading="lazy" className="h-32 max-w-full object-contain" />
                 <span className="text-xs text-ink-brand">View sticker pack</span>
@@ -103,7 +140,27 @@ function MessageBubble({ message, chat, onOpen, onReply, onReport, onAction, mes
                 <span className="block text-xs text-ink-muted">Inkwell work</span>
                 {message.post.title}
             </Link>}
-            {message.interactive && (
+            {message.interactive && message.interactive.type === 'buttons' ? (
+                <div className="mt-2 w-64 max-w-full space-y-1.5">
+                    {message.interactive.title && <p className="break-words font-semibold">{message.interactive.title}</p>}
+                    {message.interactive.answered_by ? (
+                        <p className="text-xs">
+                            <span className="font-semibold">{message.interactive.answered_by_name || 'They'} chose</span>{' '}
+                            <span className="rounded bg-black/25 px-1.5 py-0.5 font-semibold">{message.interactive.answer_label}</span>
+                        </p>
+                    ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                            {message.interactive.options.map((option, index) => (
+                                <button key={option} type="button" disabled={!canInteract}
+                                    className="rounded-lg border border-ink-brand/60 bg-ink-brand/10 px-2.5 py-1.5 text-xs font-semibold text-ink-brand disabled:opacity-60"
+                                    onClick={() => request('put', 'choice', { index, selected: true })}>
+                                    {option}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            ) : message.interactive && (
                 <div className="mt-2 w-64 max-w-full space-y-1.5">
                     <p className="break-words font-semibold">{message.interactive.title}</p>
                     <p className="text-xs capitalize text-ink-muted">{message.interactive.type}</p>
@@ -325,7 +382,7 @@ function Thread({ conversation: chat, conversations, filters, quickReplies }) {
                     }} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-4 sm:px-5" aria-label="Messages">
                         {chat.hasOlder && <div className="text-center"><Link href={show({ before: chat.messages[0]?.id })} className="btn-ghost text-xs">Earlier messages</Link></div>}
                         {!chat.messages.length && <p className="text-center text-sm text-ink-muted">{filters.q ? 'No matching messages.' : 'No messages yet.'}</p>}
-                        {chat.messages.map((message) => <MessageBubble key={message.id} message={message} chat={chat}
+                        {groupMessages(chat.messages).map((message) => <MessageBubble key={message.id} message={message} chat={chat}
                             onOpen={setLightbox} onReply={setReply} onReport={setReport} onAction={(type, item) => setAction({ type, item })} messageUrl={messageUrl} />)}
                     </div>
                     {chat.typing.length > 0 && <p className="shrink-0 truncate px-3 pb-1 text-xs text-ink-muted" role="status">{chat.typing.join(', ')} typing…</p>}
