@@ -7,6 +7,7 @@ import { Icon } from '@/Components/Icons';
 import MediaThumbnail from '@/Components/MediaThumbnail';
 import { KIND_ICON, KIND_LABEL, RATING_CLASS, compact, workArtistName } from '@/Lib/format';
 import SaveWorkActions from '@/Components/SaveWorkActions';
+import { copyText } from '@/Lib/clipboard';
 
 /* ------------------------------------------------------------------ media */
 export function MediaViewer({ media, blurred, onReveal, className = '' }) {
@@ -312,7 +313,7 @@ export function PostCard({ post, liked = false, saved = false, viewerId }) {
                     <SaveWorkActions postId={post.id} saved={returned?.saved ?? saved} compact />
                     <button
                         type="button"
-                        onClick={() => navigator.clipboard?.writeText(window.location.origin + post.url)}
+                        onClick={() => copyText(window.location.origin + post.url)}
                         className="flex min-h-9 items-center gap-1.5 rounded-full px-2 hover:bg-white/5 hover:text-ink-text"
                         aria-label="Copy link"
                     >

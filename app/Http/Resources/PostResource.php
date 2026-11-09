@@ -12,6 +12,7 @@ class PostResource extends JsonResource
     public function toArray(Request $request): array
     {
         $credited = $this->credited_artist_id ? $this->creditedArtist : null;
+        $visibleTags = $this->relationLoaded('tags') ? $this->tags->where('is_approved', true) : collect();
 
         return [
             'id' => $this->id,
@@ -19,9 +20,8 @@ class PostResource extends JsonResource
             'rating' => $this->rating,
             'rating_label' => \App\Support\Rating::label($this->rating),
             'title' => $this->title,
-            'tags' => $this->relationLoaded('tags') ? $this->tags->pluck('name')->all() : [],
-            'tagCategories' => $this->relationLoaded('tags')
-                ? $this->tags->mapWithKeys(fn ($tag) => [$tag->name => $tag->category])->all() : [],
+            'tags' => $visibleTags->pluck('name')->all(),
+            'tagCategories' => $visibleTags->mapWithKeys(fn ($tag) => [$tag->name => $tag->category])->all(),
             'caption' => $this->caption,
             'is_original' => (bool) $this->is_original,
             'artist_name' => $this->artist_name,

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 import { Icon } from '@/Components/Icons';
 import { CryptoMark } from '@/Components/CryptoMark';
+import { copyText } from '@/Lib/clipboard';
 
 /** The official brand colour behind each mark. */
 const NETWORK_TINT = {
@@ -20,7 +21,7 @@ function AddressRow({ network }) {
 
     const copy = async () => {
         try {
-            await navigator.clipboard.writeText(address);
+            if (!await copyText(address)) throw new Error('Copy failed');
             setCopied(true);
             setTimeout(() => setCopied(false), 1800);
         } catch {

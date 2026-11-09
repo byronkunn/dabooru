@@ -244,7 +244,7 @@ function Thread({ conversation: chat, conversations, filters, quickReplies }) {
     const threadRef = useRef(null);
     const nearBottom = useRef(true);
     const previousLast = useRef(null);
-    const currentLast = chat.messages.at(-1);
+    const currentLast = chat.messages[chat.messages.length - 1];
     const browsingHistory = Boolean(filters.before || filters.q);
     const visible = usePageVisibility();
     const updating = visible && !browsingHistory && !settings && !action && !report && !lightbox;
@@ -317,6 +317,24 @@ function Thread({ conversation: chat, conversations, filters, quickReplies }) {
                 acknowledge();
             }
         };
+        if (!window.IntersectionObserver) {
+            const scanVisibleMessages = () => {
+                const bounds = element.getBoundingClientRect();
+                element.querySelectorAll('[data-readable-message]').forEach((message) => {
+                    const rect = message.getBoundingClientRect();
+                    if (rect.bottom > bounds.top && rect.top < bounds.bottom) {
+                        pending = Math.max(pending, Number(message.dataset.readableMessage));
+                    }
+                });
+                acknowledge();
+            };
+            scanVisibleMessages();
+            element.addEventListener('scroll', scanVisibleMessages, { passive: true });
+            return () => {
+                stopped = true;
+                element.removeEventListener('scroll', scanVisibleMessages);
+            };
+        }
         const observer = new IntersectionObserver((entries) => {
             for (const entry of entries) {
                 if (entry.isIntersecting && entry.intersectionRect.height > 0) {
@@ -351,7 +369,7 @@ function Thread({ conversation: chat, conversations, filters, quickReplies }) {
     return (
         <AppLayout rightRail={false} footer={false}>
             <Head title={chat.title} />
-            <div className="grid h-[calc(100dvh-70px-40px)] min-w-0 grid-cols-1 lg:h-[calc(100vh-40px)] lg:grid-cols-[minmax(240px,300px)_minmax(0,1fr)]">
+            <div className="message-window grid min-w-0 grid-cols-1 lg:grid-cols-[minmax(240px,300px)_minmax(0,1fr)]">
                 <div className="hidden min-h-0 lg:grid"><Inbox conversations={conversations} currentId={chat.id} /></div>
                 <section className="flex min-h-0 min-w-0 flex-col" aria-label={chat.title}>
                     <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-ink-line p-3">

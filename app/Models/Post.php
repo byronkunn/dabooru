@@ -155,7 +155,7 @@ class Post extends Model
     {
         $names = array_values(array_filter($names, fn ($n) => is_string($n) && $n !== ''));
 
-        return $names === [] ? $q : $q->whereDoesntHave('tags', fn ($tags) => $tags->whereIn('name', $names));
+        return $names === [] ? $q : $q->whereDoesntHave('tags', fn ($tags) => $tags->where('is_approved', true)->whereIn('name', $names));
     }
 
     /** Restrict to works carrying at least one of the given tag names. */
@@ -163,7 +163,7 @@ class Post extends Model
     {
         $names = array_values(array_filter($names, fn ($n) => is_string($n) && $n !== ''));
 
-        return $names === [] ? $q : $q->whereHas('tags', fn ($tags) => $tags->whereIn('name', $names));
+        return $names === [] ? $q : $q->whereHas('tags', fn ($tags) => $tags->where('is_approved', true)->whereIn('name', $names));
     }
 
     /** A quality floor in the only currency the site records: likes and views. */

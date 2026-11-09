@@ -30,7 +30,7 @@ export default function Analytics({ days, dates, metrics, meanResolutionMinutes 
             <div className="space-y-4 p-3.5 md:p-5">
                 <div className="flex flex-wrap items-center gap-2">
                     {[7, 30].map((value) => <Link key={value} href={route('admin.analytics', { days: value })} className={days === value ? 'chip is-active' : 'chip'}>Last {value} days</Link>)}
-                    <span className="text-xs text-ink-muted">{dates[0]} to {dates.at(-1)}</span>
+                    <span className="text-xs text-ink-muted">{dates[0]} to {dates[dates.length - 1]}</span>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     {Object.entries(metrics).map(([key, metric]) => <Metric key={key} {...{ metric, dates }} />)}

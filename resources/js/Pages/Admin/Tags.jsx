@@ -4,8 +4,9 @@ import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 import { Errors, Pagination, TagPicker } from '@/Components/KnowledgeUi';
 import { categoryColor, categoryLabel } from '@/Lib/tagCategories';
 
-function TagControls({ tag }) {
+function TagControls({ tag, categories }) {
     const lock = useForm({ locked: !tag.locked });
+    const review = useForm({ category: tag.category, is_approved: tag.is_approved });
     const merge = useForm({ destination_id: '', destination_version: 0, base_version: tag.version, reason: '' });
     const [destination, setDestination] = useState([]);
     return (
@@ -13,8 +14,20 @@ function TagControls({ tag }) {
             <div className="flex flex-wrap items-center gap-2">
                 <h2 className="break-words font-bold">{tag.name}</h2>
                 <span className={`chip ${categoryColor(tag.category)}`}>{categoryLabel(tag.category)}</span>
+                {!tag.is_approved && <span className="chip border border-amber-400/40 text-amber-300">Pending approval</span>}
                 <span className="text-sm text-ink-muted">{tag.posts_count} published works · {tag.locked ? 'Locked' : 'Unlocked'}</span>
             </div>
+            <form className="flex flex-wrap items-end gap-2" onSubmit={(event) => {
+                event.preventDefault();
+                review.transform((data) => ({ ...data, is_approved: true }));
+                review.post(route('admin.tags.review', tag.id), { preserveScroll: true });
+            }}>
+                <label className="min-w-48 flex-1 text-sm">Category<select className="field-input mt-1" value={review.data.category} onChange={(event) => review.setData('category', event.target.value)}>
+                    {categories.map((value) => <option key={value} value={value}>{categoryLabel(value)}</option>)}
+                </select></label>
+                <button className="btn-primary" disabled={review.processing}>{tag.is_approved ? 'Save category' : 'Approve tag'}</button>
+            </form>
+            <Errors errors={review.errors} />
             <div className="flex flex-wrap gap-2">
                 <Link href={route('knowledge.show', { type: 'tag', id: tag.id, tab: 'edit' })} className="btn-primary">Edit tag</Link>
                 <Link href={route('knowledge.show', { type: 'tag', id: tag.id, tab: 'history' })} className="btn-ghost">History</Link>
@@ -58,7 +71,7 @@ export default function Tags({ tags, categories, filters }) {
             <Head title="Manage tags" />
             <TopBar title="Tags & merges" />
             <div className="space-y-5 p-4 md:p-5">
-                <p className="text-sm text-ink-muted">Administrators can rename and categorize tags, edit definitions and aliases, lock pages, and merge duplicates. Changes are recorded in tag history.</p>
+                <p className="text-sm text-ink-muted">New tags stay out of public search and tag suggestions until an administrator approves them. Choose the category before approving. Existing tags remain available.</p>
                 <Link href={route('knowledge.index')} className="btn-ghost">Public tag directory</Link>
                 <form className="space-y-3" onSubmit={(event) => {
                     event.preventDefault();
@@ -71,7 +84,7 @@ export default function Tags({ tags, categories, filters }) {
                     </select></label>
                     <button className="btn-primary">Find tags</button>
                 </form>
-                {tags.data.map((tag) => <TagControls key={`${tag.id}-${tag.version}`} tag={tag} />)}
+                {tags.data.map((tag) => <TagControls key={`${tag.id}-${tag.version}`} tag={tag} categories={categories} />)}
                 {tags.data.length === 0 && <p className="text-ink-muted">No tags match these filters.</p>}
                 <Pagination data={tags} />
             </div>

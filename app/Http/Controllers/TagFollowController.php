@@ -12,6 +12,7 @@ class TagFollowController extends Controller
     {
         $data = $request->validate(['tag' => ['required', 'string', 'max:40']]);
         $tag = Tag::where('name', Tag::canonicalName($data['tag']))->firstOrFail();
+        abort_unless($tag->is_approved, 404);
         $request->user()->followedTags()->syncWithoutDetaching([$tag->id]);
 
         return back();

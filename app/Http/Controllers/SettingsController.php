@@ -38,12 +38,14 @@ class SettingsController extends Controller
                 'bio' => $user->bio,
                 'location' => $user->location,
                 'website' => $user->website,
+                'ai_disclosure' => $user->ai_disclosure ?? 'none',
                 'avatar' => $user->avatarUrl(),
                 'banner' => $user->bannerUrl(),
             ],
             'settings' => array_merge(self::DEFAULTS, $this->stored($user->id), ['show_explicit' => (bool) $user->show_explicit]),
             'mutedTags' => \App\Support\CollectionLibrary::mutedFor($user),
             'mutedTagSuggestions' => \App\Models\Tag::query()
+                ->where('is_approved', true)
                 ->withCount('posts')
                 ->orderByDesc('posts_count')
                 ->take(30)
@@ -88,6 +90,7 @@ class SettingsController extends Controller
             'bio' => ['nullable', 'string', 'max:240'],
             'location' => ['nullable', 'string', 'max:80'],
             'website' => ['nullable', 'url:http,https', 'max:120'],
+            'ai_disclosure' => ['sometimes', 'required', Rule::in(['none', 'ai_artist', 'ai_works', 'both'])],
             'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'banner' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
             'remove_avatar' => ['sometimes', 'boolean'],

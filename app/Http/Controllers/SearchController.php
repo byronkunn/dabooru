@@ -78,7 +78,7 @@ class SearchController extends Controller
                 $q->where('title', 'like', $like)
                     ->orWhere('caption', 'like', $like)
                     ->orWhere('artist_name', 'like', $like)
-                    ->orWhereHas('tags', fn ($tags) => $tags->where('name', Tag::canonicalName($term)))
+                    ->orWhereHas('tags', fn ($tags) => $tags->where('is_approved', true)->where('name', Tag::canonicalName($term)))
                     ->orWhereHas('user', fn ($u) => $u->where('username', 'like', $like)->orWhere('name', 'like', $like))
                     ->orWhereHas('chapter.comic', fn ($c) => $c->where('title', 'like', $like));
             });
@@ -98,11 +98,11 @@ class SearchController extends Controller
         }
 
         foreach ($parsed['tags'] as $tag) {
-            $works->whereHas('tags', fn ($t) => $t->where('name', $tag));
+            $works->whereHas('tags', fn ($t) => $t->where('is_approved', true)->where('name', $tag));
         }
 
         foreach ($parsed['exclude_tags'] as $exTag) {
-            $works->whereDoesntHave('tags', fn ($t) => $t->where('name', $exTag));
+            $works->whereDoesntHave('tags', fn ($t) => $t->where('is_approved', true)->where('name', $exTag));
         }
 
         return $works;
@@ -139,6 +139,7 @@ class SearchController extends Controller
         // When term is empty, return trending tags
         if (mb_strlen($term) < self::MIN_LENGTH) {
             $trending = Tag::whereNull('merged_into_id')
+                ->where('is_approved', true)
                 ->when(! $request->user()?->show_explicit, fn ($q) => $q->where('wiki_rating', '!=', 'explicit'))
                 ->withCount(['posts' => fn ($q) => $q->visibleTo($request->user())->visibleRating((bool) $request->user()?->show_explicit)])
                 ->orderByDesc('posts_count')
@@ -194,6 +195,7 @@ class SearchController extends Controller
 
         $cleanTag = ltrim($term, '#');
         $tags = Tag::whereNull('merged_into_id')
+            ->where('is_approved', true)
             ->when(! $showExplicit, fn ($q) => $q->where('wiki_rating', '!=', 'explicit'))
             ->where(fn ($q) => $q->where('name', 'like', '%'.$escape($cleanTag).'%')
                 ->orWhereIn('id', \Illuminate\Support\Facades\DB::table('tag_aliases')->where('name', 'like', '%'.$escape($cleanTag).'%')->select('tag_id')))
@@ -266,6 +268,7 @@ class SearchController extends Controller
     public function trending(Request $request)
     {
         $tags = Tag::whereNull('merged_into_id')
+            ->where('is_approved', true)
             ->when(! $request->user()?->show_explicit, fn ($q) => $q->where('wiki_rating', '!=', 'explicit'))
             ->withCount(['posts' => fn ($q) => $q->visibleTo($request->user())->visibleRating((bool) $request->user()?->show_explicit)])
             ->orderByDesc('posts_count')

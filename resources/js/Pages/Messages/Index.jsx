@@ -17,7 +17,7 @@ export default function MessagesIndex(props) {
     return (
         <AppLayout rightRail={false} footer={false}>
             <Head title="Messages" />
-            <div className="grid h-[calc(100dvh-70px-40px)] min-w-0 grid-cols-1 lg:h-[calc(100vh-40px)] lg:grid-cols-[minmax(240px,300px)_minmax(0,1fr)]">
+            <div className="message-window grid min-w-0 grid-cols-1 lg:grid-cols-[minmax(240px,300px)_minmax(0,1fr)]">
                 <Inbox {...props} key={props.filters?.q ?? ''} />
                 <div className="hidden place-items-center text-center lg:grid">
                     <div className="p-6">

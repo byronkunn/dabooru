@@ -38,7 +38,7 @@ return [
 
         'local' => [
             'driver' => 'local',
-            'root' => storage_path('app/private'),
+            'root' => env('PRIVATE_DISK_ROOT', storage_path('app/private')),
             'serve' => true,
             'throw' => false,
             'report' => false,
@@ -46,7 +46,9 @@ return [
 
         'public' => [
             'driver' => 'local',
-            'root' => storage_path('app/public'),
+            // a mounted volume on a PaaS survives deploys; the default container
+            // disk does not
+            'root' => env('PUBLIC_DISK_ROOT', storage_path('app/public')),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
             'visibility' => 'public',
             'throw' => false,
@@ -57,11 +59,18 @@ return [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
             'secret' => env('AWS_SECRET_ACCESS_KEY'),
-            'region' => env('AWS_DEFAULT_REGION'),
+            // Cloudflare R2 uses "auto" for the S3 API region.
+            'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
             'bucket' => env('AWS_BUCKET'),
             'url' => env('AWS_URL'),
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            // Public gallery uploads use generated, non-reused object keys. The
+            // R2 custom domain serves them through Cloudflare's cache.
+            'visibility' => 'public',
+            'options' => [
+                'CacheControl' => 'public, max-age=31536000, immutable',
+            ],
             'throw' => false,
             'report' => false,
         ],

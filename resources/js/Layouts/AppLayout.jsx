@@ -196,8 +196,12 @@ function BottomNav({ menuOpen, setMenuOpen }) {
     useEffect(() => {
         const desktop = window.matchMedia('(min-width: 1024px)');
         const closeOnDesktop = () => { if (desktop.matches) setMenuOpen(false); };
-        desktop.addEventListener('change', closeOnDesktop);
-        return () => desktop.removeEventListener('change', closeOnDesktop);
+        if (desktop.addEventListener) {
+            desktop.addEventListener('change', closeOnDesktop);
+            return () => desktop.removeEventListener('change', closeOnDesktop);
+        }
+        desktop.addListener(closeOnDesktop);
+        return () => desktop.removeListener(closeOnDesktop);
     }, []);
     const unread = (auth?.unread_messages ?? 0) + (auth?.unread_notifications ?? 0);
     // Signed-out visitors get one honest invitation instead of three links that

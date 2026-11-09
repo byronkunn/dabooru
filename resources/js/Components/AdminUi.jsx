@@ -20,4 +20,4 @@ export function AdminErrors({ errors }) {
     );
 }
 
-export const actionLabel = (action) => action.replaceAll('_', ' ');
+export const actionLabel = (action) => action.replace(/_/g, ' ');

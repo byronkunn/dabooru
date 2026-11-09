@@ -123,7 +123,7 @@ class GalleryController extends Controller
         $tag = $filters['tag'];
 
         return SearchController::workQuery($user, $parsed, $parsed['artist'], null, $filters['explicit'])
-            ->when($tag !== '', fn ($q) => $q->whereHas('tags', fn ($tags) => $tags->where('name', $tag)))
+            ->when($tag !== '', fn ($q) => $q->whereHas('tags', fn ($tags) => $tags->where('name', $tag)->where('is_approved', true)))
             ->ofType($filters['format'])
             ->withinWindow($filters['window'])
             ->withinDuration($filters['min_duration'] ?: null, $filters['max_duration'] ?: null)
@@ -184,6 +184,7 @@ class GalleryController extends Controller
             'durationNarrowed' => $durationNarrowed,
             'tagSuggestions' => Tag::query()
                 ->whereNull('merged_into_id')
+                ->where('is_approved', true)
                 ->when(! $filters['explicit'], fn ($q) => $q->where('wiki_rating', '!=', 'explicit'))
                 ->withCount('posts')
                 ->orderByDesc('posts_count')

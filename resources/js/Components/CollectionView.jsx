@@ -7,6 +7,7 @@ import { AdminErrors, AdminPagination } from '@/Components/AdminUi';
 import CollectionDialog from '@/Components/CollectionDialog';
 import SaveWorkActions from '@/Components/SaveWorkActions';
 import LibraryMutedTags from '@/Components/LibraryMutedTags';
+import { copyText } from '@/Lib/clipboard';
 
 export function CollectionCover({ collection, className = 'h-12 w-12' }) {
     const media = collection.cover?.media?.[0];
@@ -190,7 +191,10 @@ export default function CollectionView({ collection, posts, order, mutedTags, ne
                     <Link href={collection.shareUrl} className="btn-ghost">Open shared view</Link>
                     <button type="button" className="btn-ghost" onClick={async () => {
                         setCopyError('');
-                        try { await navigator.clipboard.writeText(collection.shareUrl); setCopied(true); }
+                        try {
+                            if (!await copyText(collection.shareUrl)) throw new Error('Copy failed');
+                            setCopied(true);
+                        }
                         catch { setCopyError('Could not copy. Select and copy the link above.'); }
                     }}>{copied ? 'Copied' : 'Copy link'}</button>
                 </div>

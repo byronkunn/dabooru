@@ -1,0 +1,159 @@
+# Render blueprint for Dabooru.
+#
+# Three services share one Postgres database:
+#   dabooru          web (serves HTTP)
+#   dabooru-worker   queue worker (scheduled + expiring messages, poster frames)
+#   dabooru-cron     scheduler tick, every minute
+#
+# Deploy: push this file, then in Render choose "New > Blueprint" and pick the
+# repo. Values marked sync: false have to be filled in the dashboard.
+
+databases:
+  - name: dabooru-db
+    databaseName: dabooru
+    user: dabooru
+    plan: basic-256mb
+    region: oregon
+
+services:
+  - type: web
+    name: dabooru
+    runtime: docker
+    plan: starter
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /up
+    preDeployCommand: sh docker/release.sh
+    disk:
+      name: dabooru-storage
+      mountPath: /var/data
+      sizeGB: 10
+    envVars:
+      - key: PUBLIC_DISK_ROOT
+        value: /var/data/public
+      - key: PRIVATE_DISK_ROOT
+        value: /var/data/private
+      - key: FILESYSTEM_UPLOAD_DISK
+        value: s3
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_DEFAULT_REGION
+        value: auto
+      - key: AWS_BUCKET
+        sync: false
+      - key: AWS_ENDPOINT
+        sync: false
+      - key: AWS_URL
+        sync: false
+      - key: AWS_USE_PATH_STYLE_ENDPOINT
+        value: "false"
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_URL
+        sync: false
+      - key: APP_KEY
+        sync: false
+      - key: APP_NAME
+        value: Dabooru
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dabooru-db
+          property: connectionString
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: SESSION_DRIVER
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: MAIL_MAILER
+        sync: false
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM_ADDRESS
+        sync: false
+      - key: ADMIN_OWNER_ID
+        sync: false
+      - key: ADMIN_URGENT_REPORT_EMAIL
+        sync: false
+
+  - type: worker
+    name: dabooru-worker
+    runtime: docker
+    plan: starter
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: sh docker/worker.sh
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        sync: false
+      - key: APP_NAME
+        value: Dabooru
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dabooru-db
+          property: connectionString
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: SESSION_DRIVER
+        value: database
+      - key: LOG_CHANNEL
+        value: stderr
+
+  - type: cron
+    name: dabooru-cron
+    runtime: docker
+    plan: starter
+    region: oregon
+    schedule: "* * * * *"
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: sh docker/scheduler.sh
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        sync: false
+      - key: APP_NAME
+        value: Dabooru
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dabooru-db
+          property: connectionString
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: SESSION_DRIVER
+        value: database
+      - key: LOG_CHANNEL
+        value: stderr

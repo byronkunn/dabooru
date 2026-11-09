@@ -5,6 +5,7 @@ import AppLayout, { TopBar, RatingBadge } from '@/Layouts/AppLayout';
 import { ArtistName, BlurGate, MediaViewer, WorkCell } from '@/Components/Work';
 import { Icon } from '@/Components/Icons';
 import { compact } from '@/Lib/format';
+import { copyText } from '@/Lib/clipboard';
 import { useEffect, useState } from 'react';
 import ReportDialog from '@/Components/ReportDialog';
 import PostStarRating from '@/Components/PostStarRating';
@@ -28,10 +29,11 @@ export default function PostShow({ post, comments, canComment, commentPagination
     const blurred = shouldBlurMedia(post.rating, auth?.user?.show_explicit, revealed);
     const isVideo = post.media?.[0]?.kind === 'video';
 
-    const copyLink = () => {
-        navigator.clipboard?.writeText(window.location.href);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+    const copyLink = async () => {
+        if (await copyText(window.location.href)) {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
     };
 
     return (

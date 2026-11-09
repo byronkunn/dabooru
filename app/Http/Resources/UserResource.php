@@ -24,6 +24,7 @@ class UserResource extends JsonResource
             'bio' => $this->bio,
             'location' => $this->location,
             'website' => $this->website,
+            'ai_disclosure' => $this->ai_disclosure ?? 'none',
             'followers' => $this->followers_count ?? null,
             'following' => $this->following_count ?? null,
             'posts_count' => $this->posts_count ?? null,

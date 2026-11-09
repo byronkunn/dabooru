@@ -79,6 +79,14 @@ export default function ProfileShow({ profile, posts, comics, collections = [], 
 
             {profile.bio && <p className="px-3.5 text-[14.5px] leading-relaxed text-[#dfd7e5] md:px-5">{profile.bio}</p>}
 
+            {profile.ai_disclosure && profile.ai_disclosure !== 'none' && (
+                <p className="mx-3.5 mt-2 inline-flex rounded-full border border-ink-line bg-ink-raised px-3 py-1.5 text-xs font-semibold text-ink-text md:mx-5" aria-label="AI use disclosure">
+                    {profile.ai_disclosure === 'ai_artist' && 'AI artist'}
+                    {profile.ai_disclosure === 'ai_works' && 'Some works are AI-generated'}
+                    {profile.ai_disclosure === 'both' && 'AI artist · AI-generated works'}
+                </p>
+            )}
+
             <div className="flex flex-wrap gap-4 px-3.5 pt-2.5 text-[13.5px] text-ink-muted md:px-5">
                 {profile.location && <span>📍 {profile.location}</span>}
                 {profile.website && <span>🔗 {profile.website}</span>}

@@ -115,6 +115,7 @@ export default function SettingsIndex({ user, settings, messagingPrivacy, mutedT
         bio: user.bio ?? '',
         location: user.location ?? '',
         website: user.website ?? '',
+        ai_disclosure: user.ai_disclosure ?? 'none',
         avatar: null,
         banner: null,
         remove_avatar: false,
@@ -243,6 +244,16 @@ export default function SettingsIndex({ user, settings, messagingPrivacy, mutedT
                                     <input id="username" required minLength={3} value={profileForm.data.username} onChange={(e) => profileForm.setData('username', e.target.value)} className="field-input" maxLength={30} />
                                     {profileForm.errors.username && <p className="field-hint text-ink-expl">{profileForm.errors.username}</p>}
                                 </div>
+                            </div>
+                            <div>
+                                <label htmlFor="ai_disclosure" className="field-label">AI disclosure</label>
+                                <select id="ai_disclosure" value={profileForm.data.ai_disclosure} onChange={(e) => profileForm.setData('ai_disclosure', e.target.value)} className="field-input">
+                                    <option value="none">No AI disclosure</option>
+                                    <option value="ai_artist">I am an AI artist</option>
+                                    <option value="ai_works">Some of my works are AI-generated</option>
+                                    <option value="both">I am an AI artist and my works are AI-generated</option>
+                                </select>
+                                <p className="mt-1 text-xs text-ink-muted">When selected, this disclosure appears publicly on your profile.</p>
                             </div>
                             <div>
                                 <label htmlFor="bio" className="field-label">Bio</label>

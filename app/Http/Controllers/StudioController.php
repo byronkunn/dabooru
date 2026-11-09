@@ -199,7 +199,7 @@ class StudioController extends Controller
             foreach ($works as $post) {
                 if ($data['action'] === 'add_tags') {
                     foreach ($tagNames as $name) {
-                        $post->tags()->syncWithoutDetaching([\App\Models\Tag::firstOrCreate(['name' => $name])->id]);
+                        $post->tags()->syncWithoutDetaching([\App\Models\Tag::firstOrCreate(['name' => $name], ['is_approved' => false])->id]);
                     }
                     $post->forceFill(['tag_version' => ($post->tag_version ?? 1) + 1])->save();
                     $count++;

@@ -194,6 +194,21 @@ img[data-seed] {
     }
 }
 
+/* Fall back to the stable viewport unit on browsers without dynamic viewport support. */
+.message-window {
+    height: calc(100vh - 110px);
+}
+@supports (height: 100dvh) {
+    .message-window {
+        height: calc(100dvh - 110px);
+    }
+}
+@media (min-width: 1024px) {
+    .message-window {
+        height: calc(100vh - 40px);
+    }
+}
+
 
 /* ---------------------------------------------------------------- rating badges
    Composite classes so the rating colours survive Tailwind's purge even when

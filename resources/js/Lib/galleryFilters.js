@@ -6,7 +6,7 @@ export const clearedGalleryFilters = {
 
 export function patchGalleryFilters(filters, patch) {
     const next = { ...filters, ...patch };
-    if (Object.hasOwn(patch, 'format') && patch.format !== 'video') {
+    if (Object.prototype.hasOwnProperty.call(patch, 'format') && patch.format !== 'video') {
         next.min_duration = '';
         next.max_duration = '';
     }

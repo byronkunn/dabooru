@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(AdminSeeder::class);
         $this->call(KnowledgeSeeder::class);
+        $this->call(AdultTagsSeeder::class);
         $this->seedLibrary();
 
         $this->command?->info(sprintf(

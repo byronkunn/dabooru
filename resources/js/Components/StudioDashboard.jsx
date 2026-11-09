@@ -48,7 +48,7 @@ function DailyChart({ metric, dates }) {
                 className={`min-w-0 flex-1 rounded-t ${value < 0 ? 'bg-red-400' : 'bg-ink-brand'}`}
                 style={{ height: `${Math.max(2, Math.abs(value) / max * 100)}%`, opacity: value ? 1 : 0.15 }} />)}
         </div>
-        <div className="mt-2 flex justify-between text-[11px] text-ink-muted"><span>{dates[0]}</span><span>{dates.at(-1)}</span></div>
+        <div className="mt-2 flex justify-between text-[11px] text-ink-muted"><span>{dates[0]}</span><span>{dates[dates.length - 1]}</span></div>
         <details className="mt-2 text-xs">
             <summary className="cursor-pointer py-2 text-ink-brand">Daily values</summary>
             <div className="max-h-48 overflow-y-auto"><table className="w-full text-left"><caption className="sr-only">{metric.label} by date</caption><thead><tr><th>Date</th><th>Count</th></tr></thead>

@@ -17,6 +17,26 @@ export default function FollowingIndex({ posts, nextCursor, followingCount, foll
     const [loading, setLoading] = useState(false);
     const [loadError, setLoadError] = useState(false);
     const sentinel = useRef(null);
+    const supportsIntersectionObserver = typeof window !== 'undefined' && 'IntersectionObserver' in window;
+
+    const loadMore = () => {
+        if (!cursor || loading || loadError) return;
+        setLoading(true);
+        fetch(`${route('following')}?cursor=${encodeURIComponent(cursor)}`, {
+            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        })
+            .then((r) => {
+                if (!r.ok) throw new Error('Unable to load the Following feed.');
+                return r.json();
+            })
+            .then((data) => {
+                const incoming = data.props?.posts ?? data.posts ?? [];
+                setFeed((f) => [...f, ...incoming]);
+                setCursor(data.props?.nextCursor ?? data.nextCursor ?? null);
+            })
+            .catch(() => setLoadError(true))
+            .finally(() => setLoading(false));
+    };
 
     useEffect(() => {
         if (restored && currentProps.current.posts === posts && currentProps.current.nextCursor === nextCursor) return;
@@ -31,28 +51,13 @@ export default function FollowingIndex({ posts, nextCursor, followingCount, foll
     }, [feed, cursor, url, posts]);
 
     useEffect(() => {
-        if (!sentinel.current || !cursor || loadError) return;
+        if (!supportsIntersectionObserver || !sentinel.current || !cursor || loadError) return;
         const io = new IntersectionObserver((entries) => {
-            if (!entries[0].isIntersecting || loading) return;
-            setLoading(true);
-            fetch(`${route('following')}?cursor=${encodeURIComponent(cursor)}`, {
-                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            })
-                .then((r) => {
-                    if (!r.ok) throw new Error('Unable to load the Following feed.');
-                    return r.json();
-                })
-                .then((data) => {
-                    const incoming = data.props?.posts ?? data.posts ?? [];
-                    setFeed((f) => [...f, ...incoming]);
-                    setCursor(data.props?.nextCursor ?? data.nextCursor ?? null);
-                })
-                .catch(() => setLoadError(true))
-                .finally(() => setLoading(false));
+            if (entries[0].isIntersecting) loadMore();
         }, { rootMargin: '600px' });
         io.observe(sentinel.current);
         return () => io.disconnect();
-    }, [cursor, loading, loadError]);
+    }, [cursor, loading, loadError, supportsIntersectionObserver]);
 
     return (
         <AppLayout>
@@ -96,6 +101,7 @@ export default function FollowingIndex({ posts, nextCursor, followingCount, foll
                     feed.map((post) => <PostCard key={post.id} post={post} liked={post.liked} saved={post.saved} viewerId={auth.user?.id} />)
                 )}
                 <div ref={sentinel} className="h-px" />
+                {!supportsIntersectionObserver && cursor && <div className="p-4 text-center"><button type="button" className="btn-ghost" disabled={loading} onClick={loadMore}>Load more</button></div>}
                 {loading && <p className="py-6 text-center text-sm text-ink-muted">Loading more…</p>}
                 {loadError && <div role="alert" className="p-4 text-center text-sm text-red-300">Could not load more work. <button type="button" className="underline" onClick={() => setLoadError(false)}>Retry</button></div>}
                 {!cursor && feed.length > 0 && <p className="py-8 text-center text-sm text-ink-muted">You&apos;re all caught up.</p>}

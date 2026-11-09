@@ -35,6 +35,7 @@ class SetupController extends Controller
         }
 
         $tags = Tag::query()
+            ->where('is_approved', true)
             ->withCount('posts')
             ->orderByDesc('posts_count')
             ->take(self::SUGGESTED_TAGS)
@@ -85,6 +86,7 @@ class SetupController extends Controller
 
         // follow the chosen tags
         $tagIds = Tag::query()
+            ->where('is_approved', true)
             ->whereIn('name', collect($data['tags'] ?? [])->map(fn ($n) => Tag::canonicalName($n))->all())
             ->pluck('id');
         if ($tagIds->isNotEmpty()) {

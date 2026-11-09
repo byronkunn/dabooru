@@ -12,15 +12,14 @@ use Illuminate\Validation\ValidationException;
 class Tag extends Model
 {
     public const CATEGORIES = [
-        'artist', 'character', 'series', 'medium', 'style', 'subject', 'anatomy',
-        'clothing', 'relationships', 'themes', 'content warnings', 'general',
-        'position', 'appearance', 'setting', 'composition',
+        'genre', 'characters', 'franchise', 'anatomies', 'poses', 'activity',
+        'substance', 'settings', 'language', 'entity', 'artist',
     ];
 
     protected $guarded = [];
 
     protected $attributes = [
-        'category' => 'general', 'wiki_rating' => 'sfw', 'artist_status' => 'unverified',
+        'category' => 'entity', 'wiki_rating' => 'sfw', 'artist_status' => 'unverified',
         'version' => 0, 'locked' => false,
     ];
 
@@ -29,7 +28,7 @@ class Tag extends Model
     protected static function booted(): void
     {
         static::creating(function (Tag $tag): void {
-            if ($tag->category === 'general') {
+            if (! in_array($tag->category, self::CATEGORIES, true)) {
                 $tag->category = \App\Support\TagCategories::forName($tag->name);
             }
         });
@@ -37,7 +36,7 @@ class Tag extends Model
 
     protected function casts(): array
     {
-        return ['locked' => 'boolean', 'version' => 'integer'];
+        return ['locked' => 'boolean', 'version' => 'integer', 'is_approved' => 'boolean'];
     }
 
     public static function canonicalName(string $name): string
@@ -112,6 +111,7 @@ class Tag extends Model
             if ($names !== []) {
                 static::query()->insertOrIgnore(array_map(fn ($name) => [
                     'name' => $name, 'category' => \App\Support\TagCategories::forName($name),
+                    'is_approved' => false,
                 ], $names));
             }
             $locked->tags()->sync(static::whereIn('name', $names)->pluck('id')->all());

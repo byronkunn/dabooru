@@ -6,13 +6,17 @@ function VideoThumbnail({ url, className }) {
     const [failed, setFailed] = useState(false);
 
     useEffect(() => {
+        if (!window.IntersectionObserver) {
+            setVisible(true);
+            return undefined;
+        }
         const observer = new IntersectionObserver((entries) => {
             if (entries.some((entry) => entry.isIntersecting)) {
                 setVisible(true);
                 observer.disconnect();
             }
         }, { rootMargin: '200px' });
-        observer.observe(ref.current);
+        if (ref.current) observer.observe(ref.current);
         return () => observer.disconnect();
     }, []);
 

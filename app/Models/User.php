@@ -27,6 +27,7 @@ class User extends Authenticatable
         'bio',
         'location',
         'website',
+        'ai_disclosure',
         'age_confirmed_at',
         'show_explicit',
     ];

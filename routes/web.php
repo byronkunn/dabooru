@@ -101,6 +101,7 @@ Route::middleware(['auth', 'throttle:20,1'])->group(function () {
 Route::middleware(['auth', 'admin:curator', 'throttle:60,1'])->prefix('admin/community')->group(function () {
     Route::get('/tags', [KnowledgeController::class, 'manageTags'])->middleware('admin:admin')->name('admin.tags.index');
     Route::post('/tags/{tag}/merge', [KnowledgeController::class, 'mergeTags'])->middleware('admin:admin')->name('admin.tags.merge');
+    Route::post('/tags/{tag}/review', [KnowledgeController::class, 'reviewTag'])->middleware('admin:admin')->name('admin.tags.review');
     Route::get('/', [KnowledgeController::class, 'moderate'])->name('admin.knowledge');
     Route::post('/revisions/{revision}', [KnowledgeController::class, 'review'])->name('admin.knowledge.review');
     Route::post('/{type}/{id}/lock', [KnowledgeController::class, 'lock'])->whereNumber('id')->name('admin.knowledge.lock');

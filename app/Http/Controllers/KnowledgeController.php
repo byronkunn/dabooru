@@ -55,7 +55,7 @@ class KnowledgeController extends Controller
         $tags = Tag::whereNull('merged_into_id')
             ->when($data['q'] ?? null, fn ($query, $term) => $query->where('name', 'like', '%'.$term.'%'))
             ->when($data['category'] ?? null, fn ($query, $category) => $query->where('category', $category))
-            ->withCount('posts')->orderBy('name')->paginate(30)->withQueryString();
+            ->withCount('posts')->orderBy('is_approved')->orderBy('name')->paginate(30)->withQueryString();
 
         return Inertia::render('Admin/Tags', ['tags' => $tags, 'categories' => Tag::CATEGORIES, 'filters' => $data]);
     }
@@ -72,6 +72,29 @@ class KnowledgeController extends Controller
             $data['base_version'], $data['destination_version'], $data['reason']);
 
         return redirect()->route('admin.tags.index')->with('success', 'Tags merged. Media and followers moved; old names and links redirect.');
+    }
+
+    public function reviewTag(Request $request, Tag $tag)
+    {
+        $data = $request->validate([
+            'category' => ['required', Rule::in(Tag::CATEGORIES)],
+            'is_approved' => ['required', 'boolean'],
+        ]);
+        abort_if($tag->merged_into_id, 422, 'Review the canonical tag instead.');
+
+        $before = ['category' => $tag->category, 'is_approved' => (bool) $tag->is_approved];
+        $tag->forceFill([
+            'category' => $data['category'],
+            'is_approved' => (bool) $data['is_approved'],
+            'version' => $tag->version + 1,
+        ])->save();
+        ModerationAction::record($request->user(), ! $before['is_approved'] && $data['is_approved']
+            ? 'tag_approve' : 'tag_category_update', 'tag', $tag->id, null, null, [
+                'before' => $before,
+                'after' => ['category' => $tag->category, 'is_approved' => (bool) $tag->is_approved],
+            ]);
+
+        return back()->with('success', $tag->is_approved ? 'Tag approved and category saved.' : 'Tag is pending approval.');
     }
 
     public function autocomplete(Request $request)
@@ -153,7 +176,7 @@ class KnowledgeController extends Controller
                 throw ValidationException::withMessages(['name' => 'Enter one tag name.']);
             }
             $name = Tag::canonicalName($names[0]);
-            $target = Tag::firstOrCreate(['name' => $name]);
+            $target = Tag::firstOrCreate(['name' => $name], ['is_approved' => false]);
         } else {
             $target = WikiPage::firstOrCreate(['title' => Str::squish($data['name'])]);
         }
@@ -447,7 +470,8 @@ class KnowledgeController extends Controller
 
     private function tags(Request $request)
     {
-        return Tag::whereNull('merged_into_id')->when(! $this->explicit($request), fn ($q) => $q->where('wiki_rating', '!=', 'explicit'));
+        return Tag::whereNull('merged_into_id')->where('is_approved', true)
+            ->when(! $this->explicit($request), fn ($q) => $q->where('wiki_rating', '!=', 'explicit'));
     }
 
     private function visible(Request $request, Model $target): void
