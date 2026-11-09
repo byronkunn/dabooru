@@ -16,7 +16,6 @@ class StudioTracking
         $path = $referrer['path'] ?? '/';
         if ($path === '/discover') return 'discover';
         if ($path === '/following') return 'following';
-        if ($path === '/search') return 'search';
         if ($path === '/') {
             parse_str($referrer['query'] ?? '', $query);
             return ! empty($query['tag']) || ! empty($query['tags']) ? 'tags' : 'gallery';

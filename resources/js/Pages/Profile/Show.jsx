@@ -11,7 +11,7 @@ import ProfileActions from '@/Components/ProfileActions';
 import { compact } from '@/Lib/format';
 import { useState } from 'react';
 
-export default function ProfileShow({ profile, posts, comics, collections = [], tab, isOwner, isFollowing, relationship, hasStickerPacks = false }) {
+export default function ProfileShow({ profile, posts, comics, collections = [], stickerPacks = [], tab, isOwner, isFollowing, relationship, hasStickerPacks = false }) {
     const { auth } = usePage().props;
     const [connections, setConnections] = useState(null);
     const [editingImage, setEditingImage] = useState(null);
@@ -22,6 +22,8 @@ export default function ProfileShow({ profile, posts, comics, collections = [], 
         { key: 'comics', label: 'Comics' },
         { key: 'credited', label: 'Credited works' },
         { key: 'collections', label: 'Collections' },
+        // only offer the tab when there is something behind it
+        ...(hasStickerPacks ? [{ key: 'stickers', label: 'Sticker packs' }] : []),
     ];
 
     const goTab = (key) => router.get(route('profile.show', profile.username), { tab: key }, { preserveScroll: true, preserveState: true });
@@ -129,6 +131,27 @@ export default function ProfileShow({ profile, posts, comics, collections = [], 
                         ))}
                     </nav>
                 )
+            ) : tab === 'stickers' ? (
+                <div className="grid grid-cols-2 gap-3 p-3.5 sm:grid-cols-3 md:p-5">
+                    {stickerPacks.map((pack) => (
+                        <Link
+                            key={pack.id}
+                            href={route('messages.stickers.index', { artist: profile.username, pack: pack.id })}
+                            className="rounded-xl border border-ink-line p-3 hover:border-ink-brand"
+                        >
+                            <div className="mb-2 grid h-20 place-items-center rounded-lg bg-ink-raised">
+                                {pack.cover
+                                    ? <img src={pack.cover} alt="" loading="lazy" className="max-h-16 max-w-full object-contain" />
+                                    : <span className="text-xs text-ink-faint">Empty</span>}
+                            </div>
+                            <p className="truncate text-[13.5px] font-bold">{pack.title}</p>
+                            <p className="text-[11.5px] text-ink-muted">{pack.count} sticker{pack.count === 1 ? '' : 's'}</p>
+                        </Link>
+                    ))}
+                    {stickerPacks.length === 0 && (
+                        <p className="col-span-full py-10 text-center text-sm text-ink-muted">No public sticker packs.</p>
+                    )}
+                </div>
             ) : tab === 'comics' ? (
                 comics.length === 0 ? (
                     <p className="px-5 py-16 text-center text-sm text-ink-muted">No series yet.</p>

@@ -57,8 +57,7 @@ class TagMuteTest extends TestCase
         $viewer = User::factory()->create();
         CollectionLibrary::addMute($viewer, 'watercolor');
 
-        // /search hands the term to the gallery, which applies the mutes
-        $this->actingAs($viewer)->get('/search?q=work')->assertRedirect();
+        // browse is the search results page and applies the mutes
         $this->actingAs($viewer)->get('/?q=work&window=all')
             ->assertOk()
             ->assertInertia(fn ($page) => $page

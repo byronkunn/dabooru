@@ -108,21 +108,6 @@ class SearchController extends Controller
         return $works;
     }
 
-    public function index(Request $request): RedirectResponse
-    {
-        $rawTerm = trim((string) $request->query('q'));
-        $artistFilter = $request->query('artist');
-        $typeFilter = $request->query('type');
-        if (is_string($artistFilter) && $artistFilter !== '') {
-            $rawTerm .= ' by:'.json_encode($artistFilter, JSON_UNESCAPED_UNICODE);
-        }
-        if (in_array($typeFilter, Post::TYPES, true)) {
-            $rawTerm .= ' type:'.$typeFilter;
-        }
-
-        return redirect()->route('gallery', ['q' => trim($rawTerm), 'window' => 'all']);
-    }
-
     /**
      * Live suggestions for the header search box: people, external artists,
      * tags, works, and comics. When term is empty, returns trending tags.
@@ -273,7 +258,8 @@ class SearchController extends Controller
             'works' => $works,
             'comics' => $comics,
             'trending' => [],
-            'more' => route('search', ['q' => $rawTerm], false),
+            // the gallery is the results page now
+            'more' => route('gallery', ['q' => $rawTerm, 'window' => 'all'], false),
         ]);
     }
 

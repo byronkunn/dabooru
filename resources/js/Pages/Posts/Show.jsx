@@ -8,6 +8,7 @@ import { compact } from '@/Lib/format';
 import { useEffect, useState } from 'react';
 import ReportDialog from '@/Components/ReportDialog';
 import PostStarRating from '@/Components/PostStarRating';
+import FullscreenMedia from '@/Components/FullscreenMedia';
 import PostTags from '@/Components/PostTags';
 import AdSlot from '@/Components/AdSlot';
 import UserFollowButton from '@/Components/UserFollowButton';
@@ -26,17 +27,6 @@ export default function PostShow({ post, comments, canComment, commentPagination
 
     const blurred = shouldBlurMedia(post.rating, auth?.user?.show_explicit, revealed);
     const isVideo = post.media?.[0]?.kind === 'video';
-
-    useEffect(() => {
-        if (lightboxIndex === null) return;
-        const onKey = (e) => {
-            if (e.key === 'Escape') setLightboxIndex(null);
-            if (e.key === 'ArrowLeft') setLightboxIndex((i) => (i > 0 ? i - 1 : post.media.length - 1));
-            if (e.key === 'ArrowRight') setLightboxIndex((i) => (i < post.media.length - 1 ? i + 1 : 0));
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-    }, [lightboxIndex, post.media?.length]);
 
     const copyLink = () => {
         navigator.clipboard?.writeText(window.location.href);
@@ -320,52 +310,15 @@ export default function PostShow({ post, comments, canComment, commentPagination
             )}
 
             {lightboxIndex !== null && post.media?.[lightboxIndex] && (
-                <div
-                    className="fixed inset-0 z-[70] flex flex-col bg-black/95 backdrop-blur-md"
-                    role="dialog"
-                    aria-label="Image lightbox"
-                >
-                    <header className="flex min-h-[56px] shrink-0 items-center justify-between border-b border-white/10 px-4 py-2 text-white">
-                        <span className="text-sm font-semibold">
-                            {post.title ? `${post.title} · ` : ''}{lightboxIndex + 1} of {post.media.length}
-                        </span>
-                        <button
-                            type="button"
-                            onClick={() => setLightboxIndex(null)}
-                            className="btn-icon-flat h-9 w-9 text-white hover:bg-white/10"
-                            aria-label="Close lightbox"
-                        >
-                            <Icon name="close" className="h-5 w-5" />
-                        </button>
-                    </header>
-                    <div className="relative flex flex-1 items-center justify-center p-4">
-                        {post.media.length > 1 && (
-                            <button
-                                type="button"
-                                onClick={() => setLightboxIndex((i) => (i > 0 ? i - 1 : post.media.length - 1))}
-                                className="btn-icon-flat absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"
-                                aria-label="Previous image"
-                            >
-                                <Icon name="back" className="h-6 w-6" />
-                            </button>
-                        )}
-                        <img
-                            src={post.media[lightboxIndex].url}
-                            alt=""
-                            className={`max-h-[82vh] max-w-[90vw] object-contain select-none ${blurred ? 'blur-2xl' : ''}`}
-                        />
-                        {post.media.length > 1 && (
-                            <button
-                                type="button"
-                                onClick={() => setLightboxIndex((i) => (i < post.media.length - 1 ? i + 1 : 0))}
-                                className="btn-icon-flat absolute right-3 top-1/2 -translate-y-1/2 rotate-180 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"
-                                aria-label="Next image"
-                            >
-                                <Icon name="back" className="h-6 w-6" />
-                            </button>
-                        )}
-                    </div>
-                </div>
+                <FullscreenMedia
+                    items={post.media}
+                    index={lightboxIndex}
+                    onNavigate={setLightboxIndex}
+                    onClose={() => setLightboxIndex(null)}
+                    label={post.title ? `${post.title} media` : 'Work media'}
+                    headerStart={post.title}
+                    mediaClassName={blurred ? 'blur-2xl' : ''}
+                />
             )}
         </AppLayout>
     );

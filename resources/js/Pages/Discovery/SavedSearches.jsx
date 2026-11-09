@@ -14,7 +14,7 @@ export default function SavedSearches({ searches, selected, searchUrl, mutedTags
                 <nav className="flex flex-wrap gap-2" aria-label="Saved searches">
                     {searches.map((search) => <Link key={search.id} href={route('saved-searches.show', search.id)}
                         className={selected?.id === search.id ? 'chip is-active max-w-full truncate' : 'chip max-w-full truncate'}>{search.name}</Link>)}
-                    <Link href={route('search')} className="chip">New search</Link>
+                    <Link href={route('gallery', { window: 'all' })} className="chip">New search</Link>
                 </nav>
                 {selected ? <>
                     <div className="panel flex flex-wrap items-center justify-between gap-3">

@@ -47,7 +47,7 @@ class ProfileController extends Controller
         $blockedBy = $viewer && Block::where('blocker_id', $profile->id)->where('blocked_id', $viewer->id)->exists();
         $conversation = $viewer && $viewer->id !== $profile->id
             ? Conversation::existingBetween($viewer->id, $profile->id) : null;
-        $tab = in_array($request->query('tab'), ['works', 'albums', 'comics', 'credited', 'collections'], true) ? $request->query('tab') : 'works';
+        $tab = in_array($request->query('tab'), ['works', 'albums', 'comics', 'credited', 'collections', 'stickers'], true) ? $request->query('tab') : 'works';
 
         $profile->loadCount(['followers', 'following', 'posts']);
 
@@ -102,7 +102,23 @@ class ProfileController extends Controller
                 'canMessage' => $viewer && $viewer->id !== $profile->id && ChatAccess::canContact($viewer, $profile)
                     && (($conversation && $conversation->request_status !== 'draft') || ChatAccess::permitsContact($profile, $viewer)),
             ],
-            'hasStickerPacks' => $viewer && StickerPack::where('user_id', $profile->id)->exists(),
+            'stickerPacks' => $tab === 'stickers'
+                ? \App\Models\StickerPack::where('user_id', $profile->id)
+                    ->when(! $viewer || $viewer->id !== $profile->id, fn ($q) => $q->where('is_public', true))
+                    ->with('stickers')
+                    ->latest('id')
+                    ->limit(30)
+                    ->get(['id', 'title', 'is_public', 'created_at'])
+                    ->map(fn (StickerPack $pack) => [
+                        'id' => $pack->id,
+                        'title' => $pack->title,
+                        'count' => $pack->stickers->count(),
+                        'cover' => ($first = $pack->stickers->first())
+                            ? route('messages.stickers.image', $first, false)
+                            : null,
+                    ])->values()->all()
+                : [],
+            'hasStickerPacks' => StickerPack::where('user_id', $profile->id)->exists(),
             'blockedCount' => $viewer ? Block::where('blocker_id', $viewer->id)->count() : 0,
         ]);
     }

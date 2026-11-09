@@ -25,12 +25,13 @@ class SearchTest extends TestCase
         return compact('artist', 'quiet', 'adult', 'other');
     }
 
-    public function test_old_search_page_redirects_to_browse_and_preserves_search_filters(): void
+    public function test_the_old_search_page_is_gone_and_browse_is_the_results_page(): void
     {
-        $this->get('/search')->assertRedirect(route('gallery', ['q' => '', 'window' => 'all']));
-        $this->get('/search?q=mountain&artist=Rin&type=image')->assertRedirect(route('gallery', [
-            'q' => 'mountain by:"Rin" type:image', 'window' => 'all',
-        ]));
+        // /search used to redirect to the gallery; it was a vestigial route, so it
+        // now 404s. The operator syntax it accepted lives on in the gallery.
+        $this->get('/search')->assertNotFound();
+
+        $this->get(route('gallery', ['q' => 'mountain by:"Rin" type:image', 'window' => 'all']))->assertOk();
     }
 
     public function test_browse_searches_title_caption_handle_and_external_credit(): void

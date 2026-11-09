@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import usePageVisibility from './usePageVisibility';
 import AppLayout from '@/Layouts/AppLayout';
+import FullscreenMedia from '@/Components/FullscreenMedia';
 import { Icon } from '@/Components/Icons';
 import ReportDialog from '@/Components/ReportDialog';
 import Inbox from './Inbox';
@@ -64,113 +65,6 @@ function Attachment({ media, onOpen }) {
                 style={{ maxWidth: media.sticker ? '160px' : '280px' }}
             />
         </button>
-    );
-}
-
-/**
- * Full-screen viewer with pagination across every image in the conversation.
- *
- * Opening one image from an album, or from a single-photo message, lets the
- * reader step through the rest without closing and reopening: arrows, keyboard,
- * swipe, and a counter all read from the same ordered list.
- */
-function Lightbox({ items, index, onNavigate, onClose }) {
-    const touch = useRef(null);
-    const total = items.length;
-    const current = items[index];
-
-    // switching items must stop whatever was playing, so a clip never keeps
-    // running invisibly behind the next photo
-    const mediaRef = useRef(null);
-
-    const go = (delta) => {
-        if (total < 2) return;
-        const el = mediaRef.current;
-        if (el && typeof el.pause === 'function') el.pause();
-        onNavigate((index + delta + total) % total);
-    };
-
-    useEffect(() => {
-        const onKey = (e) => {
-            if (e.key === 'Escape') { mediaRef.current?.pause?.(); onClose(); }
-            if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
-            if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-    });
-
-    if (!current) return null;
-
-    return (
-        <div
-            className="fixed inset-0 z-[90] grid place-items-center bg-black/95 p-4 backdrop-blur-sm"
-            role="dialog"
-            aria-modal="true"
-            aria-label={total > 1 ? `Image ${index + 1} of ${total}` : 'Image'}
-            onClick={onClose}
-            onTouchStart={(e) => { touch.current = e.touches[0].clientX; }}
-            onTouchEnd={(e) => {
-                if (touch.current === null) return;
-                const dx = e.changedTouches[0].clientX - touch.current;
-                if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
-                touch.current = null;
-            }}
-        >
-            <button type="button" onClick={onClose} aria-label="Close" className="absolute right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full bg-black/70 text-white ring-1 ring-white/20 hover:bg-black/90">
-                <Icon name="close" />
-            </button>
-
-            {total > 1 && (
-                <>
-                    <span className="absolute left-1/2 top-4 z-10 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-xs font-semibold text-white ring-1 ring-white/20">
-                        {index + 1} / {total}
-                    </span>
-                    <button
-                        type="button"
-                        aria-label="Previous image"
-                        onClick={(e) => { e.stopPropagation(); go(-1); }}
-                        className="absolute left-2 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-black/70 text-white ring-1 ring-white/20 hover:bg-black/90 md:left-4"
-                    >
-                        <Icon name="back" />
-                    </button>
-                    <button
-                        type="button"
-                        aria-label="Next image"
-                        onClick={(e) => { e.stopPropagation(); go(1); }}
-                        className="absolute right-2 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-black/70 text-white ring-1 ring-white/20 hover:bg-black/90 md:right-4"
-                    >
-                        <Icon name="back" className="rotate-180" />
-                    </button>
-                </>
-            )}
-
-            {current.kind === 'video' ? (
-                <video
-                    ref={mediaRef}
-                    // no autoPlay: a clip only starts when the reader presses play
-                    src={current.url}
-                    poster={current.thumb || undefined}
-                    controls
-                    playsInline
-                    preload="metadata"
-                    className="max-h-full max-w-full rounded-lg bg-black object-contain"
-                    onClick={(e) => e.stopPropagation()}
-                />
-            ) : current.kind === 'audio' ? (
-                <div className="w-full max-w-md rounded-xl bg-ink-surface p-4" onClick={(e) => e.stopPropagation()}>
-                    <p className="mb-2 truncate text-sm font-semibold text-ink-text">{current.name || 'Audio message'}</p>
-                    <audio ref={mediaRef} src={current.url} controls preload="metadata" className="w-full" />
-                </div>
-            ) : (
-                <img
-                    src={current.url}
-                    alt=""
-                    className="max-h-full max-w-full rounded-lg object-contain"
-                    onClick={(e) => e.stopPropagation()}
-                />
-            )}
-        </div>
     );
 }
 
@@ -538,7 +432,15 @@ function Thread({ conversation: chat, conversations, filters, quickReplies }) {
             </div>
             {settings && <ChatSettings conversation={chat} onClose={() => setSettings(false)} />}
             {action && <MessageDialog action={action.type} message={action.item} conversations={conversations} conversation={chat} onClose={() => setAction(null)} />}
-            {lightbox !== null && gallery.length > 0 && <Lightbox items={gallery} index={lightbox} onNavigate={setLightbox} onClose={() => setLightbox(null)} />}
+                        {lightbox !== null && gallery.length > 0 && (
+                <FullscreenMedia
+                    items={gallery}
+                    index={lightbox}
+                    onNavigate={setLightbox}
+                    onClose={() => setLightbox(null)}
+                    label="Message media"
+                />
+            )}
             {report && auth?.user && <ReportDialog type={report.type} id={report.id} onClose={() => setReport(null)} />}
         </AppLayout>
     );

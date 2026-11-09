@@ -77,7 +77,6 @@ Route::get('/u/{username}/{type}', [ProfileController::class, 'connections'])
     ->middleware('throttle:120,1')
     ->name('profile.connections');
 
-Route::get('/search', [SearchController::class, 'index'])->name('search');
 Route::get('/search/suggest', [SearchController::class, 'suggest'])
     ->middleware('throttle:120,1')
     ->name('search.suggest');
@@ -206,8 +205,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/messages/stickers/picker', [StickerPackController::class, 'picker'])->name('messages.stickers.picker');
     Route::post('/messages/stickers', [StickerPackController::class, 'store'])->middleware('throttle:10,1')->name('messages.stickers.store');
     Route::get('/messages/stickers/images/{sticker}', [StickerPackController::class, 'image'])->name('messages.stickers.image');
-    Route::patch('/messages/stickers/{stickerPack}', [StickerPackController::class, 'update'])->name('messages.stickers.update');
-    Route::delete('/messages/stickers/{stickerPack}', [StickerPackController::class, 'destroy'])->name('messages.stickers.destroy');
+    Route::patch('/messages/stickers/{stickerPack}', [StickerPackController::class, 'update'])->middleware('throttle:20,1')->name('messages.stickers.update');
+    Route::delete('/messages/stickers/{stickerPack}', [StickerPackController::class, 'destroy'])->middleware('throttle:20,1')->name('messages.stickers.destroy');
     Route::get('/messages/{conversation}', [MessageController::class, 'show'])->whereNumber('conversation')->name('messages.show');
     Route::get('/messages/attachments/{message}/{variant}', [MessageController::class, 'attachment'])
         ->whereIn('variant', ['original', 'thumb'])->name('messages.attachment');

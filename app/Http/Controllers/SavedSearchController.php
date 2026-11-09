@@ -33,7 +33,7 @@ class SavedSearchController extends Controller
                 $parsed = SearchController::parseOperators($filters['q'] ?? '');
                 $query = SearchController::workQuery($user, $parsed, $filters['artist'] ?? $parsed['artist'], $filters['type'] ?? $parsed['type'])
                     ->latest('created_at')->orderByDesc('id');
-                $searchUrl = route('search', $filters);
+                $searchUrl = route('gallery', $filters + ['window' => 'all']);
             }
             $posts = $query->excludingTags($muted)->with(['user', 'media.media', 'chapter.comic'])->simplePaginate(30);
         }
