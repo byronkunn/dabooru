@@ -2,17 +2,19 @@ import { Head, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 import { Icon } from '@/Components/Icons';
+import { CryptoMark } from '@/Components/CryptoMark';
 
-const NETWORK_MARK = {
-    monero: { symbol: 'ɱ', tint: 'from-[#f26822] to-[#ff9d4d]' },
-    bitcoin: { symbol: '₿', tint: 'from-[#f7931a] to-[#ffb84d]' },
-    ethereum: { symbol: 'ETH', tint: 'from-[#627eea] to-[#8ea1f5]' },
-    solana: { symbol: '◎', tint: 'from-[#9945ff] to-[#14f195]' },
+/** The official brand colour behind each mark. */
+const NETWORK_TINT = {
+    monero: 'from-[#ff6600] to-[#f26822]',
+    bitcoin: 'from-[#f7931a] to-[#c76e00]',
+    ethereum: 'from-[#8a9cf0] to-[#627eea]',
+    solana: 'from-[#9945ff] to-[#14f195]',
 };
 
 function AddressRow({ network }) {
     const [copied, setCopied] = useState(false);
-    const mark = NETWORK_MARK[network.network] ?? { symbol: '?', tint: 'from-ink-brand to-ink-pink' };
+    const tint = NETWORK_TINT[network.network] ?? 'from-ink-brand to-ink-pink';
     const address = network.address ?? '';
     const short = address ? `${address.slice(0, 8)}…${address.slice(-6)}` : '';
 
@@ -30,9 +32,9 @@ function AddressRow({ network }) {
         <li className="group flex items-center gap-3 rounded-2xl border border-ink-line bg-ink-surface p-3 transition-colors hover:border-[#4a3c58]">
             <span
                 aria-hidden="true"
-                className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${mark.tint} text-[17px] font-black tracking-[-0.02em] text-black/80`}
+                className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${tint} text-white shadow-inner`}
             >
-                {mark.symbol}
+                <CryptoMark network={network.network} className="h-6 w-6 drop-shadow-sm" />
             </span>
 
             <div className="min-w-0 flex-1">
