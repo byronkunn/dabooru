@@ -41,6 +41,11 @@ export default function Announcements({ announcements }) {
             <div className="space-y-4 p-3.5 md:p-5">
                 <p className="text-sm text-ink-muted">The most recently published or updated announcement appears in a dismissible strip across the site. Drafts are private. Editing a message makes it visible again to people who dismissed the old version.</p>
                 <section className="panel"><h2 className="mb-3 font-bold">New announcement</h2><AnnouncementForm /></section>
+                {announcements.data.length === 0 && (
+                    <p className="panel px-4 py-10 text-center text-sm text-ink-muted">
+                        No announcements yet. Anything you publish above appears in the strip across the site.
+                    </p>
+                )}
                 {announcements.data.map((announcement) => (
                     <details key={announcement.id} className="panel">
                         <summary className="cursor-pointer break-words font-bold">{announcement.title} <span className="text-sm font-normal text-ink-muted">· {announcement.published ? 'Published' : 'Draft'}</span></summary>

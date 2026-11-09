@@ -35,6 +35,11 @@ export default function AdminShelves({ shelves, nextPage, previousPage }) {
             <AdminTopBar title="Curated shelves" />
             <div className="space-y-3 p-3.5 md:p-5">
                 <details className="panel"><summary className="cursor-pointer font-bold">Create shelf</summary><div className="mt-3"><ShelfForm /></div></details>
+                {shelves.length === 0 && (
+                    <p className="panel px-4 py-10 text-center text-sm text-ink-muted">
+                        No shelves yet. Create one above to group works for the Discover page.
+                    </p>
+                )}
                 {shelves.map((shelf) => <details className="panel" key={shelf.id}>
                     <summary className="cursor-pointer break-words font-bold">{shelf.title} <span className="text-sm font-normal text-ink-muted">· {shelf.published ? 'Published' : 'Draft'}</span></summary>
                     <div className="mt-3"><ShelfForm shelf={shelf} /></div>

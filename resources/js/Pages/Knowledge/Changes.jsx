@@ -28,7 +28,13 @@ export default function KnowledgeChanges({ revisions, moderation, reports }) {
             <div className="mx-auto max-w-3xl space-y-5 p-4 md:p-6">
                 <p className="text-sm text-ink-muted">Content preferences apply to revision previews. Enable explicit content in settings to review explicit pages. Five independently moderator-approved edits unlock ordinary publishing.</p>
                 <RevisionList revisions={revisions} />
-                {moderation && <section><h2 className="text-xl font-bold">Reports</h2>{reports.data.map((report) => <Report key={report.id} report={report} />)}<Pagination data={reports} /></section>}
+                {moderation && <section>
+                    <h2 className="text-xl font-bold">Reports</h2>
+                    {reports.data.length === 0
+                        ? <p className="py-8 text-center text-sm text-ink-muted">No reports in this view.</p>
+                        : reports.data.map((report) => <Report key={report.id} report={report} />)}
+                    <Pagination data={reports} />
+                </section>}
             </div>
         </Layout>
     );
