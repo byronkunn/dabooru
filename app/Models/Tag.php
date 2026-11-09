@@ -41,7 +41,7 @@ class Tag extends Model
 
     public static function canonicalName(string $name): string
     {
-        $name = Str::lower(Str::squish($name));
+        $name = str_replace('_', '-', Str::lower(Str::squish($name)));
         $tag = static::where('name', $name)->first();
         if (! $tag) {
             $id = DB::table('tag_aliases')->where('name', $name)->value('tag_id');
