@@ -26,14 +26,26 @@ function Attachment({ media, onOpen }) {
 
     if (media.kind === 'video') {
         return (
-            <video
-                src={media.url}
-                controls
-                playsInline
-                preload="metadata"
-                poster={media.thumb || undefined}
-                className="mt-1 block max-h-[320px] w-full max-w-[280px] rounded-xl bg-black object-contain"
-            />
+            <div className="relative mt-1 w-fit max-w-full">
+                <video
+                    src={media.url}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    poster={media.thumb || undefined}
+                    className="block max-h-[320px] w-full max-w-[280px] rounded-xl bg-black object-contain"
+                />
+                {/* open the clip in the full-screen viewer, where it can page on to the next item */}
+                <button
+                    type="button"
+                    onClick={() => onOpen(media)}
+                    aria-label="Open video in the viewer"
+                    title="Open in viewer"
+                    className="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-full bg-black/70 text-white hover:bg-black/90"
+                >
+                    <Icon name="expand" className="h-3.5 w-3.5" />
+                </button>
+            </div>
         );
     }
 
@@ -67,14 +79,20 @@ function Lightbox({ items, index, onNavigate, onClose }) {
     const total = items.length;
     const current = items[index];
 
+    // switching items must stop whatever was playing, so a clip never keeps
+    // running invisibly behind the next photo
+    const mediaRef = useRef(null);
+
     const go = (delta) => {
         if (total < 2) return;
+        const el = mediaRef.current;
+        if (el && typeof el.pause === 'function') el.pause();
         onNavigate((index + delta + total) % total);
     };
 
     useEffect(() => {
         const onKey = (e) => {
-            if (e.key === 'Escape') onClose();
+            if (e.key === 'Escape') { mediaRef.current?.pause?.(); onClose(); }
             if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
             if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
         };
@@ -127,12 +145,31 @@ function Lightbox({ items, index, onNavigate, onClose }) {
                 </>
             )}
 
-            <img
-                src={current.url}
-                alt=""
-                className="max-h-full max-w-full rounded-lg object-contain"
-                onClick={(e) => e.stopPropagation()}
-            />
+            {current.kind === 'video' ? (
+                <video
+                    ref={mediaRef}
+                    // no autoPlay: a clip only starts when the reader presses play
+                    src={current.url}
+                    poster={current.thumb || undefined}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    className="max-h-full max-w-full rounded-lg bg-black object-contain"
+                    onClick={(e) => e.stopPropagation()}
+                />
+            ) : current.kind === 'audio' ? (
+                <div className="w-full max-w-md rounded-xl bg-ink-surface p-4" onClick={(e) => e.stopPropagation()}>
+                    <p className="mb-2 truncate text-sm font-semibold text-ink-text">{current.name || 'Audio message'}</p>
+                    <audio ref={mediaRef} src={current.url} controls preload="metadata" className="w-full" />
+                </div>
+            ) : (
+                <img
+                    src={current.url}
+                    alt=""
+                    className="max-h-full max-w-full rounded-lg object-contain"
+                    onClick={(e) => e.stopPropagation()}
+                />
+            )}
         </div>
     );
 }
@@ -295,7 +332,8 @@ function Thread({ conversation: chat, conversations, filters, quickReplies }) {
             if (message.removed) continue;
             const list = message.album?.length ? message.album : (message.media ? [message.media] : []);
             for (const media of list) {
-                if (media && (media.kind === 'image' || media.kind === 'gif' || !media.kind)) out.push(media);
+                // video rides along so the pager can move between photos and clips
+                if (media && ['image', 'gif', 'video', 'audio'].includes(media.kind ?? 'image')) out.push(media);
             }
         }
         return out;
