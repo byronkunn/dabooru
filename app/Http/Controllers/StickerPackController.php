@@ -39,8 +39,18 @@ class StickerPackController extends Controller
         ]);
     }
 
-    public function picker(Request $request): JsonResponse
+    /**
+     * JSON feed used by the chat sticker picker.
+     *
+     * A browser navigating here would otherwise get a blank page showing raw
+     * JSON, so a page request is redirected to the sticker library instead.
+     */
+    public function picker(Request $request): JsonResponse|RedirectResponse
     {
+        if (! $request->wantsJson()) {
+            return redirect()->route('messages.stickers.index');
+        }
+
         $data = $request->validate(['q' => ['nullable', 'string', 'max:100']]);
 
         return response()->json($this->catalog($request->user(), $data));

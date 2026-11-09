@@ -3,11 +3,12 @@ import { useState } from 'react';
 import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 import { LibraryTabs } from '@/Components/DestinationTabs';
 import CollectionView, { CollectionCover } from '@/Components/CollectionView';
+import { WorkCell } from '@/Components/Work';
 import CollectionDialog from '@/Components/CollectionDialog';
 import { AdminErrors } from '@/Components/AdminUi';
 import useLibraryRefresh from '@/Lib/useLibraryRefresh';
 
-export default function CollectionsIndex({ collections, collection, allSaved, showAll, ...view }) {
+export default function CollectionsIndex({ collections, collection, allSaved, showAll, recent = [], ...view }) {
     useLibraryRefresh();
     const [creating, setCreating] = useState(false);
     const create = useForm({ name: '' });
@@ -28,6 +29,28 @@ export default function CollectionsIndex({ collections, collection, allSaved, sh
                     </Link>)}
                 </nav>
                 {collections.length === 0 && <p className="text-sm text-ink-muted">Create a collection, then open a work and choose Save to collection.</p>}
+
+                {recent.length > 0 && (
+                    <section aria-label="Recently saved">
+                        <div className="mb-2 flex items-baseline justify-between gap-2">
+                            <h2 className="text-[15px] font-bold">Recently saved</h2>
+                            {allSaved?.count > 0 && (
+                                <Link href={route('collections.index', { view: 'all' })} className="text-[12.5px] font-semibold text-ink-brand hover:underline">
+                                    View all {allSaved.count} →
+                                </Link>
+                            )}
+                        </div>
+                        <div className="columns-2 gap-2.5 sm:columns-3 lg:columns-4">
+                            {recent.map((post) => <div key={post.id} className="mb-2.5 break-inside-avoid"><WorkCell post={post} /></div>)}
+                        </div>
+                    </section>
+                )}
+
+                {recent.length === 0 && (
+                    <p className="rounded-xl border border-dashed border-ink-line px-3 py-6 text-center text-[13px] text-ink-muted">
+                        Nothing saved yet. Open a work and choose Save to keep it here.
+                    </p>
+                )}
             </div>
         </>}
         {creating && <CollectionDialog title="New collection" onClose={() => { if (!create.processing) setCreating(false); }}>

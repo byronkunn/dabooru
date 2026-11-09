@@ -31,10 +31,17 @@ class SavedCollectionController extends Controller
         $showAll = ! $collection && $request->query('view') === 'all';
 
         if (! $collection && ! $showAll) {
+            // Show the most recent saves straight away: a reader who lands on
+            // Library should see their work, not just folder tiles with a count.
+            $recent = CollectionLibrary::ordered(
+                CollectionLibrary::posts($viewer->id, $viewer, null, $muted), null, 'recent'
+            )->with(['user', 'media.media', 'chapter.comic'])->take(12)->get();
+
             return Inertia::render('Collections/Index', [
                 'collections' => SavedCollection::where('user_id', $viewer->id)->orderBy('name')->get()
                     ->map(fn ($folder) => CollectionLibrary::summary($viewer->id, $viewer, $folder, $muted)),
                 'allSaved' => CollectionLibrary::summary($viewer->id, $viewer, null, $muted),
+                'recent' => PostResource::collection($recent)->resolve(),
             ]);
         }
 
