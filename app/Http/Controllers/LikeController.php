@@ -19,7 +19,8 @@ class LikeController extends Controller
         ]);
 
         if ($like->wasRecentlyCreated) {
-            $post->increment('likes_count');
+            // recalculated, not incremented: a stale counter must never drift
+            $post->syncLikesCount();
             if ($post->user_id && $post->user_id !== $request->user()->id && Setting::enabled($post->user_id, 'notification_likes')) {
                 AppNotification::create([
                     'user_id' => $post->user_id,
@@ -42,7 +43,7 @@ class LikeController extends Controller
             ->delete();
 
         if ($deleted) {
-            $post->decrement('likes_count');
+            $post->syncLikesCount();
         }
 
         return back();

@@ -1,6 +1,15 @@
 # Inkwell
 
-**Inkwell** is a gallery-first portfolio site for artists who post mature work: a 34-post demo gallery of images, GIFs, videos, albums and comic chapters, built for people who want their NSFW work in the same place as their SFW work instead of split across two accounts. Every post carries an explicit **SFW / Suggestive / Explicit** rating, the whole site sits behind an 18+ age gate, and a viewer who hasn't opted in never sees explicit content. Around the media it has the social basics — following feed, likes, saves, comments, follows, DMs, notifications, a series/reader view for comics — plus real file uploads for images, GIFs, videos, albums and comic pages. It is a Laravel 12 + Inertia + React app with zero client-side routing: every page is a real HTTP request backed by a controller and Eloquent queries, so the server is the source of truth for what a viewer is allowed to see.
+**Inkwell** is a gallery-first portfolio site for artists who post mature work: a 129-work gallery of images, GIFs, videos, albums and comic chapters, built for people who want their NSFW work in the same place as their SFW work instead of split across two accounts. Every post carries an explicit **SFW / Suggestive / Explicit** rating, the whole site sits behind an 18+ age gate, and a viewer who hasn't opted in never sees explicit content. Around the media it has the social basics — following feed, likes, star
+ratings, saves, threaded comments, follows, DMs with attachments and stickers,
+notifications, a series/reader view for comics — plus real file uploads for
+images, GIFs, videos, albums and comic pages.
+
+Also included: a Creator Studio with analytics, traffic sources and bulk editing;
+account-level tag mutes applied to every feed and to search; a skippable
+post-registration setup that gives a new reader a working feed immediately; a
+private report-status page; and an admin panel with a reports queue, staff
+roles, moderation log, DMCA queue and site logs. It is a Laravel 12 + Inertia + React app with zero client-side routing: every page is a real HTTP request backed by a controller and Eloquent queries, so the server is the source of truth for what a viewer is allowed to see.
 
 ## Screenshots
 
@@ -46,9 +55,32 @@ invented. Running `php artisan migrate:fresh --seed` gives you:
 | Unattributed posts | 64 | hashed file names (`148a0f0e….png`, `sample_<hash>.jpg`) — posted as **Unsorted**, not assigned a fake artist |
 
 Titles come from the file name when it has real words in it, and are left empty
-otherwise. No comics, likes, comments, follows, messages or notifications are
-fabricated — there's no real data behind them, so the site starts with an empty
-social graph.
+otherwise.
+
+### Seeded social data
+
+The media is real; the engagement around it is clearly-labelled sample data so
+the feeds, rankings and Studio analytics have something to work on:
+
+| Seeder | Adds |
+| --- | --- |
+| `SampleComicsSeeder` | 3 series / 9 chapters built from the `sfw/` images, one feed post per chapter |
+| `SampleLikesSeeder` | real rows in the `likes` table, then each post's `likes_count` is recalculated from them |
+| `SampleMessagesSeeder` | conversations to the admin account |
+| `QaAccountsSeeder` | the `@qa.test` accounts used for manual testing (password `password`) |
+
+**Like counts are derived, never invented.** `likes_count` is a cache
+recalculated from the `likes` table on every like and unlike, so it can't drift
+or go negative. Run `php artisan posts:reconcile-counters` to repair old data
+(use `--dry-run` first).
+
+### Maintenance commands
+
+```bash
+php artisan posts:reconcile-counters [--dry-run]   # repair like/comment counters
+php artisan tags:prune-weak [--dry-run] [--all]    # drop auto-generated one-off tags
+php artisan messages:privatize-attachments         # move DM files to private storage
+```
 
 `public/sfw/content` is a symlink to `sfw/`, so files are served in place with
 no copying and no external image hosts.

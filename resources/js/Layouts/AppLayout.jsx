@@ -78,12 +78,13 @@ function rememberedNavHref(item) {
     }
 }
 
-const BROWSE = ['gallery', 'discover', 'following', 'artists*'];
+const BROWSE = ['gallery', 'discover', 'following'];
 const INBOX = ['messages*', 'notifications*'];
 const CREATE = ['create', 'upload*', 'comics.chapters.create'];
 const LIBRARY = ['collections*', 'saved-searches*'];
 const NAV = [
     { label: 'Browse', href: 'gallery', icon: 'gallery', matches: BROWSE },
+    { label: 'Artists', href: 'artists.index', icon: 'user', matches: ['artists*'] },
     { label: 'Comics', href: 'comics.index', icon: 'book', matches: ['comics.index', 'comics.show', 'comics.read'] },
     { label: 'Tags & wiki', href: 'knowledge.index', icon: 'tag', matches: ['knowledge*'] },
     { label: 'Create', href: 'create', icon: 'plus', matches: CREATE, auth: true },
@@ -197,12 +198,20 @@ function BottomNav({ menuOpen, setMenuOpen }) {
         return () => desktop.removeEventListener('change', closeOnDesktop);
     }, []);
     const unread = (auth?.unread_messages ?? 0) + (auth?.unread_notifications ?? 0);
-    const items = [
+    // Signed-out visitors get one honest invitation instead of three links that
+    // all silently redirect to the login form.
+    const items = user ? [
         { label: 'Browse', icon: 'gallery', href: route('gallery'), matches: BROWSE },
         { label: 'Comics', icon: 'book', href: route('comics.index'), matches: ['comics.index', 'comics.show', 'comics.read'] },
-        { label: 'Create', icon: 'plus', href: route(user ? 'create' : 'login'), matches: CREATE },
-        { label: 'Inbox', icon: 'chat', href: route(user ? 'messages.index' : 'login'), matches: INBOX, badge: unread },
+        { label: 'Create', icon: 'plus', href: route('create'), matches: CREATE },
+        { label: 'Inbox', icon: 'chat', href: route('messages.index'), matches: INBOX, badge: unread },
         { label: 'You', icon: 'user', menu: true, matches: ['profile*', 'settings*', ...LIBRARY] },
+    ] : [
+        { label: 'Browse', icon: 'gallery', href: route('gallery'), matches: BROWSE },
+        { label: 'Artists', icon: 'user', href: route('artists.index'), matches: ['artists*'] },
+        { label: 'Comics', icon: 'book', href: route('comics.index'), matches: ['comics.index', 'comics.show', 'comics.read'] },
+        { label: 'Log in', icon: 'chat', href: route('login'), matches: ['login'] },
+        { label: 'Join', icon: 'plus', href: route('register'), matches: ['register'] },
     ];
     const overflowItems = NAV
         .filter((item) => (!item.auth || user) && !items.some((dockItem) => dockItem.label === item.label))

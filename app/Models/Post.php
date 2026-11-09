@@ -174,6 +174,20 @@ class Post extends Model
             ->when($minViews !== null && $minViews > 0, fn ($q) => $q->where('views', '>=', $minViews));
     }
 
+    /**
+     * Recompute the denormalised counters from the rows that actually exist.
+     *
+     * likes_count is a cache, never a source of truth: it is recalculated from
+     * the likes table so it can never drift or go negative.
+     */
+    public function syncLikesCount(): int
+    {
+        $count = $this->likes()->count();
+        $this->forceFill(['likes_count' => $count])->save();
+
+        return $count;
+    }
+
     public function scopeSorted(Builder $q, string $sort): Builder
     {
         return match ($sort) {
