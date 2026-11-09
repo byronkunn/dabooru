@@ -1,6 +1,6 @@
 import { Head, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import AppLayout from '@/Layouts/AppLayout';
+import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 import { Icon } from '@/Components/Icons';
 
 const NETWORK_MARK = {
@@ -77,14 +77,14 @@ export default function TipIndex({ networks = [], ownerName, isOwner = false }) 
     return (
         <AppLayout rightRail={false}>
             <Head title="Tip" />
+            <TopBar title="Tip" back={route('gallery')} />
 
-            <div className="mx-auto max-w-[600px] px-4 pb-24 pt-8 md:px-5">
+            <div className="mx-auto max-w-[600px] px-4 pb-24 pt-6 md:px-5">
                 <div className="text-center">
                     <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-ink-brand to-ink-pink text-[26px]">
                         <Icon name="heart" className="h-7 w-7 text-[#1a1017]" />
                     </span>
-                    <h1 className="mt-3 text-[26px] font-extrabold tracking-[-0.03em]">Tip the site</h1>
-                    <p className="mx-auto mt-2 max-w-[380px] text-[13.5px] leading-relaxed text-ink-muted">
+                    <p className="mx-auto mt-3 max-w-[380px] text-[13.5px] leading-relaxed text-ink-muted">
                         Tips go straight to {ownerName} and keep the hosting, storage and moderation running.
                         No account needed, nothing is stored about you.
                     </p>
