@@ -11,6 +11,7 @@ export const ADMIN_NAV = [
     { label: 'Curated shelves', shortLabel: 'Shelves', href: 'admin.shelves', icon: 'gallery', route: 'admin.shelves*', permission: 'curator' },
     { label: 'Artist credit claims', shortLabel: 'Credits', href: 'admin.credit-claims', icon: 'user', route: 'admin.credit-claims*', permission: 'curator' },
     { label: 'DMCA notices', shortLabel: 'DMCA', href: 'admin.dmca', icon: 'flag', route: 'admin.dmca*', permission: 'admin' },
+    { label: 'Tip wallets', shortLabel: 'Tips', href: 'admin.tips', icon: 'heart', route: 'admin.tips*', permission: 'admin' },
     { label: 'Moderation log', shortLabel: 'Audit', href: 'admin.log', icon: 'following', route: 'admin.log', permission: 'admin' },
     { label: 'Site logs', shortLabel: 'Logs', href: 'admin.site-logs', icon: 'settings', route: 'admin.site-logs', permission: 'operator' },
     { label: 'Analytics', href: 'admin.analytics', icon: 'analytics', route: 'admin.analytics', permission: 'analyst' },

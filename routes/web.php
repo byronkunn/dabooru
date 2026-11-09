@@ -285,6 +285,8 @@ Route::middleware('auth')->group(function () {
             Route::post('/works/{post}/restore', [AdminPostController::class, 'restore'])->whereNumber('post')->name('works.restore');
         });
         Route::middleware('admin')->group(function () {
+            Route::get('/tips', [\App\Http\Controllers\Admin\TipSettingsController::class, 'edit'])->name('tips');
+            Route::patch('/tips', [\App\Http\Controllers\Admin\TipSettingsController::class, 'update'])->name('tips.update');
             Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
             Route::post('/announcements', [AnnouncementController::class, 'store'])->name('announcements.store');
             Route::patch('/announcements/{announcement}', [AnnouncementController::class, 'update'])->name('announcements.update');

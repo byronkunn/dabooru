@@ -36,11 +36,12 @@ class TipAndBugTest extends TestCase
         $this->assertSame(['monero', 'bitcoin', 'ethereum', 'solana'], array_keys(TipAddresses::stored($owner)));
     }
 
-    public function test_a_visitor_sees_labels_but_not_the_addresses(): void
+    public function test_a_visitor_gets_the_addresses_so_they_can_actually_tip(): void
     {
         $owner = $this->owner();
         TipAddresses::save($owner, ['monero' => '4AdUndXsecret']);
 
+        // a tip page without the address is useless; these are public keys
         $this->get(route('tip'))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
@@ -48,11 +49,31 @@ class TipAndBugTest extends TestCase
                 ->has('networks', 4)
                 ->where('networks.0.network', 'monero')
                 ->where('networks.0.configured', true)
-                ->where('networks.0.address', null)
+                ->where('networks.0.address', '4AdUndXsecret')
                 ->where('isOwner', false));
+    }
 
-        // the address itself must not appear anywhere in the page
-        $this->assertStringNotContainsString('4AdUndXsecret', $this->get(route('tip'))->getContent());
+    public function test_the_admin_tip_page_is_admin_only(): void
+    {
+        $this->owner();
+        $someone = User::factory()->create();
+
+        $this->actingAs($someone)->get(route('admin.tips'))->assertForbidden();
+    }
+
+    public function test_the_admin_can_change_a_wallet_from_the_admin_panel(): void
+    {
+        $owner = $this->owner();
+
+        $this->actingAs($owner)->get(route('admin.tips'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->component('Admin/Tips')->has('networks', 4));
+
+        $this->actingAs($owner)->patch(route('admin.tips.update'), [
+            'addresses' => ['solana' => '7EcDhNEWaddress'],
+        ])->assertRedirect();
+
+        $this->assertSame(['solana'], array_keys(TipAddresses::stored($owner)));
     }
 
     public function test_the_owner_sees_their_own_addresses(): void

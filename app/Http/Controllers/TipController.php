@@ -19,7 +19,9 @@ class TipController extends Controller
         $viewer = $request->user();
 
         return Inertia::render('Tip/Index', [
-            'networks' => TipAddresses::publicList($owner, StaffAccess::owner($viewer ?? new User)),
+            // every visitor gets the full address: a tip page without the address
+            // is useless. They are public keys, not secrets.
+            'networks' => TipAddresses::publicList($owner, true),
             'ownerName' => $owner?->name ?? 'the site owner',
             'isOwner' => StaffAccess::owner($viewer ?? new User),
         ]);
