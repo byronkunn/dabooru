@@ -182,6 +182,11 @@ class ComicController extends Controller
             ->whereHas('comic', fn ($q) => $q->visibleRating($showExplicit)->visibleTo($viewer))
             ->whereHas('chapter', fn ($q) => $readableChapters($q)
                 ->whereColumn('comic_chapters.comic_id', 'reading_progress.comic_id')->has('pages'))
+            // a chapter read to its last page is finished: "continue reading" should
+            // not offer it again. Progress on the final page counts as done.
+            ->whereExists(fn ($q) => $q->from('comic_pages')
+                ->whereColumn('comic_pages.comic_chapter_id', 'reading_progress.comic_chapter_id')
+                ->whereColumn('comic_pages.position', '>', 'reading_progress.page'))
             ->with([
                 'comic' => fn ($q) => $q->withMax(['chapters as newest_number' => $readableChapters], 'number'),
                 'chapter' => fn ($q) => $q->withCount('pages'),
@@ -197,6 +202,7 @@ class ComicController extends Controller
                 'page' => max(1, min((int) $progress->page, $progress->chapter->pages_count)),
                 'pages' => $progress->chapter->pages_count,
                 'hasNewerChapter' => $progress->comic->newest_number > $progress->chapter->number,
+                'finished' => false,
                 'url' => route('comics.read', [$progress->comic->slug, $progress->chapter->number], false),
             ])->all();
     }
