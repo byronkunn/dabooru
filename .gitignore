@@ -39,3 +39,6 @@ database/database.sqlite
 /database/data/sfw/image/
 /database/data/sfw/video/
 /database/data/sfw/thumbs/
+
+# Local PHP temp-dir workaround, not part of the app
+/.php-tmp
