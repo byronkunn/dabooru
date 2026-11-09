@@ -3,7 +3,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import usePageVisibility from './usePageVisibility';
-import AppLayout from '@/Layouts/AppLayout';
+import AppLayout, { LegalFooter } from '@/Layouts/AppLayout';
 import FullscreenMedia from '@/Components/FullscreenMedia';
 import { Icon } from '@/Components/Icons';
 import ReportDialog from '@/Components/ReportDialog';
@@ -351,7 +351,7 @@ function Thread({ conversation: chat, conversations, filters, quickReplies }) {
     return (
         <AppLayout rightRail={false} footer={false}>
             <Head title={chat.title} />
-            <div className="grid h-[calc(100dvh-70px)] min-w-0 grid-cols-1 lg:h-screen lg:grid-cols-[minmax(240px,300px)_minmax(0,1fr)]">
+            <div className="grid h-[calc(100dvh-70px-40px)] min-w-0 grid-cols-1 lg:h-[calc(100vh-40px)] lg:grid-cols-[minmax(240px,300px)_minmax(0,1fr)]">
                 <div className="hidden min-h-0 lg:grid"><Inbox conversations={conversations} currentId={chat.id} /></div>
                 <section className="flex min-h-0 min-w-0 flex-col" aria-label={chat.title}>
                     <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-ink-line p-3">
@@ -430,6 +430,7 @@ function Thread({ conversation: chat, conversations, filters, quickReplies }) {
                     </p>}
                 </section>
             </div>
+            <LegalFooter compact className="bg-ink-bg/95 lg:pl-[min(300px,24%)]" />
             {settings && <ChatSettings conversation={chat} onClose={() => setSettings(false)} />}
             {action && <MessageDialog action={action.type} message={action.item} conversations={conversations} conversation={chat} onClose={() => setAction(null)} />}
                         {lightbox !== null && gallery.length > 0 && (

@@ -1,7 +1,7 @@
 import { Head, usePoll } from '@inertiajs/react';
 import { useEffect, useRef } from 'react';
 import usePageVisibility from './usePageVisibility';
-import AppLayout from '@/Layouts/AppLayout';
+import AppLayout, { LegalFooter } from '@/Layouts/AppLayout';
 import { Icon } from '@/Components/Icons';
 import Inbox from './Inbox';
 
@@ -17,7 +17,7 @@ export default function MessagesIndex(props) {
     return (
         <AppLayout rightRail={false} footer={false}>
             <Head title="Messages" />
-            <div className="grid h-[calc(100dvh-70px)] min-w-0 grid-cols-1 lg:h-screen lg:grid-cols-[minmax(240px,300px)_minmax(0,1fr)]">
+            <div className="grid h-[calc(100dvh-70px-40px)] min-w-0 grid-cols-1 lg:h-[calc(100vh-40px)] lg:grid-cols-[minmax(240px,300px)_minmax(0,1fr)]">
                 <Inbox {...props} key={props.filters?.q ?? ''} />
                 <div className="hidden place-items-center text-center lg:grid">
                     <div className="p-6">
@@ -27,6 +27,7 @@ export default function MessagesIndex(props) {
                     </div>
                 </div>
             </div>
+            <LegalFooter compact className="bg-ink-bg/95 lg:pl-[min(300px,24%)]" />
         </AppLayout>
     );
 }

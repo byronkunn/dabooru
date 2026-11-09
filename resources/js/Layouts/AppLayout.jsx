@@ -467,6 +467,25 @@ function DemoSwitcher({ inline = false }) {
     );
 }
 
+/* ---------------------------------------------------------------- footer */
+/**
+ * The legal footer. Kept as its own export so pages that manage their own
+ * viewport (the comic reader, a chat thread) can still end with it.
+ */
+export function LegalFooter({ className = '', compact = false }) {
+    return (
+        <footer className={`border-t border-ink-line px-5 text-[12px] text-ink-faint ${compact ? 'py-2' : 'py-4'} ${className}`}>
+            <nav className="flex flex-wrap gap-x-4 gap-y-1" aria-label="Legal">
+                <Link href={route('legal.terms')} className="hover:text-ink-text">Terms</Link>
+                <Link href={route('legal.privacy')} className="hover:text-ink-text">Privacy</Link>
+                <Link href={route('legal.policy')} className="hover:text-ink-text">Content policy</Link>
+                <Link href={route('dmca')} className="hover:text-ink-text">Copyright / DMCA</Link>
+                <span className="w-full md:ml-auto md:w-auto">18+ only. Work is rated by its artist.</span>
+            </nav>
+        </footer>
+    );
+}
+
 /* ---------------------------------------------------------------- layout */
 export default function AppLayout({ children, rightRail = true, bare = false, admin = false, footer = true }) {
     const shellName = rightRail ? 'shell-full' : 'shell-solo';
@@ -494,15 +513,11 @@ export default function AppLayout({ children, rightRail = true, bare = false, ad
                 {!bare && !admin && <BottomNav menuOpen={menuOpen} setMenuOpen={setMenuOpen} />}
                 {!bare && admin && <AdminMobileRail open={adminRailOpen} onClose={() => setAdminRailOpen(false)} />}
                 {!bare && !admin && <DemoSwitcher />}
-                {footer && <footer className={`${rightRail ? 'lg:col-span-2 xl:col-span-3' : 'lg:col-span-2'} col-span-1 border-t border-ink-line px-5 py-4 pb-24 text-[12px] text-ink-faint md:pb-4`}>
-                    <nav className="flex flex-wrap gap-x-4 gap-y-1" aria-label="Legal">
-                        <Link href={route('legal.terms')} className="hover:text-ink-text">Terms</Link>
-                        <Link href={route('legal.privacy')} className="hover:text-ink-text">Privacy</Link>
-                        <Link href={route('legal.policy')} className="hover:text-ink-text">Content policy</Link>
-                        <Link href={route('dmca')} className="hover:text-ink-text">Copyright / DMCA</Link>
-                        <span className="w-full md:ml-auto md:w-auto">18+ only. Work is rated by its artist.</span>
-                    </nav>
-                </footer>}
+                {footer && (
+                    <LegalFooter
+                        className={`${rightRail ? 'lg:col-span-2 xl:col-span-3' : 'lg:col-span-2'} col-span-1 pb-24 md:pb-4`}
+                    />
+                )}
             </div>
         </ToastProvider>
     );

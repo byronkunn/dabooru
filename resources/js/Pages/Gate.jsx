@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 
 const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 
@@ -30,6 +30,14 @@ export default function Gate() {
                 <p className="mt-4 text-[11.5px] leading-relaxed text-ink-faint">
                     By entering you confirm you are of legal age to view adult content in your jurisdiction. We use a cookie to remember this choice.
                 </p>
+
+                {/* the gate is the first screen anyone sees, so the legal pages must be reachable from it */}
+                <nav aria-label="Legal" className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1 border-t border-ink-line pt-4 text-[12px] text-ink-muted">
+                    <Link href={route('legal.terms')} className="hover:text-ink-text">Terms</Link>
+                    <Link href={route('legal.privacy')} className="hover:text-ink-text">Privacy</Link>
+                    <Link href={route('legal.policy')} className="hover:text-ink-text">Content policy</Link>
+                    <Link href={route('dmca')} className="hover:text-ink-text">Copyright / DMCA</Link>
+                </nav>
             </div>
         </div>
     );
