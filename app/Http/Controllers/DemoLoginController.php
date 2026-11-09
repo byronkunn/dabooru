@@ -6,6 +6,7 @@ use App\Support\AgeGate;
 use App\Support\DemoAccounts;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 /**
  * One-click sign-in for the demo accounts. Local development only — the
@@ -21,6 +22,7 @@ class DemoLoginController extends Controller
 
         Auth::login($user);
         request()->session()->regenerate();
+        Inertia::clearHistory();
         AgeGate::confirm();
 
         return redirect()->route('gallery')->with('success', "Signed in as {$user->name}.");

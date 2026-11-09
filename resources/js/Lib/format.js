@@ -5,6 +5,10 @@ export function compact(n) {
     return `${(num / 1_000_000).toFixed(1).replace(/\.0$/, '')}m`;
 }
 
+export function workArtistName(post, fallback = post.user?.name || 'Unsorted') {
+    return post.credited_artist?.name || post.artist_name || post.external_artist?.name || fallback;
+}
+
 export const RATING_CLASS = {
     sfw: 'rate-badge-sfw',
     suggestive: 'rate-badge-suggestive',

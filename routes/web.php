@@ -1,44 +1,50 @@
 <?php
 
 use App\Http\Controllers\Admin\AnalyticsController;
+use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\DmcaController as AdminDmcaController;
 use App\Http\Controllers\Admin\ModerationLogController;
 use App\Http\Controllers\Admin\PostController as AdminPostController;
-use App\Http\Controllers\Admin\SiteLogController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
+use App\Http\Controllers\Admin\SiteLogController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\AgeGateController;
+use App\Http\Controllers\ArtistController;
+use App\Http\Controllers\ArtistCreditController;
 use App\Http\Controllers\BlockController;
 use App\Http\Controllers\BookmarkController;
-use App\Http\Controllers\CommentController;
+use App\Http\Controllers\ChapterInboxController;
+use App\Http\Controllers\ChatMessageController;
+use App\Http\Controllers\ChatRoomController;
 use App\Http\Controllers\ComicChapterController;
-use App\Http\Controllers\ContentController;
-use App\Http\Controllers\DmcaController;
-use App\Http\Controllers\LegalController;
 use App\Http\Controllers\ComicController;
+use App\Http\Controllers\CommentController;
+use App\Http\Controllers\ContentController;
+use App\Http\Controllers\CuratedShelfController;
+use App\Http\Controllers\DiscoverController;
+use App\Http\Controllers\DmcaController;
 use App\Http\Controllers\FollowController;
 use App\Http\Controllers\FollowingController;
 use App\Http\Controllers\GalleryController;
-use App\Http\Controllers\LikeController;
 use App\Http\Controllers\KnowledgeController;
-use App\Http\Controllers\ChatMessageController;
-use App\Http\Controllers\ChatRoomController;
-use App\Http\Controllers\StickerPackController;
+use App\Http\Controllers\LegalController;
+use App\Http\Controllers\LikeController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PostController;
+use App\Http\Controllers\PostRatingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
-use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SavedCollectionController;
-use App\Http\Controllers\SettingsController;
-use App\Http\Controllers\UploadController;
-use App\Http\Controllers\ArtistCreditController;
-use App\Http\Controllers\ChapterInboxController;
-use App\Http\Controllers\CuratedShelfController;
 use App\Http\Controllers\SavedSearchController;
+use App\Http\Controllers\SearchController;
+use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\StickerPackController;
 use App\Http\Controllers\StudioController;
 use App\Http\Controllers\StudioMediaController;
+use App\Http\Controllers\StudioPlanController;
+use App\Http\Controllers\TagFollowController;
+use App\Http\Controllers\UploadController;
 use Illuminate\Support\Facades\Route;
 
 /* ---------------- public ---------------- */
@@ -47,13 +53,29 @@ Route::get('/age-gate', [AgeGateController::class, 'show'])->name('age-gate');
 Route::post('/age-gate', [AgeGateController::class, 'confirm'])->name('age-gate.confirm');
 Route::post('/age-gate/leave', [AgeGateController::class, 'leave'])->name('age-gate.leave');
 
-Route::get('/discover', [CuratedShelfController::class, 'index'])->name('shelves.index');
 Route::get('/shared/collections/{token}', [SavedCollectionController::class, 'shared'])->whereUuid('token')->name('collections.shared');
+Route::patch('/library/muted-tags', [SavedCollectionController::class, 'updateMutedTags'])->name('library.muted-tags.update');
+
+// Post-registration setup: optional, skippable, shown once.
+Route::middleware('auth')->group(function () {
+    Route::get('/welcome/setup', [\App\Http\Controllers\SetupController::class, 'show'])->name('setup.show');
+    Route::post('/welcome/setup', [\App\Http\Controllers\SetupController::class, 'store'])->name('setup.store');
+    Route::post('/welcome/setup/skip', [\App\Http\Controllers\SetupController::class, 'skip'])->name('setup.skip');
+});
 Route::get('/work-media/{media}/{variant}', [StudioMediaController::class, 'show'])
     ->whereNumber('media')->whereIn('variant', ['original', 'thumb'])->name('studio.media');
 Route::get('/', [GalleryController::class, 'index'])->name('gallery');
+Route::get('/discover', [DiscoverController::class, 'index'])->name('discover');
 Route::get('/p/{post}', [PostController::class, 'show'])->name('posts.show');
+Route::get('/artists', [ArtistController::class, 'index'])->name('artists.index');
+Route::get('/artists/works', [ArtistController::class, 'show'])->name('artists.show');
 Route::get('/u/{username}', [ProfileController::class, 'show'])->name('profile.show');
+Route::get('/u/{username}/collections/{collection}', [SavedCollectionController::class, 'publicCollection'])
+    ->name('collections.public');
+Route::get('/u/{username}/{type}', [ProfileController::class, 'connections'])
+    ->where('type', 'followers|following')
+    ->middleware('throttle:120,1')
+    ->name('profile.connections');
 
 Route::get('/search', [SearchController::class, 'index'])->name('search');
 Route::get('/search/suggest', [SearchController::class, 'suggest'])
@@ -78,6 +100,8 @@ Route::middleware(['auth', 'throttle:20,1'])->group(function () {
     Route::post('/community/reports', [KnowledgeController::class, 'report'])->name('knowledge.report');
 });
 Route::middleware(['auth', 'admin:curator', 'throttle:60,1'])->prefix('admin/community')->group(function () {
+    Route::get('/tags', [KnowledgeController::class, 'manageTags'])->middleware('admin:admin')->name('admin.tags.index');
+    Route::post('/tags/{tag}/merge', [KnowledgeController::class, 'mergeTags'])->middleware('admin:admin')->name('admin.tags.merge');
     Route::get('/', [KnowledgeController::class, 'moderate'])->name('admin.knowledge');
     Route::post('/revisions/{revision}', [KnowledgeController::class, 'review'])->name('admin.knowledge.review');
     Route::post('/{type}/{id}/lock', [KnowledgeController::class, 'lock'])->whereNumber('id')->name('admin.knowledge.lock');
@@ -110,15 +134,27 @@ Route::get('/comics/{comic}/{number}', [ComicController::class, 'read'])
 
 Route::middleware('auth')->group(function () {
     Route::get('/following', [FollowingController::class, 'index'])->name('following');
+    Route::post('/following/tags', [TagFollowController::class, 'store'])->name('tags.follow');
+    Route::delete('/following/tags', [TagFollowController::class, 'destroy'])->name('tags.unfollow');
 
-    Route::get('/saved-searches', [SavedSearchController::class, 'index'])->name('saved-searches.index');
-    Route::get('/saved-searches/{savedSearch}', [SavedSearchController::class, 'index'])->whereNumber('savedSearch')->name('saved-searches.show');
+    Route::get('/saved-searches', [SavedSearchController::class, 'index'])
+        ->middleware(['inertia.encrypt', 'cache.headers:private;no_store'])->name('saved-searches.index');
+    Route::get('/saved-searches/{savedSearch}', [SavedSearchController::class, 'index'])
+        ->middleware(['inertia.encrypt', 'cache.headers:private;no_store'])->whereNumber('savedSearch')->name('saved-searches.show');
     Route::post('/saved-searches', [SavedSearchController::class, 'store'])->name('saved-searches.store');
+    Route::post('/settings/muted-tags', [SettingsController::class, 'muteTag'])->name('settings.muted-tags.store');
+    Route::delete('/settings/muted-tags', [SettingsController::class, 'unmuteTag'])->name('settings.muted-tags.destroy');
+    Route::post('/discover/show-less', [DiscoverController::class, 'showLess'])->middleware('throttle:30,1')->name('discover.show-less');
     Route::delete('/saved-searches/{savedSearch}', [SavedSearchController::class, 'destroy'])->name('saved-searches.destroy');
     Route::get('/chapter-inbox', [ChapterInboxController::class, 'index'])->name('chapters.inbox');
     Route::post('/chapter-inbox/{chapter}/read', [ChapterInboxController::class, 'markRead'])->name('chapters.mark-read');
+    Route::inertia('/create', 'Create/Index')->name('create');
     Route::get('/studio', [StudioController::class, 'index'])->name('studio.index');
+    Route::post('/studio/plans', [StudioPlanController::class, 'store'])->name('studio.plans.store');
+    Route::patch('/studio/plans/{plan}', [StudioPlanController::class, 'update'])->whereNumber('plan')->name('studio.plans.update');
+    Route::delete('/studio/plans/{plan}', [StudioPlanController::class, 'destroy'])->whereNumber('plan')->name('studio.plans.destroy');
     Route::patch('/studio/works/{work}', [StudioController::class, 'updateWork'])->whereNumber('work')->name('studio.works.update');
+    Route::post('/studio/bulk', [StudioController::class, 'bulk'])->middleware('throttle:20,1')->name('studio.bulk');
     Route::patch('/studio/chapters/{chapter}', [StudioController::class, 'updateChapter'])->whereNumber('chapter')->name('studio.chapters.update');
     Route::delete('/studio/works/{work}', [StudioController::class, 'discardWork'])->whereNumber('work')->name('studio.works.discard');
     Route::delete('/studio/chapters/{chapter}', [StudioController::class, 'discardChapter'])->whereNumber('chapter')->name('studio.chapters.discard');
@@ -132,7 +168,7 @@ Route::middleware('auth')->group(function () {
 
     // engagement
     Route::post('/p/{post}/like', [LikeController::class, 'store'])->name('posts.like');
-    Route::put('/p/{post}/stars', [\App\Http\Controllers\PostRatingController::class, 'update'])
+    Route::put('/p/{post}/stars', [PostRatingController::class, 'update'])
         ->middleware('throttle:30,1')->name('posts.stars');
     Route::delete('/p/{post}/like', [LikeController::class, 'destroy'])->name('posts.unlike');
     Route::post('/p/{post}/save', [BookmarkController::class, 'store'])->name('posts.save');
@@ -144,14 +180,23 @@ Route::middleware('auth')->group(function () {
     Route::post('/comics/{comic}/follow', [ComicController::class, 'follow'])->name('comics.follow');
     Route::post('/comics/{comic}/progress', [ComicController::class, 'progress'])->name('comics.progress');
 
-    Route::get('/saved', [SavedCollectionController::class, 'index'])->name('collections.index');
-    Route::get('/saved/{collection}', [SavedCollectionController::class, 'index'])->name('collections.show');
+    Route::get('/saved', [SavedCollectionController::class, 'index'])
+        ->middleware(['inertia.encrypt', 'cache.headers:private;no_store'])->name('collections.index');
+    Route::get('/saved/{collection}', [SavedCollectionController::class, 'index'])
+        ->middleware(['inertia.encrypt', 'cache.headers:private;no_store'])->name('collections.show');
     Route::post('/saved', [SavedCollectionController::class, 'store'])->name('collections.store');
+    Route::post('/saved/undo', [BookmarkController::class, 'undo'])->name('bookmarks.undo');
+    Route::get('/p/{post}/collections', [BookmarkController::class, 'collections'])->name('bookmarks.collections');
+    Route::patch('/p/{post}/collections', [BookmarkController::class, 'updateCollections'])->name('bookmarks.collections.update');
     Route::patch('/saved/{collection}', [SavedCollectionController::class, 'update'])->name('collections.update');
     Route::patch('/saved/{collection}/share', [SavedCollectionController::class, 'share'])->name('collections.share');
+    Route::patch('/saved/{collection}/visibility', [SavedCollectionController::class, 'visibility'])->name('collections.visibility');
+    Route::patch('/saved/{collection}/order', [SavedCollectionController::class, 'reorder'])->name('collections.reorder');
     Route::delete('/saved/{collection}', [SavedCollectionController::class, 'destroy'])->name('collections.destroy');
     Route::post('/saved/{collection}/posts/{post}', [SavedCollectionController::class, 'add'])->name('collections.posts.add');
     Route::delete('/saved/{collection}/posts/{post}', [SavedCollectionController::class, 'remove'])->name('collections.posts.remove');
+    Route::delete('/saved/{collection}/bookmarks/{bookmark}', [SavedCollectionController::class, 'removeBookmark'])
+        ->whereNumber('bookmark')->name('collections.bookmarks.remove');
 
     // notifications and messages
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
@@ -160,6 +205,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/messages/stickers', [StickerPackController::class, 'index'])->name('messages.stickers.index');
     Route::get('/messages/stickers/picker', [StickerPackController::class, 'picker'])->name('messages.stickers.picker');
     Route::post('/messages/stickers', [StickerPackController::class, 'store'])->middleware('throttle:10,1')->name('messages.stickers.store');
+    Route::get('/messages/stickers/images/{sticker}', [StickerPackController::class, 'image'])->name('messages.stickers.image');
+    Route::patch('/messages/stickers/{stickerPack}', [StickerPackController::class, 'update'])->name('messages.stickers.update');
     Route::delete('/messages/stickers/{stickerPack}', [StickerPackController::class, 'destroy'])->name('messages.stickers.destroy');
     Route::get('/messages/{conversation}', [MessageController::class, 'show'])->whereNumber('conversation')->name('messages.show');
     Route::get('/messages/attachments/{message}/{variant}', [MessageController::class, 'attachment'])
@@ -168,6 +215,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/messages/rooms', [ChatRoomController::class, 'store'])->middleware('throttle:12,1')->name('messages.rooms.store');
     Route::put('/messages/quick-replies', [ChatRoomController::class, 'quickReplies'])->name('messages.quick-replies');
     Route::put('/messages/privacy', [ChatRoomController::class, 'privacy'])->name('messages.privacy');
+    Route::get('/messages/{conversation}/sync', [MessageController::class, 'sync'])
+        ->whereNumber('conversation')->middleware('throttle:90,1,message-sync:')->name('messages.sync');
+    Route::post('/messages/{conversation}/read', [ChatMessageController::class, 'read'])
+        ->whereNumber('conversation')->middleware('throttle:90,1,message-read:')->name('messages.read');
     Route::prefix('messages/{conversation}')->name('messages.')->middleware('throttle:60,1')->group(function () {
         Route::post('/request', [ChatRoomController::class, 'requestDecision'])->name('request');
         Route::patch('/preferences', [ChatRoomController::class, 'preferences'])->name('preferences');
@@ -186,7 +237,10 @@ Route::middleware('auth')->group(function () {
     // settings
     Route::get('/settings', [SettingsController::class, 'edit'])->name('settings.edit');
     Route::post('/settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.profile');
+    Route::post('/settings/profile/image/{type}', [SettingsController::class, 'updateImage'])
+        ->where('type', 'avatar|banner')->name('settings.profile.image');
     Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
+    Route::put('/settings/email', [SettingsController::class, 'updateEmail'])->middleware('throttle:6,1')->name('settings.email');
     Route::delete('/settings/account', [SettingsController::class, 'destroyAccount'])->name('settings.account.destroy');
 
     // owning your own content
@@ -194,6 +248,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/p/{post}', [ContentController::class, 'update'])->name('posts.update');
     Route::delete('/p/{post}', [ContentController::class, 'destroy'])->name('posts.destroy');
     Route::delete('/comments/{comment}', [ContentController::class, 'destroyComment'])->name('comments.destroy');
+    Route::patch('/comments/{comment}', [CommentController::class, 'update'])->middleware('throttle:30,1')->name('comments.update');
     Route::delete('/messages/message/{message}', [ContentController::class, 'destroyMessage'])->name('messages.destroy');
 
     // blocking
@@ -202,6 +257,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/u/{user}/block', [BlockController::class, 'destroy'])->where('user', '[^/]+')->name('users.unblock');
 
     // moderation entry point (anyone can report)
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::post('/report', [ReportController::class, 'store'])->middleware('throttle:10,1')->name('reports.store');
 
     Route::prefix('admin')->name('admin.')->group(function () {
@@ -223,6 +279,10 @@ Route::middleware('auth')->group(function () {
             Route::post('/works/{post}/restore', [AdminPostController::class, 'restore'])->whereNumber('post')->name('works.restore');
         });
         Route::middleware('admin')->group(function () {
+            Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
+            Route::post('/announcements', [AnnouncementController::class, 'store'])->name('announcements.store');
+            Route::patch('/announcements/{announcement}', [AnnouncementController::class, 'update'])->name('announcements.update');
+            Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('announcements.destroy');
             Route::get('/users', [AdminUserController::class, 'index'])->name('users');
             Route::post('/users/{user}/ban', [AdminUserController::class, 'ban'])->name('users.ban');
             Route::post('/users/{user}/unban', [AdminUserController::class, 'unban'])->name('users.unban');

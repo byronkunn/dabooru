@@ -36,6 +36,8 @@ class DatabaseSeeder extends Seeder
         $this->command?->info('Anonymous files are posted unattributed. Add a name to a file name to credit it.');
 
         $this->call(SampleComicsSeeder::class);
+        $this->call(MediaTagsSeeder::class);
+        $this->call(TagCategoriesSeeder::class);
     }
 
     private function seedLibrary(): void

@@ -25,10 +25,24 @@ export function Icon({ name, className = 'w-5 h-5' }) {
             </>
         ),
         bookmark: <path d="M4 5h10a4 4 0 0 1 0 8H6l-2 3V5z" />,
+        book: (
+            <>
+                <path d="M12 7v14" />
+                <path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H12v18H5.5A2.5 2.5 0 0 0 3 23z" />
+                <path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H12v18h6.5a2.5 2.5 0 0 1 2.5 2z" />
+            </>
+        ),
+        tag: <path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V4h9l8.6 6.6a2 2 0 0 1 0 2.8z" />,
         user: (
             <>
                 <circle cx="12" cy="8" r="3.5" />
                 <path d="M4.5 20a7.5 7.5 0 0 1 15 0" />
+            </>
+        ),
+        camera: (
+            <>
+                <path d="M4 6h4l2-3h4l2 3h4a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" />
+                <circle cx="12" cy="12.5" r="3.5" />
             </>
         ),
         settings: (
@@ -66,9 +80,10 @@ export function Icon({ name, className = 'w-5 h-5' }) {
         sort: <path d="M8 20V4M4 8l4-4 4 4M16 4v16m-4-4 4 4 4-4" />,
         star: <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3z" />,
         starFilled: <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3z" fill="currentColor" />,
-        check: <path d="M4 12.5l5 5L20 6.5" />,
         plus: <path d="M12 5v14M5 12h14" />,
         send: <path d="M4 12l16-8-6 16-3-6-7-2z" />,
+        attachment: <path d="m8 13 7-7a3 3 0 0 1 4 4L9 20a5 5 0 0 1-7-7L12 3m-7 13 10-10" />,
+        sticker: <><path d="M14 21H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v8l-7 7zM14 21v-4a3 3 0 0 1 3-3h4" /><path d="M7 8h.01M14 8h.01M7 12c2 2 4 2 6 0" /></>,
         more: (
             <>
                 <circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none" />

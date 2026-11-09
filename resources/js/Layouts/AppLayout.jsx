@@ -1,27 +1,44 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link, useForm, usePage } from '@inertiajs/react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Icon } from '@/Components/Icons';
 import SearchBox from '@/Components/SearchBox';
-import { RATING_CLASS } from '@/Lib/format';
-import { adminLinks, AdminMobileRail, AdminRailButton } from '@/Components/AdminNavigation';
+import { RATING_CLASS, workArtistName } from '@/Lib/format';
+import { adminLinks, AdminMobileRail } from '@/Components/AdminNavigation';
+import AdSlot from '@/Components/AdSlot';
+import SiteAnnouncement from '@/Components/SiteAnnouncement';
+import { AdminErrors } from '@/Components/AdminUi';
+import { rememberWorkEngagement } from '@/Lib/workEngagement';
+import WorkLink from '@/Components/WorkLink';
+import MediaThumbnail from '@/Components/MediaThumbnail';
 
 const FlashContext = createContext(null);
-const AdminRailToggleContext = createContext(() => {});
+const NavigationToggleContext = createContext(null);
 
 /* ---------------------------------------------------------------- toast */
-function Toast({ message, tone, onDone }) {
+function Toast({ message, tone, undo, onDone }) {
+    const { auth } = usePage().props;
+    const form = useForm({ token: undo?.token ?? '' });
     useEffect(() => {
-        const t = setTimeout(onDone, 2400);
+        const t = setTimeout(onDone, undo ? 15000 : 2400);
         return () => clearTimeout(t);
-    }, [message, onDone]);
+    }, [message, undo, onDone]);
 
     return (
         <div
             role="status"
-            className="fixed bottom-24 left-1/2 z-[200] -translate-x-1/2 rounded-xl border border-[#3d3447] bg-[#241f2b] px-5 py-3 text-[13.5px] shadow-2xl md:bottom-6"
+            className="fixed bottom-24 left-1/2 z-[200] w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-xl border border-[#3d3447] bg-[#241f2b] px-5 py-3 text-[13.5px] shadow-2xl md:bottom-6"
         >
             {message}
+            {undo && <button type="button" className="btn-ghost ml-2" disabled={form.processing} onClick={() => {
+                form.transform(() => ({ token: undo.token }));
+                form.post(route('bookmarks.undo'), { preserveScroll: true, onSuccess: () => {
+                    if (auth.user) rememberWorkEngagement(auth.user.id, undo.postId, 'saved', true);
+                    window.dispatchEvent(new CustomEvent('work-saved', { detail: { postId: undo.postId, saved: true } }));
+                    onDone();
+                } });
+            }}>Undo</button>}
+            <AdminErrors errors={form.errors} />
         </div>
     );
 }
@@ -32,7 +49,7 @@ export function ToastProvider({ children }) {
 
     useEffect(() => {
         const msg = flash?.success || flash?.error;
-        if (msg) setToast({ message: msg, tone: flash?.error ? 'error' : 'success' });
+        if (msg) setToast({ message: msg, tone: flash?.error ? 'error' : 'success', undo: flash?.bookmarkUndo });
     }, [flash]);
 
     return (
@@ -44,17 +61,35 @@ export function ToastProvider({ children }) {
 }
 
 /* ---------------------------------------------------------------- nav */
+/**
+ * Destination for a nav item, honouring the last sub-section the reader used.
+ * Falls back to the item's own route when nothing has been remembered yet.
+ */
+function rememberedNavHref(item) {
+    if (!item.rememberGroup) return route(item.href);
+
+    try {
+        const saved = window.localStorage.getItem(`inkwell.tab.${item.rememberGroup}`);
+        const known = (item.rememberTabs ?? []).some(([, destination]) => destination === saved);
+
+        return known ? route(saved) : route(item.href);
+    } catch {
+        return route(item.href);
+    }
+}
+
+const BROWSE = ['gallery', 'discover', 'following', 'artists*'];
+const INBOX = ['messages*', 'notifications*'];
+const CREATE = ['create', 'upload*', 'comics.chapters.create'];
+const LIBRARY = ['collections*', 'saved-searches*'];
 const NAV = [
-    { label: 'Discover', href: 'shelves.index', icon: 'search', route: 'shelves' },
-    { label: 'Gallery', href: 'gallery', icon: 'gallery', route: 'gallery' },
-    { label: 'Following', href: 'following', icon: 'following', route: 'following', auth: true },
-    { label: 'Messages', href: 'messages.index', icon: 'chat', route: 'messages', auth: true, badge: 'unread_messages' },
-    { label: 'Notifications', href: 'notifications.index', icon: 'bell', route: 'notifications', auth: true, badge: 'unread_notifications' },
-    { label: 'Comics', href: 'comics.index', icon: 'bookmark', route: 'comics' },
-    { label: 'Tags & wiki', href: 'knowledge.index', icon: 'bookmark', route: 'knowledge' },
-    { label: 'Saved works', href: 'collections.index', icon: 'save', route: 'collections', auth: true },
-    { label: 'Creator Studio', href: 'studio.index', icon: 'upload', route: 'studio', auth: true },
-    { label: 'Profile', href: 'profile.show', icon: 'user', route: 'profile', auth: true },
+    { label: 'Browse', href: 'gallery', icon: 'gallery', matches: BROWSE },
+    { label: 'Comics', href: 'comics.index', icon: 'book', matches: ['comics.index', 'comics.show', 'comics.read'] },
+    { label: 'Tags & wiki', href: 'knowledge.index', icon: 'tag', matches: ['knowledge*'] },
+    { label: 'Create', href: 'create', icon: 'plus', matches: CREATE, auth: true },
+    { label: 'Creator Studio', shortLabel: 'Studio', href: 'studio.index', icon: 'upload', matches: ['studio*'], auth: true },
+    { label: 'Inbox', href: 'messages.index', icon: 'chat', matches: INBOX, auth: true },
+    { label: 'Library', href: 'collections.index', icon: 'save', matches: LIBRARY, auth: true, rememberGroup: 'library-sections', rememberTabs: [['Collections', 'collections.index'], ['Saved Searches', 'saved-searches.index']] },
 ];
 
 function Rail({ admin = false }) {
@@ -73,13 +108,9 @@ function Rail({ admin = false }) {
 
             {(admin ? staffLinks : NAV).map((item) => {
                 if (item.auth && !user) return null;
-                const active = admin ? route().current(item.route) : item.route === 'gallery'
-                    ? route().current('gallery')
-                    : route().current(`${item.route}*`);
-                const href = item.href === 'profile.show'
-                    ? route('profile.show', user?.username ?? 'me')
-                    : route(item.href);
-                const badge = item.badge ? auth?.[item.badge] : 0;
+                const active = admin ? route().current(item.route) : item.matches.some((match) => route().current(match));
+                const href = rememberedNavHref(item);
+                const badge = item.label === 'Inbox' ? (auth?.unread_messages ?? 0) + (auth?.unread_notifications ?? 0) : 0;
 
                 return (
                     <Link
@@ -88,12 +119,13 @@ function Rail({ admin = false }) {
                         aria-label={item.label}
                         title={item.label}
                         aria-current={active ? 'page' : undefined}
-                        className={`relative flex min-h-[44px] items-center gap-3 rounded-[11px] px-3 py-2.5 text-[15.5px] font-semibold justify-center xl:justify-start ${
+                        className={`relative flex min-h-[44px] items-center gap-3 rounded-[11px] px-3 py-2.5 text-[15.5px] font-semibold justify-start ${
                             active ? 'bg-ink-raised text-ink-brand' : 'text-ink-text hover:bg-ink-raised'
                         }`}
                     >
                         <Icon name={item.icon} className="h-[22px] w-[22px] shrink-0 opacity-90" />
-                        <span className="hidden xl:inline">{item.label}</span>
+                        <span className="min-w-0 text-sm xl:hidden">{item.shortLabel ?? item.label}</span>
+                        <span className="hidden min-w-0 xl:inline xl:text-base">{item.label}</span>
                         {badge > 0 && (
                             <span className="absolute right-0 top-1 rounded-full bg-ink-pink px-1.5 py-0.5 text-[11px] font-extrabold text-white xl:static xl:ml-auto">
                                 {badge > 99 ? '99+' : badge}
@@ -108,16 +140,11 @@ function Rail({ admin = false }) {
                     <Icon name="back" className="h-5 w-5 shrink-0" />
                     <span className="hidden xl:inline">Back to site</span>
                 </Link>
-            ) : user ? (
-                <Link href={route('upload.create')} className="btn-primary mt-3 xl:mt-4">
-                    <Icon name="plus" className="h-5 w-5" />
-                    <span className="hidden xl:inline">Upload work</span>
-                </Link>
-            ) : (
+            ) : !user ? (
                 <Link href={route('login')} className="btn-primary mt-3 xl:mt-4">
                     Log in
                 </Link>
-            )}
+            ) : null}
 
             {!admin && staffLinks.length > 0 && (
                 <Link
@@ -130,16 +157,8 @@ function Rail({ admin = false }) {
                 </Link>
             )}
 
-            {!admin && <Link
-                href={route('search')}
-                aria-label="Search"
-                className="relative flex min-h-[44px] items-center gap-3 rounded-[11px] px-3 py-2.5 text-[15.5px] font-semibold justify-center text-ink-text hover:bg-ink-raised xl:justify-start"
-            >
-                <Icon name="search" className="h-[22px] w-[22px] shrink-0 opacity-90" />
-                <span className="hidden xl:inline">Search</span>
-            </Link>}
-
             <div className="mt-auto">
+                {!admin && <DemoSwitcher inline />}
                 {admin && user ? (
                     <div className="flex items-center gap-2.5 rounded-xl p-2" title={`Signed in as @${user.username}`}>
                         <img src={user.avatar} alt="" className="h-[38px] w-[38px] shrink-0 rounded-full object-cover" />
@@ -166,10 +185,9 @@ function Rail({ admin = false }) {
     );
 }
 
-function BottomNav() {
+function BottomNav({ menuOpen, setMenuOpen }) {
     const { auth } = usePage().props;
     const { url } = usePage();
-    const [menuOpen, setMenuOpen] = useState(false);
     const user = auth?.user;
     useEffect(() => setMenuOpen(false), [url, user?.id]);
     useEffect(() => {
@@ -178,49 +196,45 @@ function BottomNav() {
         desktop.addEventListener('change', closeOnDesktop);
         return () => desktop.removeEventListener('change', closeOnDesktop);
     }, []);
+    const unread = (auth?.unread_messages ?? 0) + (auth?.unread_notifications ?? 0);
     const items = [
-        { label: 'Gallery', icon: 'gallery', href: route('gallery'), match: 'gallery' },
-        { label: 'Following', icon: 'following', href: user ? route('following') : route('login'), match: 'following' },
-        { label: 'User', icon: 'user', menu: true, match: 'profile' },
-        { label: 'Upload', icon: 'plus', href: user ? route('upload.create') : route('login'), match: 'upload' },
-        { label: 'Search', icon: 'search', href: route('search'), match: 'search' },
+        { label: 'Browse', icon: 'gallery', href: route('gallery'), matches: BROWSE },
+        { label: 'Comics', icon: 'book', href: route('comics.index'), matches: ['comics.index', 'comics.show', 'comics.read'] },
+        { label: 'Create', icon: 'plus', href: route(user ? 'create' : 'login'), matches: CREATE },
+        { label: 'Inbox', icon: 'chat', href: route(user ? 'messages.index' : 'login'), matches: INBOX, badge: unread },
+        { label: 'You', icon: 'user', menu: true, matches: ['profile*', 'settings*', ...LIBRARY] },
     ];
-    const menuItems = [
-        ...(user ? [
-            { label: 'Profile', href: route('profile.show', user.username) },
-            { label: 'Messages', href: route('messages.index'), badge: auth?.unread_messages },
-            { label: 'Notifications', href: route('notifications.index'), badge: auth?.unread_notifications },
-        ] : [
-            { label: 'Log in', href: route('login') },
-            { label: 'Create account', href: route('register') },
-        ]),
-        { label: 'Discover', href: route('shelves.index') },
-        { label: 'Comics', href: route('comics.index') },
-        { label: 'Tags & wiki', href: route('knowledge.index') },
-        ...(user ? [
-            { label: 'Saved works', href: route('collections.index') },
-            { label: 'Saved searches', href: route('saved-searches.index') },
-            { label: 'Chapter inbox', href: route('chapters.inbox') },
-            { label: 'Creator Studio', href: route('studio.index') },
+    const overflowItems = NAV
+        .filter((item) => (!item.auth || user) && !items.some((dockItem) => dockItem.label === item.label))
+        .map((item) => ({ ...item, href: route(item.href) }));
+    const menuItems = user ? [
+        { label: 'Profile', href: route('profile.show', user.username) },
+        ...overflowItems,
+    ] : [
+        ...overflowItems,
+        { label: 'Log in', href: route('login') },
+        { label: 'Create account', href: route('register') },
+    ];
+    const menuGroups = user ? [{
+        label: 'Account', items: [
             { label: 'Settings', href: route('settings.edit') },
             { label: 'Blocked users', href: route('blocks.index') },
-        ] : []),
-        ...adminLinks(user).slice(0, 1).map((item) => ({ label: 'Admin panel', href: route(item.href) })),
-    ];
-    const unread = (auth?.unread_messages ?? 0) + (auth?.unread_notifications ?? 0);
+            ...adminLinks(user).slice(0, 1).map((item) => ({ label: 'Admin panel', href: route(item.href) })),
+        ],
+    }] : [];
 
     return (
         <>
         <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-ink-line bg-ink-bg/95 pb-safe backdrop-blur lg:hidden" aria-label="Main">
             {items.map((item) => {
-                const active = route().current(`${item.match}*`);
+                const active = [...item.matches, ...(item.menu ? overflowItems.flatMap((destination) => destination.matches) : [])]
+                    .some((match) => route().current(match));
                 const className = `relative flex min-h-[52px] flex-col items-center justify-center gap-0.5 py-1.5 text-[10.5px] ${active ? 'text-ink-brand' : 'text-ink-muted'}`;
                 if (item.menu) {
                     return (
-                        <button key={item.label} type="button" aria-label="User menu" aria-haspopup="dialog" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)} className={className}>
+                        <button key={item.label} type="button" aria-label="You" aria-haspopup="dialog" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)} className={className}>
                             {user ? <img src={user.avatar} alt="" className="h-6 w-6 rounded-full object-cover" /> : <Icon name="user" className="h-[22px] w-[22px]" />}
-                            <span>User</span>
-                            {unread > 0 && <span className="absolute right-[calc(50%-22px)] top-0.5 rounded-full bg-ink-pink px-1 text-[9.5px] font-extrabold text-white" aria-label={`${unread} unread messages and notifications`}>{unread > 99 ? '99+' : unread}</span>}
+                            <span>You</span>
                         </button>
                     );
                 }
@@ -235,7 +249,7 @@ function BottomNav() {
                         <Icon name={item.icon} className="h-[22px] w-[22px]" />
                         <span>{item.shortLabel ?? item.label}</span>
                         {item.badge > 0 && (
-                            <span className="absolute right-[calc(50%-22px)] top-0.5 rounded-full bg-ink-pink px-1 text-[9.5px] font-extrabold text-white">
+                            <span className="absolute right-[calc(50%-22px)] top-0.5 rounded-full bg-ink-pink px-1 text-[9.5px] font-extrabold text-white" aria-label={`${item.badge} unread`}>
                                 {item.badge > 99 ? '99+' : item.badge}
                             </span>
                         )}
@@ -259,12 +273,27 @@ function BottomNav() {
                     </div>
                     <nav aria-label="User destinations" className="flex flex-col gap-1">
                         {menuItems.map((item) => (
-                            <Link key={item.label} href={item.href} onClick={() => setMenuOpen(false)} className="flex min-h-11 items-center justify-between gap-3 rounded-xl px-3 py-2 hover:bg-ink-raised">
+                            <Link key={item.label} href={item.href} aria-current={item.matches?.some((match) => route().current(match)) ? 'page' : undefined} onClick={() => setMenuOpen(false)} className="flex min-h-11 items-center justify-between gap-3 rounded-xl px-3 py-2 hover:bg-ink-raised">
                                 <span>{item.label}</span>
                                 {item.badge > 0 && <span className="rounded-full bg-ink-pink px-2 text-xs font-bold text-white">{item.badge > 99 ? '99+' : item.badge}</span>}
                             </Link>
                         ))}
-                        {user && <Link href={route('logout')} method="post" as="button" onClick={() => setMenuOpen(false)} className="min-h-11 rounded-xl px-3 py-2 text-left text-ink-muted hover:bg-ink-raised">Log out</Link>}
+                        {menuGroups.map((group) => (
+                            <details key={group.label} className="group rounded-xl border border-ink-line">
+                                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3 py-2 font-semibold hover:bg-ink-raised [&::-webkit-details-marker]:hidden">
+                                    {group.label}
+                                    <Icon name="back" className="h-4 w-4 -rotate-90 text-ink-muted group-open:rotate-90" />
+                                </summary>
+                                <div className="border-t border-ink-line px-2 py-1">
+                                    {group.items.map((item) => (
+                                        <Link key={item.label} href={item.href} onClick={() => setMenuOpen(false)} className="flex min-h-11 items-center rounded-lg px-3 py-2 text-sm hover:bg-ink-raised">
+                                            {item.label}
+                                        </Link>
+                                    ))}
+                                    {group.label === 'Account' && <Link href={route('logout')} method="post" as="button" onClick={() => setMenuOpen(false)} className="flex min-h-11 w-full items-center rounded-lg px-3 py-2 text-left text-sm text-ink-muted hover:bg-ink-raised">Log out</Link>}
+                                </div>
+                            </details>
+                        ))}
                     </nav>
                 </DialogPanel>
             </div>
@@ -275,52 +304,62 @@ function BottomNav() {
 
 /* ---------------------------------------------------------------- right rail */
 function RightRail() {
-    const { suggested = [] } = usePage().props;
+    const { discoveryRail = {} } = usePage().props;
+    const { risingArtists = [], popularWorks = [] } = discoveryRail;
 
     return (
-        <aside className="sticky top-0 hidden h-screen flex-col gap-4 overflow-y-auto border-l border-ink-line px-4 py-5 lg:flex">
-            <Link href={route('knowledge.index')} className="btn-ghost">Community tags & wiki</Link>
-            <div className="panel">
-                <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.1em] text-ink-faint">Ad — sidebar 300×250</p>
-                <div className="grid h-[190px] place-items-center rounded-xl border border-dashed border-[#4a3c58] bg-[#141118] text-center text-xs text-ink-faint">
-                    <span>
-                        Ad slot <code className="text-ink-muted">sidebar</code>
-                        <br />
-                        <span className="opacity-70">network tag renders here</span>
-                    </span>
+        <aside className="sticky top-0 hidden h-screen flex-col gap-4 overflow-y-auto border-l border-ink-line px-4 py-5 xl:flex">
+            <AdSlot placement="sidebar" fallback={(reason) => (
+                <div className="rounded-xl border border-dashed border-ink-line bg-ink-raised/40 p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-ink-faint">Sponsored placement</p>
+                    {reason === 'image-error' && <p role="status" className="mt-1 text-xs text-ink-muted">The sponsor image could not be loaded.</p>}
+                    <p className="mt-1 text-xs leading-relaxed text-ink-muted">Artist and work boosts are planned, but paid promotion is not available yet.</p>
                 </div>
-            </div>
+            )} />
 
-            <Link
-                href={route('search')}
-                className="surface flex items-center gap-2.5 rounded-panel px-4 py-3 text-[13.5px] text-ink-muted hover:text-ink-text"
-            >
-                <Icon name="search" className="h-4 w-4" />
-                Search works, artists and comics
-                <kbd className="ml-auto hidden rounded border border-ink-line px-1.5 py-0.5 text-[11px] xl:block">/</kbd>
-            </Link>
-
-            {suggested.length > 0 && (
+            {risingArtists.length > 0 && (
                 <div className="panel">
-                    <h3 className="card-title">Artists with work here</h3>
-                    {suggested.map((artist) => (
+                    <h3 className="card-title">Rising artists</h3>
+                    {risingArtists.map((artist) => (
                         <div key={artist.id} className="flex items-center gap-2.5 py-2">
                             <Link href={route('profile.show', artist.username)}>
                                 <img src={artist.avatar} alt="" className="h-[34px] w-[34px] rounded-full object-cover" />
                             </Link>
                             <Link href={route('profile.show', artist.username)} className="min-w-0">
                                 <p className="truncate text-[13.5px] font-semibold leading-tight">{artist.name}</p>
-                                <p className="truncate text-xs text-ink-muted">@{artist.username}</p>
+                                <p className="truncate text-xs text-ink-muted">{artist.recent_posts_count} new {artist.recent_posts_count === 1 ? 'work' : 'works'} this month</p>
                             </Link>
                         </div>
                     ))}
+                    <Link href={route('artists.index')} className="mt-2 inline-flex text-xs font-semibold text-ink-brand hover:underline">Browse artists</Link>
                 </div>
             )}
 
-            <p className="px-1 text-[11.5px] leading-relaxed text-ink-faint">
-                Work with no artist in its file name is filed under <b className="text-ink-muted">Unsorted</b>.
-                No ads inside the comic reader.
-            </p>
+            {popularWorks.length > 0 && (
+                <section aria-label="Popular works" className="panel">
+                    <h3 className="card-title">Popular works</h3>
+                    <div className="space-y-3">
+                        {popularWorks.map((work) => (
+                            <WorkLink key={work.id} href={work.url} className="flex min-w-0 items-center gap-2.5 rounded-lg hover:bg-ink-raised">
+                                <span className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-ink-raised">
+                                    {work.media?.[0] && <MediaThumbnail media={work.media[0]} className="h-full w-full object-cover" />}
+                                </span>
+                                <span className="min-w-0">
+                                    <span className="block truncate text-[13px] font-semibold">{work.title || 'Untitled work'}</span>
+                                    <span className="block truncate text-xs text-ink-muted">{workArtistName(work)}</span>
+                                    <span className="block text-[11px] text-ink-faint">{work.week_likes ? `${work.week_likes} likes this week` : `${work.lifetime_likes} total likes`}</span>
+                                </span>
+                            </WorkLink>
+                        ))}
+                    </div>
+                    <Link href={route('discover')} className="mt-3 inline-flex text-xs font-semibold text-ink-brand hover:underline">Explore more</Link>
+                </section>
+            )}
+
+            <div className="rounded-xl border border-ink-line bg-ink-raised/50 p-3 text-[11.5px] leading-relaxed text-ink-faint">
+                <p>Work with no artist in its file name is filed under <b className="text-ink-muted">Unsorted</b>.</p>
+                <p className="mt-2">No ads inside the comic reader.</p>
+            </div>
         </aside>
     );
 }
@@ -328,7 +367,7 @@ function RightRail() {
 /* ---------------------------------------------------------------- demo switcher */
 /* Local development only: the server only sends demoAccounts when the
    demo-login route exists (it does not exist in production). */
-function DemoSwitcher() {
+function DemoSwitcher({ inline = false }) {
     const { demoAccounts, auth } = usePage().props;
     const [open, setOpen] = useState(false);
 
@@ -336,10 +375,12 @@ function DemoSwitcher() {
 
     const current = auth?.user?.username;
 
+    // Inline mode sits in the desktop rail footer so it never covers the user link;
+    // the floating button is only for md widths where the rail is hidden.
     return (
-        <div className="fixed bottom-4 left-3 z-50 hidden md:block">
+        <div className={inline ? 'relative mb-1 hidden lg:block' : 'fixed bottom-4 left-3 z-50 hidden md:block lg:hidden'}>
             {open && (
-                <div className="mb-2 w-[248px] rounded-2xl border border-ink-line bg-ink-surface p-2 shadow-2xl">
+                <div className={`mb-2 rounded-2xl border border-ink-line bg-ink-surface p-2 shadow-2xl ${inline ? 'absolute inset-x-0 bottom-full z-50' : 'w-[248px]'}`}>
                     <p className="px-2 pb-1 pt-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-ink-faint">
                         Sign in as
                     </p>
@@ -372,12 +413,12 @@ function DemoSwitcher() {
                 onClick={() => setOpen((v) => !v)}
                 aria-expanded={open}
                 aria-label="Switch demo account"
-                className="flex items-center gap-2 rounded-full border border-ink-line bg-ink-surface px-3 py-2 text-[12px] font-bold shadow-xl hover:bg-ink-raised"
+                className={`flex items-center gap-2 rounded-full border border-ink-line bg-ink-surface px-3 py-2 text-[12px] font-bold shadow-xl hover:bg-ink-raised ${inline ? 'w-full justify-center shadow-none' : ''}`}
             >
-                <span className="grid h-5 w-5 place-items-center rounded-full bg-ink-brand text-[10px] font-black text-[#1c1017]">
+                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-ink-brand text-[10px] font-black text-[#1c1017]">
                     ⇄
                 </span>
-                <span>Accounts</span>
+                <span className={inline ? 'hidden xl:inline' : ''}>Accounts</span>
             </button>
         </div>
     );
@@ -387,6 +428,7 @@ function DemoSwitcher() {
 export default function AppLayout({ children, rightRail = true, bare = false, admin = false, footer = true }) {
     const shellName = rightRail ? 'shell-full' : 'shell-solo';
     const [adminRailOpen, setAdminRailOpen] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
 
     return (
         <ToastProvider>
@@ -397,15 +439,19 @@ export default function AppLayout({ children, rightRail = true, bare = false, ad
                         rightRail ? '' : 'border-r-0'
                     }`}
                 >
-                    <AdminRailToggleContext.Provider value={() => setAdminRailOpen(true)}>
+                    <NavigationToggleContext.Provider value={admin && !bare ? {
+                        open: () => setAdminRailOpen(true),
+                        expanded: adminRailOpen,
+                    } : null}>
+                        {!bare && !admin && <SiteAnnouncement />}
                         {children}
-                    </AdminRailToggleContext.Provider>
+                    </NavigationToggleContext.Provider>
                 </main>
                 {!bare && rightRail && <RightRail />}
-                {!bare && !admin && <BottomNav />}
+                {!bare && !admin && <BottomNav menuOpen={menuOpen} setMenuOpen={setMenuOpen} />}
                 {!bare && admin && <AdminMobileRail open={adminRailOpen} onClose={() => setAdminRailOpen(false)} />}
                 {!bare && !admin && <DemoSwitcher />}
-                {footer && <footer className={`${rightRail ? 'lg:col-span-3' : 'lg:col-span-2'} col-span-1 border-t border-ink-line px-5 py-4 pb-24 text-[12px] text-ink-faint md:pb-4`}>
+                {footer && <footer className={`${rightRail ? 'lg:col-span-2 xl:col-span-3' : 'lg:col-span-2'} col-span-1 border-t border-ink-line px-5 py-4 pb-24 text-[12px] text-ink-faint md:pb-4`}>
                     <nav className="flex flex-wrap gap-x-4 gap-y-1" aria-label="Legal">
                         <Link href={route('legal.terms')} className="hover:text-ink-text">Terms</Link>
                         <Link href={route('legal.privacy')} className="hover:text-ink-text">Privacy</Link>
@@ -420,18 +466,45 @@ export default function AppLayout({ children, rightRail = true, bare = false, ad
 }
 
 /* ---------------------------------------------------------------- top bar */
-export function TopBar({ title, subtitle, back = null, children, tabs = null, actions = null, siteActions = true }) {
-    const [mobileSearch, setMobileSearch] = useState(false);
-    const openAdminRail = useContext(AdminRailToggleContext);
+export function TopBar({ title, subtitle, back = null, backLabel = 'Back', onBack, children, tabs = null, actions = null, siteActions = true, search = true, searchScope = 'gallery', hideOnScroll = false, exitHref = null, exitLabel = 'Back to site' }) {
+    const { props } = usePage();
+    const navigation = useContext(NavigationToggleContext);
+    const [hidden, setHidden] = useState(false);
+
+    useEffect(() => {
+        if (!hideOnScroll) {
+            setHidden(false);
+            return;
+        }
+        let previous = Math.max(0, window.scrollY);
+        const onScroll = () => {
+            const current = Math.max(0, Math.min(window.scrollY, document.documentElement.scrollHeight - window.innerHeight));
+            const difference = current - previous;
+            if (current <= 16) {
+                setHidden(false);
+            } else if (Math.abs(difference) < 8) {
+                return;
+            } else {
+                setHidden(difference > 0);
+            }
+            previous = current;
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
+    }, [hideOnScroll]);
 
     return (
-        <div className="sticky top-0 z-[15] border-b border-ink-line bg-ink-bg/90 backdrop-blur">
+        <div onFocusCapture={() => setHidden(false)}
+            className={`sticky top-0 z-[15] border-b border-ink-line bg-ink-bg/90 backdrop-blur ${hideOnScroll ? 'transition-transform duration-200 motion-reduce:transition-none' : ''} ${hidden ? '-translate-y-full' : ''}`}>
             <div className="flex min-h-[56px] items-center gap-3 px-4 pt-3 md:px-5">
-                <span className="lg:hidden">
-                    <AdminRailButton onClick={openAdminRail} />
-                </span>
+                {navigation && <button type="button" onClick={navigation.open}
+                    aria-label="Open admin navigation"
+                    aria-expanded={navigation.expanded}
+                    className="btn-icon-flat -ml-2 shrink-0 lg:hidden">
+                    <Icon name="following" />
+                </button>}
                 {back && (
-                    <Link href={back} aria-label="Back" className="btn-icon-flat -ml-2 shrink-0">
+                    <Link href={back} onClick={onBack} aria-label={backLabel} title={backLabel} className="btn-icon-flat -ml-2 shrink-0">
                         <Icon name="back" />
                     </Link>
                 )}
@@ -441,32 +514,15 @@ export function TopBar({ title, subtitle, back = null, children, tabs = null, ac
                 </h1>
                 <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2">
                     {actions && <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">{actions}</div>}
-                    {siteActions && <div className="hidden w-[min(42vw,340px)] lg:block">
-                        <SearchBox />
+                    {siteActions && search && <div className="hidden w-[min(36vw,300px)] lg:block">
+                        <SearchBox scope={searchScope} initial={searchScope === 'comics' ? props.searchQuery ?? '' : searchScope === 'knowledge' ? props.filters?.q ?? '' : ''} />
                     </div>}
-                    {siteActions && <button
-                        type="button"
-                        aria-label="Search"
-                        aria-expanded={mobileSearch}
-                        onClick={() => setMobileSearch((v) => !v)}
-                        className="btn-icon-flat lg:hidden"
-                    >
-                        <Icon name="search" />
-                    </button>}
-                    {siteActions && <Link href={route('upload.create')} aria-label="Upload work" className="btn-primary h-10 w-10 p-0 lg:hidden">
-                        <Icon name="plus" />
-                    </Link>}
-                    {!siteActions && <Link href={route('gallery')} className="btn-ghost min-h-11 text-[12px]">
+                    {!siteActions && <Link href={exitHref ?? route('gallery')} className="btn-ghost min-h-11 text-[12px]">
                         <Icon name="back" className="h-4 w-4 shrink-0" />
-                        Back to site
+                        {exitLabel}
                     </Link>}
                 </div>
             </div>
-            {siteActions && mobileSearch && (
-                <div className="pb-3 pt-1 lg:hidden">
-                    <SearchBox autoFocus />
-                </div>
-            )}
             {tabs}
         </div>
     );

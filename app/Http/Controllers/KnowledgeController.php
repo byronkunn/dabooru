@@ -40,9 +40,38 @@ class KnowledgeController extends Controller
         return Inertia::render('Knowledge/Index', [
             'tags' => $tags, 'categories' => Tag::CATEGORIES, 'filters' => $data,
             'articles' => WikiPage::when(! $this->explicit($request), fn ($q) => $q->where('rating', '!=', 'explicit'))
+                ->matchingSearch(trim($data['q'] ?? ''))
                 ->orderBy('title')->paginate(20, ['*'], 'articles_page')->withQueryString(),
             'canContribute' => $request->user() && KnowledgeService::canContribute($request->user()),
         ]);
+    }
+
+    public function manageTags(Request $request)
+    {
+        $data = $request->validate([
+            'q' => ['nullable', 'string', 'max:160'],
+            'category' => ['nullable', Rule::in(Tag::CATEGORIES)],
+        ]);
+        $tags = Tag::whereNull('merged_into_id')
+            ->when($data['q'] ?? null, fn ($query, $term) => $query->where('name', 'like', '%'.$term.'%'))
+            ->when($data['category'] ?? null, fn ($query, $category) => $query->where('category', $category))
+            ->withCount('posts')->orderBy('name')->paginate(30)->withQueryString();
+
+        return Inertia::render('Admin/Tags', ['tags' => $tags, 'categories' => Tag::CATEGORIES, 'filters' => $data]);
+    }
+
+    public function mergeTags(Request $request, Tag $tag)
+    {
+        $data = $request->validate([
+            'destination_id' => ['required', 'integer', 'exists:tags,id'],
+            'base_version' => ['required', 'integer', 'min:0'],
+            'destination_version' => ['required', 'integer', 'min:0'],
+            'reason' => ['required', 'string', 'min:3', 'max:500'],
+        ]);
+        KnowledgeService::mergeTags($request->user(), $tag->id, $data['destination_id'],
+            $data['base_version'], $data['destination_version'], $data['reason']);
+
+        return redirect()->route('admin.tags.index')->with('success', 'Tags merged. Media and followers moved; old names and links redirect.');
     }
 
     public function autocomplete(Request $request)
@@ -57,7 +86,7 @@ class KnowledgeController extends Controller
             ->orderByDesc('posts_count')->limit(8)->get()
             ->map(fn ($tag) => ['id' => $tag->id, 'name' => $tag->name, 'category' => $tag->category,
                 'definition' => Str::limit(strip_tags($tag->wiki ?? ''), 100),
-                'count' => $tag->posts_count, 'url' => route('knowledge.show', ['type' => 'tag', 'id' => $tag->id], false)])]);
+                'count' => $tag->posts_count, 'version' => $tag->version, 'url' => route('knowledge.show', ['type' => 'tag', 'id' => $tag->id], false)])]);
     }
 
     public function show(Request $request, string $type, int $id)

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Report extends Model
 {
-    protected $fillable = ['reporter_id', 'reportable_type', 'reportable_id', 'reason', 'details', 'status', 'handled_by', 'resolved_at', 'message_evidence', 'evidence_media_id'];
+    protected $fillable = ['reporter_id', 'reportable_type', 'reportable_id', 'reason', 'details', 'status', 'handled_by', 'resolved_at', 'message_evidence', 'evidence_media_id', 'message_context'];
 
     public function reporter(): BelongsTo
     {
@@ -17,7 +17,19 @@ class Report extends Model
 
     protected function casts(): array
     {
-        return ['resolved_at' => 'datetime'];
+        return ['resolved_at' => 'datetime', 'message_context' => 'array'];
+    }
+
+    public static function sharedWorkContext(Message $message): ?array
+    {
+        if (! $message->shared_post_id) {
+            return null;
+        }
+
+        return [
+            'post_id' => $message->shared_post_id,
+            'title' => $message->sharedPost?->title ?: 'Shared artwork',
+        ];
     }
 
     public function reportable(): MorphTo

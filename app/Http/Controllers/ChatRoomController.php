@@ -47,6 +47,7 @@ class ChatRoomController extends Controller
             ChatAccess::requireMember($chat, $viewer);
             abort_unless($chat->kind === 'direct' && $chat->request_status === 'pending' && (int) $chat->requested_by !== $viewer->id, 403);
             $chat->update(['request_status' => $data['decision']]);
+            Conversation::bumpMessageRevision($chat->id);
             if ($data['decision'] === 'declined') {
                 $chat->participants()->updateExistingPivot($viewer->id, ['archived' => true]);
             }

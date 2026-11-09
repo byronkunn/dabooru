@@ -2,16 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Resources\PostResource;
-use App\Http\Resources\UserResource;
 use App\Models\Comic;
 use App\Models\Post;
 use App\Models\Tag;
 use App\Models\User;
+use App\Models\WikiPage;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class SearchController extends Controller
 {
@@ -54,7 +51,7 @@ class SearchController extends Controller
             } elseif (str_starts_with($token, '#') && strlen($token) > 1) {
                 $parsed['tags'][] = Tag::canonicalName(trim(substr($token, 1), '"\''));
             } else {
-                $textParts[] = $token;
+                $textParts[] = trim($token, '"\'');
             }
         }
 
@@ -63,16 +60,18 @@ class SearchController extends Controller
         return $parsed;
     }
 
-    public static function workQuery(?User $user, array $parsed, ?string $artist, ?string $type): \Illuminate\Database\Eloquent\Builder
+    public static function workQuery(?User $user, array $parsed, ?string $artist, ?string $type, ?bool $showExplicit = null): \Illuminate\Database\Eloquent\Builder
     {
         $term = $parsed['text'];
         $rating = $parsed['rating'];
-        $showExplicit = (bool) $user?->show_explicit;
+        $showExplicit ??= (bool) $user?->show_explicit;
         $like = '%'.str_replace(['\\', '%'], ['\\\\', '\\%'], $term).'%';
 
         $works = Post::query()
             ->visibleRating($showExplicit)
-            ->visibleTo($user);
+            ->visibleTo($user)
+            // account-level tag mutes hide those works from every search surface
+            ->excludingTags($user ? \App\Support\CollectionLibrary::mutedFor($user) : []);
 
         if ($term !== '') {
             $works->where(function ($q) use ($like, $term) {
@@ -109,124 +108,19 @@ class SearchController extends Controller
         return $works;
     }
 
-    public function index(Request $request): Response
+    public function index(Request $request): RedirectResponse
     {
         $rawTerm = trim((string) $request->query('q'));
-        $parsed = self::parseOperators($rawTerm);
-        $term = $parsed['text'];
-
-        $tab = in_array($request->query('tab'), ['works', 'comics', 'people'], true)
-            ? $request->query('tab')
-            : 'works';
-
         $artistFilter = $request->query('artist');
         $typeFilter = $request->query('type');
-        $artist = is_string($artistFilter) && $artistFilter !== '' ? $artistFilter : $parsed['artist'];
-        $type = in_array($typeFilter, Post::TYPES, true) ? $typeFilter : $parsed['type'];
-        $rating = $parsed['rating'];
-
-        $user = $request->user();
-        $showExplicit = $user ? (bool) $user->show_explicit : false;
-
-        $hasOperators = ! empty($parsed['tags']) || ! empty($parsed['exclude_tags']) || ! empty($artist) || ! empty($type) || ! empty($rating);
-        $searchable = mb_strlen($term) >= self::MIN_LENGTH || $hasOperators;
-        $escape = fn (string $s) => str_replace(['\\', '%'], ['\\\\', '\\%'], $s);
-        $like = '%'.$escape($term).'%';
-
-        $results = [
-            'term' => $rawTerm,
-            'tab' => $tab,
-            'searchable' => $searchable,
-            'parsed' => $parsed,
-            'workFilters' => ['q' => $rawTerm, 'artist' => $artist, 'type' => in_array($type, Post::TYPES, true) ? $type : null],
-            'counts' => ['works' => 0, 'comics' => 0, 'people' => 0],
-            'works' => [],
-            'comics' => [],
-            'people' => [],
-            'artist' => null,
-            'type' => in_array($type, Post::TYPES, true) ? $type : null,
-            'artistOptions' => [],
-        ];
-
-        if (! $searchable) {
-            return Inertia::render('Search/Index', $results + [
-                'minLength' => self::MIN_LENGTH,
-            ]);
+        if (is_string($artistFilter) && $artistFilter !== '') {
+            $rawTerm .= ' by:'.json_encode($artistFilter, JSON_UNESCAPED_UNICODE);
+        }
+        if (in_array($typeFilter, Post::TYPES, true)) {
+            $rawTerm .= ' type:'.$typeFilter;
         }
 
-        // ---- works -------------------------------------------------------
-        $works = self::workQuery($user, $parsed, $artist, $results['type'])
-            ->with(['user', 'media.media', 'chapter.comic']);
-        $works->orderByDesc('likes_count')->orderByDesc('created_at');
-
-        $results['counts']['works'] = (clone $works)->count();
-        $results['works'] = PostResource::collection($works->take(48)->get())->resolve();
-
-        $artistIds = (clone $works)
-            ->reorder()
-            ->select('user_id')
-            ->whereNotNull('user_id')
-            ->distinct()
-            ->limit(8)
-            ->pluck('user_id');
-        $results['artistOptions'] = User::query()
-            ->whereIn('id', $artistIds)
-            ->get(['id', 'username', 'name'])
-            ->map(fn ($u) => ['username' => $u->username, 'name' => $u->name])
-            ->values()
-            ->all();
-
-        // ---- comics ------------------------------------------------------
-        $comics = Comic::query()
-            ->withCount('chapters')
-            ->with(['user', 'coverMedia', 'chapters' => fn ($q) => $q->limit(1)->with(['pages' => fn ($p) => $p->limit(1)->with('media')])])
-            ->when(! $showExplicit, fn ($q) => $q->where('rating', '!=', 'explicit'))
-            ->where(function ($q) use ($like) {
-                $q->where('title', 'like', $like)
-                    ->orWhere('description', 'like', $like)
-                    ->orWhereHas('user', fn ($u) => $u->where('username', 'like', $like)->orWhere('name', 'like', $like));
-            })
-            ->latest('last_chapter_at');
-
-        $results['counts']['comics'] = (clone $comics)->count();
-        $results['comics'] = $comics->take(24)->get()->map(fn (Comic $c) => [
-            'id' => $c->id,
-            'slug' => $c->slug,
-            'title' => $c->title,
-            'description' => $c->description,
-            'rating' => $c->rating,
-            'status' => $c->status,
-            'author' => $c->user->name,
-            'author_username' => $c->user->username,
-            'cover' => $c->cover()?->thumbUrl(),
-            'chapters' => $c->chapters_count,
-            'url' => route('comics.show', $c->slug, false),
-        ])->all();
-
-        // ---- people ------------------------------------------------------
-        $people = User::query()
-            ->verified()
-            ->where(function ($q) use ($like) {
-                $q->where('username', 'like', $like)->orWhere('name', 'like', $like);
-            })
-            ->withCount(['followers', 'posts'])
-            ->orderByDesc('followers_count')
-            ->orderBy('username')
-            ->take(24);
-
-        $results['counts']['people'] = User::query()
-            ->verified()
-            ->where(fn ($q) => $q->where('username', 'like', $like)->orWhere('name', 'like', $like))
-            ->count();
-        $results['people'] = UserResource::collection($people->get())->resolve();
-
-        $results['artist'] = $artist
-            ? User::where('username', $artist)->first()?->only(['username', 'name'])
-            : null;
-
-        return Inertia::render('Search/Index', $results + [
-            'minLength' => self::MIN_LENGTH,
-        ]);
+        return redirect()->route('gallery', ['q' => trim($rawTerm), 'window' => 'all']);
     }
 
     /**
@@ -235,9 +129,27 @@ class SearchController extends Controller
      */
     public function suggest(Request $request)
     {
+        $data = $request->validate(['scope' => ['nullable', 'in:gallery,comics,knowledge']]);
+        $scope = $data['scope'] ?? 'gallery';
         $rawTerm = trim((string) $request->query('q'));
         $parsed = self::parseOperators($rawTerm);
-        $term = $parsed['text'] !== '' ? $parsed['text'] : (! empty($parsed['tags']) ? $parsed['tags'][0] : $rawTerm);
+        $term = $scope === 'gallery'
+            ? ($parsed['text'] !== '' ? $parsed['text'] : (! empty($parsed['tags']) ? $parsed['tags'][0] : $rawTerm))
+            : $rawTerm;
+
+        if ($scope === 'comics') {
+            return response()->json(['comics' => mb_strlen($term) < self::MIN_LENGTH ? [] : Comic::query()
+                ->visibleTo($request->user())
+                ->visibleRating((bool) $request->user()?->show_explicit)->matchingSearch($term)
+                ->orderBy('title')->limit(self::SUGGEST_LIMIT)->get()
+                ->map(fn (Comic $comic) => [
+                    'label' => $comic->title, 'hint' => 'Comic',
+                    'url' => route('comics.show', $comic->slug, false),
+                ])]);
+        }
+        if ($scope === 'knowledge' && mb_strlen($term) < self::MIN_LENGTH) {
+            return response()->json(['tags' => [], 'articles' => []]);
+        }
 
         // When term is empty, return trending tags
         if (mb_strlen($term) < self::MIN_LENGTH) {
@@ -268,7 +180,7 @@ class SearchController extends Controller
         $like = '%'.$escape($term).'%';
         $showExplicit = $request->user() ? (bool) $request->user()->show_explicit : false;
 
-        $people = User::verified()
+        $people = $scope === 'knowledge' ? collect() : User::verified()
             ->where(fn ($q) => $q->where('username', 'like', $like)->orWhere('name', 'like', $like))
             ->take(self::SUGGEST_LIMIT)
             ->get()
@@ -280,7 +192,7 @@ class SearchController extends Controller
                 'url' => route('profile.show', $u->username, false),
             ]);
 
-        $externalArtists = Post::whereNotNull('artist_name')
+        $externalArtists = $scope === 'knowledge' ? collect() : Post::whereNotNull('artist_name')
             ->visibleTo($request->user())->visibleRating($showExplicit)
             ->where('artist_name', 'like', $like)
             ->select('artist_name')
@@ -289,10 +201,10 @@ class SearchController extends Controller
             ->get()
             ->map(fn ($p) => [
                 'label' => $p->artist_name,
-                'hint' => 'External artist',
+                'hint' => 'Artist credit page · not a member profile',
                 'is_external' => true,
                 'type' => 'external_artist',
-                'url' => route('search', ['q' => 'by:"'.$p->artist_name.'"'], false),
+                'url' => route('artists.show', ['name' => $p->artist_name], false),
             ]);
 
         $cleanTag = ltrim($term, '#');
@@ -313,6 +225,18 @@ class SearchController extends Controller
                 'url' => route('knowledge.show', ['type' => 'tag', 'id' => $t->id], false),
             ]);
 
+        if ($scope === 'knowledge') {
+            return response()->json([
+                'tags' => $tags,
+                'articles' => WikiPage::when(! $showExplicit, fn ($q) => $q->where('rating', '!=', 'explicit'))
+                    ->matchingSearch($term)->orderBy('title')->limit(self::SUGGEST_LIMIT)->get()
+                    ->map(fn (WikiPage $article) => [
+                        'label' => $article->title, 'hint' => 'Wiki guide',
+                        'url' => route('knowledge.show', ['type' => 'wiki', 'id' => $article->id], false),
+                    ]),
+            ]);
+        }
+
         $works = Post::with(['media.media', 'user'])
             ->visibleRating($showExplicit)
             ->visibleTo($request->user())
@@ -329,7 +253,7 @@ class SearchController extends Controller
                 'url' => route('posts.show', $p->id, false),
             ]);
 
-        $comics = Comic::where('title', 'like', $like)
+        $comics = Comic::visibleTo($request->user())->where('title', 'like', $like)
             ->when(! $showExplicit, fn ($q) => $q->where('rating', '!=', 'explicit'))
             ->take(self::SUGGEST_LIMIT)
             ->get()
@@ -338,7 +262,7 @@ class SearchController extends Controller
                 'hint' => 'Comic',
                 'badge' => 'Comic',
                 'type' => 'comic',
-                'avatar' => $c->cover()?->thumbUrl(),
+                'avatar' => $c->cover()?->thumbUrl() ?: $c->cover()?->url(),
                 'url' => route('comics.show', $c->slug, false),
             ]);
 

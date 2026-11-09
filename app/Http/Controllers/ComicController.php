@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\MediaResource;
-use App\Models\Block;
 use App\Models\Comic;
 use App\Models\ComicChapter;
 use App\Models\Post;
@@ -16,10 +15,14 @@ class ComicController extends Controller
 {
     public function index(Request $request): Response
     {
+        $data = $request->validate(['q' => ['nullable', 'string', 'max:160']]);
+        $term = trim($data['q'] ?? '');
         $comics = Comic::query()
+            ->visibleTo($request->user())
             ->withCount('chapters')
             ->with(['user', 'coverMedia', 'chapters' => fn ($q) => $q->limit(1)->with(['pages' => fn ($p) => $p->limit(1)->with('media')])])
             ->visibleRating($request->user()?->show_explicit ?? false)
+            ->matchingSearch($term)
             ->latest('last_chapter_at')
             ->take(24)
             ->get()
@@ -27,6 +30,7 @@ class ComicController extends Controller
 
         return Inertia::render('Comics/Index', [
             'comics' => $comics,
+            'searchQuery' => $term,
             'continueReading' => $request->user() ? $this->recentReading($request->user()) : [],
         ]);
     }
@@ -34,6 +38,7 @@ class ComicController extends Controller
     public function show(Request $request, string $slug): Response
     {
         $comic = Comic::with(['user', 'coverMedia', 'chapters.pages.media'])
+            ->visibleTo($request->user())
             ->where('slug', $slug)
             ->firstOrFail();
 
@@ -78,13 +83,14 @@ class ComicController extends Controller
 
     public function read(Request $request, string $slug, int $number): Response
     {
-        $comic = Comic::where('slug', $slug)->firstOrFail();
+        $comic = Comic::visibleTo($request->user())->where('slug', $slug)->firstOrFail();
         $chapter = ComicChapter::published()->visibleAfterModeration()->with('pages.media')
             ->where('comic_id', $comic->id)
             ->where('number', $number)
             ->firstOrFail();
 
         $chapter->increment('views');
+        \App\Support\StudioTracking::reader($request, $chapter, 1);
 
         $viewer = $request->user();
         $progress = $viewer
@@ -147,6 +153,7 @@ class ComicController extends Controller
         }
 
         \Illuminate\Support\Facades\DB::transaction(function () use ($request, $comic, $chapter, $data, $pages) {
+            \App\Support\StudioTracking::reader($request, $chapter, (int) $data['page']);
             $viewer = $request->user();
             ReadingProgress::upsert([[
                 'user_id' => $viewer->id,
@@ -172,8 +179,7 @@ class ComicController extends Controller
             ->when(! $showExplicit, fn ($q) => $q->where('rating', '!=', 'explicit'));
 
         return ReadingProgress::where('user_id', $viewer->id)
-            ->whereHas('comic', fn ($q) => $q->visibleRating($showExplicit)
-                ->whereNotIn('user_id', Block::counterpartIds($viewer->id)))
+            ->whereHas('comic', fn ($q) => $q->visibleRating($showExplicit)->visibleTo($viewer))
             ->whereHas('chapter', fn ($q) => $readableChapters($q)
                 ->whereColumn('comic_chapters.comic_id', 'reading_progress.comic_id')->has('pages'))
             ->with([
@@ -206,7 +212,7 @@ class ComicController extends Controller
             'status' => $c->status,
             'author' => $c->user->name,
             'author_username' => $c->user->username,
-            'cover' => $c->cover()?->thumbUrl(),
+            'cover' => $c->cover()?->thumbUrl() ?: $c->cover()?->url(),
             'chapters' => $c->chapters_count,
             'url' => route('comics.show', $c->slug, false),
         ];

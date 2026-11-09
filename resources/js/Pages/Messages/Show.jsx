@@ -1,6 +1,8 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
-import { Head, Link, router, usePage, usePoll } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
+import axios from 'axios';
+import usePageVisibility from './usePageVisibility';
 import AppLayout from '@/Layouts/AppLayout';
 import { Icon } from '@/Components/Icons';
 import ReportDialog from '@/Components/ReportDialog';
@@ -40,14 +42,14 @@ function Attachment({ media, onOpen }) {
             type="button"
             onClick={() => onOpen(media)}
             className="mt-1 block w-fit max-w-full overflow-hidden rounded-xl"
-            aria-label="Open image"
+            aria-label={media.sticker ? 'Open sticker' : 'Open image'}
         >
             <img
                 src={media.thumb || media.url}
                 alt=""
                 loading="lazy"
-                className="block max-h-[320px] w-auto max-w-full bg-ink-raised object-cover"
-                style={{ maxWidth: '280px' }}
+                className={`block w-auto max-w-full object-contain ${media.sticker ? 'max-h-40' : 'max-h-[320px] bg-ink-raised'}`}
+                style={{ maxWidth: media.sticker ? '160px' : '280px' }}
             />
         </button>
     );
@@ -83,7 +85,7 @@ function MessageBubble({ message, chat, onOpen, onReply, onReport, onAction, mes
         else router.delete(route(`messages.${name}`, message.id), { preserveScroll: true });
     };
     return (
-        <article id={`chat-message-${message.id}`} className={`relative w-fit min-w-0 max-w-[92%] rounded-2xl px-3 py-2 text-sm leading-snug sm:max-w-[82%] ${message.mine
+        <article id={`chat-message-${message.id}`} data-readable-message={message.removed ? undefined : message.id} className={`relative w-fit min-w-0 max-w-[92%] rounded-2xl px-3 py-2 text-sm leading-snug sm:max-w-[82%] ${message.mine
             ? 'ml-auto rounded-br-sm bg-[#4a2e37]' : 'rounded-bl-sm bg-ink-raised'}`}>
             {message.forwarded_from && <p className="mb-1 break-words text-xs text-ink-brand">Forwarded from {message.forwarded_from}</p>}
             {message.reply && <Link href={messageUrl(message.reply.id)} className="mb-1 block min-w-0 rounded border-l-2 border-ink-brand bg-black/15 px-2 py-1 text-xs">
@@ -94,7 +96,7 @@ function MessageBubble({ message, chat, onOpen, onReply, onReport, onAction, mes
             {message.body && <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{message.body.split(/(?<![\p{L}\p{M}\p{N}_.@-])(@[\p{L}\p{M}\p{N}_.-]{3,30})(?![\p{L}\p{M}\p{N}_-])/u).map((piece, index) =>
                 index % 2 ? <strong className="text-ink-brand" key={index}>{piece}</strong> : piece)}</p>}
             <Attachment media={message.media} onOpen={onOpen} />
-            {message.post?.sticker ? <Link href={message.post.pack} className="mt-1 block w-fit">
+            {message.post?.sticker ? <Link href={`${message.post.pack}&return_chat=${chat.id}`} className="mt-1 block w-fit">
                 <img src={message.post.sticker} alt={message.post.title} loading="lazy" className="h-32 max-w-full object-contain" />
                 <span className="text-xs text-ink-brand">View sticker pack</span>
             </Link> : message.post && <Link href={message.post.url} className="mt-1 block break-words rounded-lg border border-ink-line px-3 py-2 text-sm text-ink-brand hover:underline">
@@ -172,12 +174,88 @@ function Thread({ conversation: chat, conversations, filters, quickReplies }) {
     const previousLast = useRef(null);
     const currentLast = chat.messages.at(-1);
     const browsingHistory = Boolean(filters.before || filters.q);
-    const poll = usePoll(4000, { only: ['conversation', 'conversations', 'auth'], preserveScroll: true }, { autoStart: false });
-    const { start, stop } = useRef(poll).current;
+    const visible = usePageVisibility();
+    const updating = visible && !browsingHistory && !settings && !action && !report && !lightbox;
+    const syncToken = useRef(chat.syncToken);
+    syncToken.current = chat.syncToken;
+
     useEffect(() => {
-        if (!browsingHistory && !settings && !action && !report && !lightbox) start();
-        else stop();
-    }, [browsingHistory, settings, action, report, lightbox, start, stop]);
+        if (!updating) return;
+        const controller = new AbortController();
+        let timer;
+        let refreshed = Date.now();
+        const schedule = () => {
+            if (!controller.signal.aborted) timer = window.setTimeout(check, 4000);
+        };
+        const check = async () => {
+            if (document.hidden || controller.signal.aborted) return;
+            try {
+                const { data } = await axios.get(route('messages.sync', chat.id), { signal: controller.signal, timeout: 6000 });
+                if (controller.signal.aborted || document.hidden) return;
+                if (data.token !== syncToken.current || Date.now() - refreshed >= 30000) {
+                    router.reload({
+                        only: ['conversation', 'conversations', 'auth'],
+                        onSuccess: () => { refreshed = Date.now(); },
+                        onFinish: schedule,
+                    });
+                    return;
+                }
+            } catch (error) {
+                if (error.response?.status === 403 || error.response?.status === 404) {
+                    router.visit(route('messages.index'));
+                    return;
+                }
+            }
+            schedule();
+        };
+        schedule();
+        return () => { controller.abort(); window.clearTimeout(timer); };
+    }, [chat.id, updating]);
+
+    const acknowledged = useRef({ id: chat.readPosition, marked: false });
+    const readVersion = useRef(chat.readPosition);
+    readVersion.current = chat.readPosition;
+
+    useEffect(() => {
+        if (!chat.markedUnread) acknowledged.current.marked = false;
+    }, [chat.markedUnread]);
+
+    useEffect(() => {
+        const element = threadRef.current;
+        if (!visible || browsingHistory || settings || action || report || lightbox || !element) return;
+        let pending = 0;
+        let inFlight = false;
+        let stopped = false;
+
+        const acknowledge = async () => {
+            if (stopped || inFlight || document.hidden || !pending) return;
+            const id = pending;
+            pending = 0;
+            const previous = acknowledged.current;
+            if (id <= Math.max(previous.id, readVersion.current) && (!chat.markedUnread || previous.marked)) return;
+            inFlight = true;
+            try {
+                const { data } = await axios.post(route('messages.read', chat.id), { message_id: id });
+                acknowledged.current = { id: Math.max(id, previous.id), marked: true };
+                if (!stopped) router.replaceProp('auth.unread_messages', data.unread);
+            } catch {
+                // A later visibility change or refreshed message can retry.
+            } finally {
+                inFlight = false;
+                acknowledge();
+            }
+        };
+        const observer = new IntersectionObserver((entries) => {
+            for (const entry of entries) {
+                if (entry.isIntersecting && entry.intersectionRect.height > 0) {
+                    pending = Math.max(pending, Number(entry.target.dataset.readableMessage));
+                }
+            }
+            acknowledge();
+        }, { root: element, threshold: [0, 0.01] });
+        element.querySelectorAll('[data-readable-message]').forEach((message) => observer.observe(message));
+        return () => { stopped = true; observer.disconnect(); };
+    }, [chat.id, chat.messages, chat.markedUnread, visible, browsingHistory, settings, action, report, lightbox]);
 
     useEffect(() => {
         const element = threadRef.current;
@@ -269,7 +347,10 @@ function Thread({ conversation: chat, conversations, filters, quickReplies }) {
                             </div>
                         </div>
                     ) : chat.canSend ? (
-                        <Composer conversation={chat} reply={reply} quickReplies={quickReplies} onClearReply={() => setReply(null)} />
+                        <>
+                            {chat.request?.status === 'declined' && <p className="px-3 pb-1 text-xs text-ink-muted">Send a message to reopen this conversation.</p>}
+                            <Composer conversation={chat} reply={reply} quickReplies={quickReplies} onClearReply={() => setReply(null)} />
+                        </>
                     ) : <p className="shrink-0 border-t border-ink-line p-3 text-sm text-ink-muted">
                         {chat.request?.status === 'pending' ? 'Waiting for this message request to be accepted.'
                             : chat.request?.status === 'declined' ? 'This request is closed.'

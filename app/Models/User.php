@@ -52,6 +52,13 @@ class User extends Authenticatable
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::deleting(function (User $user): void {
+            Follow::where('follower_id', $user->id)->get()->each->delete();
+        });
+    }
+
     /* ---------------- relations ---------------- */
 
     public function posts(): HasMany
@@ -72,6 +79,11 @@ class User extends Authenticatable
     public function following(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'follows', 'follower_id', 'following_id');
+    }
+
+    public function followedTags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class);
     }
 
     public function conversations(): BelongsToMany

@@ -1,12 +1,13 @@
+import { ComicsTabs } from '@/Components/DestinationTabs';
 import { Head, Link, router } from '@inertiajs/react';
 import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 import { AdminPagination } from '@/Components/AdminUi';
 
 export default function ChapterInbox({ chapters, nextPage, previousPage }) {
     return (
-        <AppLayout>
-            <Head title="Chapter inbox" />
-            <TopBar title="Chapter inbox" back={route('comics.index')} />
+        <AppLayout rightRail={false}>
+            <Head title="New Chapters" />
+            <TopBar title="New Chapters" back={route('comics.index')} tabs={<ComicsTabs />} />
             <div className="space-y-3 p-3.5 md:p-5">
                 {chapters.length ? <ul className="space-y-2">
                     {chapters.map((chapter) => <li key={chapter.id} className="panel space-y-3">

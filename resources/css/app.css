@@ -179,10 +179,10 @@ img[data-seed] {
    content scanner (the class names are assembled in JS). */
 @media (min-width: 1024px) {
     .shell-full {
-        grid-template-columns: 88px minmax(0, 1fr) 280px;
+        grid-template-columns: 164px minmax(0, 1fr);
     }
     .shell-solo {
-        grid-template-columns: 88px minmax(0, 1fr);
+        grid-template-columns: 164px minmax(0, 1fr);
     }
 }
 @media (min-width: 1280px) {

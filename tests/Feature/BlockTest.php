@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Block;
+use App\Models\Comic;
+use App\Models\ComicChapter;
 use App\Models\Follow;
 use App\Models\Post;
 use App\Models\User;
@@ -40,6 +42,25 @@ class BlockTest extends TestCase
 
         $titles = collect($this->actingAs($me)->get('/')->viewData('page')['props']['posts'])->pluck('title');
         $this->assertNotContains('Their work', $titles);
+    }
+
+    public function test_direct_work_and_comic_links_obey_blocks_in_both_directions(): void
+    {
+        $reader = User::factory()->create();
+        $artist = User::factory()->create();
+        $post = Post::create(['user_id' => $artist->id, 'type' => 'image', 'rating' => 'sfw']);
+        $comic = Comic::create(['user_id' => $artist->id, 'slug' => 'neon', 'title' => 'Neon', 'rating' => 'sfw', 'status' => 'ongoing']);
+        ComicChapter::create(['comic_id' => $comic->id, 'number' => 1, 'rating' => 'sfw', 'published_at' => now()]);
+        $urls = [route('posts.show', $post), route('comics.show', $comic->slug), route('comics.read', [$comic->slug, 1])];
+
+        $this->actingAs($reader);
+        foreach ([[$reader, $artist], [$artist, $reader]] as [$blocker, $blocked]) {
+            $block = Block::create(['blocker_id' => $blocker->id, 'blocked_id' => $blocked->id]);
+            foreach ($urls as $url) {
+                $this->get($url)->assertNotFound();
+            }
+            $block->delete();
+        }
     }
 
     public function test_blocking_ends_following_either_way(): void

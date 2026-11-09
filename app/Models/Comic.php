@@ -64,6 +64,24 @@ class Comic extends Model
         return $showExplicit ? $q : $q->where('rating', '!=', 'explicit');
     }
 
+    public function scopeVisibleTo($query, ?User $viewer)
+    {
+        return $query->when($viewer, fn ($comics) => $comics->whereNotIn('comics.user_id', Block::counterpartIds($viewer->id)));
+    }
+
+    public function scopeMatchingSearch($query, string $term)
+    {
+        if ($term === '') {
+            return $query;
+        }
+        $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $term).'%';
+
+        return $query->where(fn ($query) => $query->where('title', 'like', $like)
+            ->orWhere('description', 'like', $like)
+            ->orWhereHas('user', fn ($user) => $user->where('name', 'like', $like)->orWhere('username', 'like', $like))
+            ->orWhereHas('chapters', fn ($chapter) => $chapter->where('title', 'like', $like)));
+    }
+
     public function follows(): HasMany
     {
         return $this->hasMany(ComicFollow::class);

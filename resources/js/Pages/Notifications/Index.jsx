@@ -1,3 +1,4 @@
+import { InboxTabs } from '@/Components/DestinationTabs';
 import { Head, Link, router } from '@inertiajs/react';
 import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 import { Icon } from '@/Components/Icons';
@@ -21,24 +22,25 @@ export default function NotificationsIndex({ notifications, tab }) {
     const go = (key) => router.get(route('notifications.index'), { tab: key }, { preserveScroll: true, preserveState: true });
 
     return (
-        <AppLayout>
-            <Head title="Notifications" />
+        <AppLayout rightRail={false}>
+            <Head title="Activity" />
             <TopBar
-                title="Notifications"
+                title="Inbox"
                 actions={
                     <button type="button" onClick={() => router.post(route('notifications.read-all'), {}, { preserveScroll: true })} className="btn-ghost h-9 px-3 text-[12.5px]">
                         Mark all read
                     </button>
                 }
-                tabs={
-                    <div className="scrollbar-none flex gap-1.5 overflow-x-auto px-4 pb-3 md:px-5" role="tablist">
+                tabs={<>
+                    <InboxTabs />
+                    <div className="scrollbar-none flex gap-1.5 overflow-x-auto px-4 py-3 md:px-5" role="tablist">
                         {tabs.map(([key, label]) => (
                             <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => go(key)} className="chip">
                                 {label}
                             </button>
                         ))}
                     </div>
-                }
+                </>}
             />
 
             {notifications.length === 0 ? (
@@ -52,7 +54,13 @@ export default function NotificationsIndex({ notifications, tab }) {
                 notifications.map((n) => (
                     <div key={n.id} className={`flex items-center gap-3 border-b border-ink-line px-3.5 py-3.5 md:px-5 ${n.read ? '' : 'bg-ink-brand/5'}`}>
                         <div className="relative h-11 w-11 shrink-0">
-                            <img src={n.actor?.avatar} alt="" className="h-11 w-11 rounded-full object-cover" />
+                            {n.actor ? (
+                                <img src={n.actor.avatar} alt="" className="h-11 w-11 rounded-full object-cover" />
+                            ) : (
+                                <span role="img" aria-label="Community" className="grid h-11 w-11 place-items-center rounded-full bg-ink-raised text-ink-brand">
+                                    <Icon name="bell" className="h-6 w-6" />
+                                </span>
+                            )}
                             <span className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full border border-ink-line bg-ink-bg text-[11px]">
                                 {ICONS[n.type] ?? '•'}
                             </span>
@@ -65,9 +73,9 @@ export default function NotificationsIndex({ notifications, tab }) {
                                 <Link href={route('admin.reports', { report: n.data.report_id })} className="font-bold text-ink-expl hover:underline">Urgent report awaiting review</Link>
                             ) : n.type === 'knowledge' ? (
                                 <Link href={n.data.url} className="text-ink-brand hover:underline">{n.data.message}</Link>
-                            ) : (TEXT[n.type] ?? n.type)}
+                            ) : n.type === 'comment' && n.data?.reply ? 'replied to your comment' : (TEXT[n.type] ?? n.type)}
                             {n.data?.post_id && (
-                                <Link href={route('posts.show', n.data.post_id)} className="ml-1 font-bold hover:underline">
+                                <Link href={`${route('posts.show', n.data.post_id)}${n.type === 'comment' ? '#comments' : ''}`} className="ml-1 font-bold hover:underline">
                                     #{n.data.post_id}
                                 </Link>
                             )}

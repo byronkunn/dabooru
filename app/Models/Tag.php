@@ -14,6 +14,7 @@ class Tag extends Model
     public const CATEGORIES = [
         'artist', 'character', 'series', 'medium', 'style', 'subject', 'anatomy',
         'clothing', 'relationships', 'themes', 'content warnings', 'general',
+        'position', 'appearance', 'setting', 'composition',
     ];
 
     protected $guarded = [];
@@ -24,6 +25,15 @@ class Tag extends Model
     ];
 
     public $timestamps = false;
+
+    protected static function booted(): void
+    {
+        static::creating(function (Tag $tag): void {
+            if ($tag->category === 'general') {
+                $tag->category = \App\Support\TagCategories::forName($tag->name);
+            }
+        });
+    }
 
     protected function casts(): array
     {
@@ -55,7 +65,7 @@ class Tag extends Model
         return $this->belongsToMany(Post::class);
     }
 
-    public static function parse(?string $input, int $limit = 10): array
+    public static function parse(?string $input, int $limit = 30): array
     {
         $names = collect(explode(',', $input ?? ''))
             ->map(fn ($name) => Str::lower(Str::squish($name)))
@@ -95,12 +105,14 @@ class Tag extends Model
     public static function syncFor(Post $post, array $names, bool $audit = true, bool $expand = true): void
     {
         DB::transaction(function () use ($post, $names, $audit, $expand) {
-            $locked = Post::lockForUpdate()->findOrFail($post->id);
+            $locked = Post::withoutGlobalScope('published')->withTrashed()->lockForUpdate()->findOrFail($post->id);
             $names = $expand ? static::expandedNames($names) : $names;
             $before = $locked->tags()->pluck('name')->all();
             $version = $locked->tag_version;
             if ($names !== []) {
-                static::query()->insertOrIgnore(array_map(fn ($name) => ['name' => $name], $names));
+                static::query()->insertOrIgnore(array_map(fn ($name) => [
+                    'name' => $name, 'category' => \App\Support\TagCategories::forName($name),
+                ], $names));
             }
             $locked->tags()->sync(static::whereIn('name', $names)->pluck('id')->all());
             $after = $locked->tags()->pluck('name')->all();

@@ -24,7 +24,7 @@ export default function KnowledgeChanges({ revisions, moderation, reports }) {
     return (
         <Layout>
             <Head title={moderation ? 'Community moderation' : 'Recent community changes'} />
-            <Header title={moderation ? 'Community moderation' : 'Recent changes'} back={moderation ? null : route('knowledge.index')} />
+            <Header title={moderation ? 'Community moderation' : 'Recent changes'} searchScope="knowledge" back={moderation ? null : route('knowledge.index')} />
             <div className="mx-auto max-w-3xl space-y-5 p-4 md:p-6">
                 <p className="text-sm text-ink-muted">Content preferences apply to revision previews. Enable explicit content in settings to review explicit pages. Five independently moderator-approved edits unlock ordinary publishing.</p>
                 <RevisionList revisions={revisions} />

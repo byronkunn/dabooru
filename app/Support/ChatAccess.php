@@ -15,8 +15,7 @@ class ChatAccess
 {
     public static function membership(Conversation $chat, User $viewer): ?Pivot
     {
-        if (! in_array($chat->kind, Conversation::MESSAGING_KINDS, true)
-            || ($chat->request_status === 'draft' && (int) $chat->requested_by !== $viewer->id)) {
+        if (! in_array($chat->kind, Conversation::MESSAGING_KINDS, true)) {
             return null;
         }
 
@@ -68,7 +67,7 @@ class ChatAccess
 
         abort_unless(self::permitsContact($recipient, $sender), 403, 'This account limits new conversations.');
         $chat = $existing ?? Conversation::between($sender->id, $recipient->id);
-        if (! $existing || (int) $chat->requested_by !== $sender->id) {
+        if (! $existing) {
             $chat->update(['request_status' => 'draft', 'requested_by' => $sender->id]);
         }
 
@@ -88,9 +87,12 @@ class ChatAccess
             return false;
         }
         if ($chat->kind === 'direct') {
-            return in_array($chat->request_status, ['accepted', 'draft'], true)
-                && self::canContact($viewer, $other)
-                && ($chat->request_status === 'accepted' || self::permitsContact($other, $viewer));
+            return self::canContact($viewer, $other) && match ($chat->request_status) {
+                'accepted' => true,
+                'draft' => self::permitsContact($other, $viewer),
+                'declined' => (int) $chat->requested_by !== $viewer->id,
+                default => false,
+            };
         }
 
         return $chat->kind === 'saved';
@@ -123,6 +125,7 @@ class ChatAccess
             $message->update(['expires_at' => $message->created_at->copy()->addSeconds($chat->auto_delete_seconds)]);
         }
         $chat->update(['last_message_at' => $message->created_at]);
+        Conversation::bumpMessageRevision($chat->id);
         $chat->participants()->updateExistingPivot($viewer->id, ['typing_until' => null]);
     }
 

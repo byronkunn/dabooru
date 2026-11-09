@@ -141,17 +141,6 @@ function DurationRange({ filters, onApply, disabled }) {
             <div className="relative mx-2 mb-5 h-4 text-[10px] text-ink-faint">
                 {tickLabels.map((label, index) => <span key={index} className="absolute -translate-x-1/2 whitespace-nowrap" style={{ left: `${index / 8 * 100}%` }}>{label}</span>)}
             </div>
-            <div className="grid grid-cols-2 gap-3">
-                {['Minimum seconds', 'Maximum seconds'].map((label, index) => (
-                    <label key={label} className="text-[12px] text-ink-muted">
-                        {label}
-                        <input type="number" min="1" max="86400" step="1" placeholder="Any" value={value[index]}
-                            onChange={(e) => change(index === 0 ? [e.target.value, value[1]] : [value[0], e.target.value])}
-                            onBlur={commit} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } }}
-                            className="field-input mt-1 w-full" />
-                    </label>
-                ))}
-            </div>
             {error && <p role="alert" className="mt-2 text-xs text-ink-expl">{error}</p>}
         </fieldset>
     );
@@ -228,32 +217,6 @@ function TagEditor({ label, hint, tone, values, suggestions, onAdd, onRemove }) 
                 )}
             </div>
         </div>
-    );
-}
-
-/** A small numeric floor, e.g. "at least 10 likes". */
-function Threshold({ label, unit, value, onChange, max = 100 }) {
-    const n = Number(value) || 0;
-    return (
-        <li className="flex items-center gap-2 py-2 pl-3 pr-2">
-            <span className="text-[14px]">{label}</span>
-            <div className="ml-auto flex items-center gap-1.5">
-                <button type="button" onClick={() => onChange(Math.max(0, n - 5))} aria-label={`Decrease ${label}`}
-                    className="grid h-7 w-7 place-items-center rounded-lg border border-ink-line text-ink-muted hover:text-ink-text">−</button>
-                <input
-                    type="range" min={0} max={max} step={5} value={n}
-                    onChange={(e) => onChange(Number(e.target.value))}
-                    aria-label={`${label} minimum`}
-                    aria-valuetext={n ? `at least ${n} ${unit}` : 'no minimum'}
-                    className="range-thumb w-[92px] appearance-none bg-transparent"
-                />
-                <button type="button" onClick={() => onChange(Math.min(max, n + 5))} aria-label={`Increase ${label}`}
-                    className="grid h-7 w-7 place-items-center rounded-lg border border-ink-line text-ink-muted hover:text-ink-text">+</button>
-                <span className={`w-[46px] text-right text-[12px] font-semibold ${n ? 'text-ink-brand' : 'text-ink-faint'}`}>
-                    {n ? `${n}+` : 'any'}
-                </span>
-            </div>
-        </li>
     );
 }
 
@@ -350,15 +313,28 @@ export default function GalleryFilterSheet({
                             />
                         </div>
 
-                        {/* QUALITY */}
                         <div className="mt-4">
-                            <h4 className="pb-1 text-[12.5px] font-bold text-ink-muted">Popularity</h4>
-                            <ul className="divide-y divide-ink-line/70">
-                                <Threshold label="At least this many likes" unit="likes" value={filters.min_likes} onChange={(v) => set({ min_likes: v || '' })} max={50} />
-                                <Threshold label="At least this many views" unit="views" value={filters.min_views} onChange={(v) => set({ min_views: v || '' })} max={150} />
-                            </ul>
+                            <h4 className="pb-1 text-[12.5px] font-bold text-ink-muted">Star rating</h4>
+                            <div role="group" aria-label="Minimum average star rating" className="flex flex-wrap items-center gap-1">
+                                <button type="button" aria-pressed={!filters.min_stars}
+                                    onClick={() => set({ min_stars: '' })}
+                                    className={`min-h-11 rounded-lg px-3 text-sm font-semibold ${!filters.min_stars ? 'bg-ink-raised text-ink-brand' : 'text-ink-muted'}`}>
+                                    Any
+                                </button>
+                                {[1, 2, 3, 4, 5].map((stars) => (
+                                    <button key={stars} type="button" aria-label={`${stars} ${stars === 1 ? 'star' : 'stars'} and up`}
+                                        aria-pressed={Number(filters.min_stars) === stars}
+                                        onClick={() => set({ min_stars: stars })}
+                                        className={`grid h-11 w-11 place-items-center rounded-lg hover:bg-ink-raised focus-visible:outline focus-visible:outline-ink-brand ${Number(filters.min_stars) >= stars ? 'text-ink-brand' : 'text-ink-muted'}`}>
+                                        <Icon name={Number(filters.min_stars) >= stars ? 'starFilled' : 'star'} className="h-7 w-7" />
+                                    </button>
+                                ))}
+                            </div>
+                            <p className="mt-1 px-1.5 text-[13px] font-semibold">
+                                {filters.min_stars ? `${filters.min_stars} stars and up` : 'Any star rating'}
+                            </p>
                             <p className="mt-1 px-1.5 text-[11px] text-ink-faint">
-                                These filters use likes and views. Star ratings are shown on each work.
+                                Uses the average user rating, not likes or views. Any includes unrated works.
                             </p>
                         </div>
 

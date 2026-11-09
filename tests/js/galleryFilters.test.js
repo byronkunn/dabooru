@@ -32,6 +32,17 @@ test('tag changes do not reset time period or sort', () => {
     assert.deepEqual(patchGalleryFilters({ ...filters, window: 'month' }, { tag: 'study' }), { ...filters, window: 'month', tag: 'study' });
 });
 
+test('star threshold is preserved, counted once, and independently removable', () => {
+    const rated = { ...clearedGalleryFilters, sort: 'views', explicit: true, min_stars: 4 };
+    const chips = galleryFilterChips(rated, [], []);
+    assert.deepEqual(chips, [{ key: 'min_stars', label: '4+ stars', patch: { min_stars: '' } }]);
+    assert.equal(patchGalleryFilters(rated, { sort: 'newest' }).min_stars, 4);
+    assert.equal(patchGalleryFilters(rated, { format: 'video' }).min_stars, 4);
+    assert.equal(patchGalleryFilters(rated, chips[0].patch).min_stars, '');
+    assert.equal(patchGalleryFilters(rated, clearedGalleryFilters).min_stars, '');
+    assert.equal(patchGalleryFilters(rated, clearedGalleryFilters).sort, 'views');
+});
+
 test('duration ticks and precise long values round-trip without a 25-minute cap', () => {
     for (const seconds of [0, 15, 30, 60, 120, 300, 600, 1500, 1800, 3600, 5400, 86400]) {
         assert.equal(durationAtPosition(durationPosition(seconds)), seconds || '');

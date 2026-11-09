@@ -33,7 +33,7 @@ class Media extends Model
 
     public function thumbUrl(): string
     {
-        return $this->resolve($this->thumb_path);
+        return $this->resolve($this->thumb_path ?: ($this->kind === 'image' ? $this->path : null));
     }
 
     /**

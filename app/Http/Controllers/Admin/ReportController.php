@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\MessageController;
 use App\Models\Comment;
+use App\Models\Conversation;
 use App\Models\Media;
 use App\Models\Message;
 use App\Models\ModerationAction;
@@ -40,27 +41,51 @@ class ReportController extends Controller
             ->whereColumn('related.reportable_id', 'reports.reportable_id')
             ->where('related.status', 'open');
 
-        $reports = Report::query()
-            ->with(['reporter', 'handler', 'assignee', 'reportable' => fn ($relation) => $relation->withTrashed()])
-            ->addSelect([
-                'related_open' => (clone $related)->selectRaw('COUNT(*)'),
-                'related_urgent' => (clone $related)->whereIn('related.reason', Report::URGENT_REASONS)->selectRaw('COUNT(*)'),
-            ])
+        $matching = Report::query()
             ->when(isset($filters['report']), fn ($q) => $q->whereKey($filters['report']), fn ($q) => $q->where('status', $status))
             ->when(isset($filters['priority']), fn ($q) => $q->whereIn('reason', Report::URGENT_REASONS))
             ->when(($filters['assignment'] ?? null) === 'mine', fn ($q) => $q->where('assigned_to', $request->user()->id))
             ->when(($filters['assignment'] ?? null) === 'unassigned', fn ($q) => $q->whereNull('assigned_to'))
             ->when(isset($filters['target_type'], $filters['target_id']), fn ($q) => $q
                 ->where('reportable_type', 'App\\Models\\'.$filters['target_type'])
-                ->where('reportable_id', $filters['target_id']))
-            ->when($status === 'open', fn ($q) => $q
+                ->where('reportable_id', $filters['target_id']));
+        $rows = (clone $matching)
+            ->with(['reporter', 'handler', 'assignee', 'reportable' => fn ($relation) => $relation->withTrashed()])
+            ->addSelect([
+                'related_open' => (clone $related)->selectRaw('COUNT(*)'),
+                'related_urgent' => (clone $related)->whereIn('related.reason', Report::URGENT_REASONS)->selectRaw('COUNT(*)'),
+            ]);
+        $caseView = ! isset($filters['report']) && ! isset($filters['target_type'], $filters['target_id']);
+
+        if ($caseView) {
+            $cases = (clone $matching)->select('reportable_type', 'reportable_id')
+                ->selectRaw('COUNT(*) AS report_count')
+                ->groupBy('reportable_type', 'reportable_id');
+            if ($status === 'open') {
+                $cases->selectRaw('COALESCE(MIN(CASE WHEN reason IN (?, ?) THEN id END), MIN(id)) AS lead_id', Report::URGENT_REASONS)
+                    ->selectRaw('MAX(CASE WHEN reason IN (?, ?) THEN 1 ELSE 0 END) AS has_urgent', Report::URGENT_REASONS)
+                    ->selectRaw('COALESCE(MIN(CASE WHEN reason IN (?, ?) THEN created_at END), MIN(created_at)) AS case_date', Report::URGENT_REASONS)
+                    ->orderByDesc('has_urgent')->orderBy('case_date')->orderBy('lead_id');
+            } else {
+                $cases->selectRaw('MAX(id) AS lead_id, MAX(resolved_at) AS case_date')
+                    ->orderByDesc('case_date')->orderByDesc('lead_id');
+            }
+
+            $page = $cases->paginate(50)->withQueryString();
+            $reportsById = $rows->whereKey($page->getCollection()->pluck('lead_id')->all())->get()->keyBy('id');
+            $reports = $page->getCollection()->filter(fn (Report $case) => $reportsById->has($case->lead_id))
+                ->map(fn (Report $case) => $this->row($reportsById->get($case->lead_id)) + ['case_count' => (int) $case->report_count]);
+        } else {
+            $page = $rows->when($status === 'open', fn ($q) => $q
                 ->orderByRaw('CASE WHEN reason IN (?, ?) THEN 0 ELSE 1 END', Report::URGENT_REASONS)
                 ->oldest()->orderBy('id'), fn ($q) => $q->latest('resolved_at')->orderByDesc('id'))
-            ->paginate(50)->withQueryString();
+                ->paginate(50)->withQueryString();
+            $reports = $page->getCollection()->map(fn (Report $report) => $this->row($report));
+        }
 
         return Inertia::render('Admin/Reports', [
             'status' => $status,
-            'reports' => collect($reports->items())->map(fn (Report $r) => $this->row($r))->all(),
+            'reports' => $reports->values()->all(),
             'counts' => [
                 'open' => Report::where('status', 'open')->count(),
                 'actioned' => Report::where('status', 'actioned')->count(),
@@ -68,8 +93,8 @@ class ReportController extends Controller
             ],
             'filters' => $filters,
             'urgentCount' => Report::open()->whereIn('reason', Report::URGENT_REASONS)->count(),
-            'previousPage' => $reports->previousPageUrl(),
-            'nextPage' => $reports->hasMorePages() ? $reports->url($reports->currentPage() + 1) : null,
+            'previousPage' => $page->previousPageUrl(),
+            'nextPage' => $page->nextPageUrl(),
         ]);
     }
 
@@ -99,6 +124,7 @@ class ReportController extends Controller
             } else {
                 $target->delete();
                 if ($target instanceof Message) {
+                    DB::afterCommit(fn () => Conversation::bumpMessageRevision($target->conversation_id));
                     MessageAttachments::purgeAfterCommit($target->media_id);
                 }
                 if ($target instanceof Comment) {
@@ -163,11 +189,20 @@ class ReportController extends Controller
     {
         $evidence = $this->reportedMessage($request, $report, 'view_message_evidence');
 
+        $context = $report->message_context;
+        if (! $context && ($message = Message::find($report->reportable_id))) {
+            $context = Report::sharedWorkContext($message);
+        }
+
         Inertia::encryptHistory();
 
         return Inertia::render('Admin/MessageEvidence', [
             'reportId' => $report->id,
             'body' => $evidence->body,
+            'work' => $context ? $context + [
+                'url' => Post::whereKey($context['post_id'])->exists()
+                    ? route('posts.show', $context['post_id'], false) : null,
+            ] : null,
             'attachment' => $evidence->media ? [
                 'url' => route('admin.reports.message.attachment', $report, false),
                 'kind' => $evidence->media->kind,
@@ -204,7 +239,7 @@ class ReportController extends Controller
         $evidenceMedia = $report->evidence_media_id;
         $report->forceFill([
             'status' => $status, 'handled_by' => $actor->id, 'resolved_at' => now(),
-            'message_evidence' => null, 'evidence_media_id' => null,
+            'message_evidence' => null, 'evidence_media_id' => null, 'message_context' => null,
         ])->save();
         MessageAttachments::purgeAfterCommit($evidenceMedia);
         ModerationAction::record($actor, $action, $report->reportable_type, $report->reportable_id, $report->id, $reason);

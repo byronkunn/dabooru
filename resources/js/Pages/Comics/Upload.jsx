@@ -50,7 +50,7 @@ export default function ComicUpload({ comics }) {
     return (
         <AppLayout>
             <Head title="New comic" />
-            <TopBar title="Comics" subtitle="Series and chapters" back={route('comics.index')} />
+            <TopBar title="Comics" searchScope="comics" subtitle="Series and chapters" back={route('comics.index')} />
 
             <div className="mx-auto max-w-[760px] p-3.5 md:p-5">
                 <div className="mb-4 flex gap-2">

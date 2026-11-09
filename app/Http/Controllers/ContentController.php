@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Comment;
+use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Post;
 use App\Models\Tag;
@@ -109,12 +110,13 @@ class ContentController extends Controller
     {
         $this->authorizeOwner($request, $comment->user_id);
 
-        $post = $comment->post;
-        $comment->delete();
-
-        if ($post) {
-            $post->forceFill(['comments_count' => $post->comments()->count()])->save();
-        }
+        DB::transaction(function () use ($comment) {
+            $post = Post::lockForUpdate()->find($comment->post_id);
+            Comment::lockForUpdate()->findOrFail($comment->id)->delete();
+            if ($post) {
+                $post->forceFill(['comments_count' => $post->comments()->count()])->save();
+            }
+        });
 
         return back()->with('success', 'Comment deleted.');
     }
@@ -124,6 +126,7 @@ class ContentController extends Controller
     public function destroyMessage(Request $request, Message $message): RedirectResponse
     {
         DB::transaction(function () use ($request, $message) {
+            Conversation::lockForUpdate()->findOrFail($message->conversation_id);
             $current = Message::lockForUpdate()->findOrFail($message->id);
             $this->authorizeOwner($request, $current->user_id);
             ChatAccess::requireMessage($current, $request->user());
@@ -132,6 +135,7 @@ class ContentController extends Controller
                 'body' => '[deleted]', 'media_id' => null, 'shared_post_id' => null, 'interactive' => null,
                 'forwarded_from' => null, 'reply_to_id' => null, 'spoiler' => false, 'attachment_name' => null, 'sticker_pack_id' => null, 'pinned_at' => null, 'removed_at' => now(),
             ]);
+            Conversation::bumpMessageRevision($current->conversation_id);
             MessageAttachments::purgeAfterCommit($mediaId);
         });
 

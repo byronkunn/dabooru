@@ -45,12 +45,15 @@ class BlockController extends Controller
 
             Block::firstOrCreate(['blocker_id' => $actor->id, 'blocked_id' => $user->id]);
 
-            Follow::where('follower_id', $actor->id)->where('following_id', $user->id)->delete();
-            Follow::where('follower_id', $user->id)->where('following_id', $actor->id)->delete();
+            Follow::where('follower_id', $actor->id)->where('following_id', $user->id)->get()->each->delete();
+            Follow::where('follower_id', $user->id)->where('following_id', $actor->id)->get()->each->delete();
 
             $conversation = Conversation::existingBetween($actor->id, $user->id);
             if ($conversation && ! $conversation->messages()->exists()) {
                 $conversation->delete();
+            } elseif ($conversation) {
+                $conversation->participants()->updateExistingPivot($actor->id, ['typing_until' => null]);
+                $conversation->participants()->updateExistingPivot($user->id, ['typing_until' => null]);
             }
         });
 

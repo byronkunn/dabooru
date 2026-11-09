@@ -19,7 +19,9 @@ class ScheduledMessages
             try {
                 self::deliver($snapshot);
             } catch (HttpExceptionInterface) {
-                DB::table('scheduled_messages')->where('id', $snapshot->id)->where('status', 'pending')->update(['status' => 'failed']);
+                if (DB::table('scheduled_messages')->where('id', $snapshot->id)->where('status', 'pending')->update(['status' => 'failed'])) {
+                    Conversation::bumpMessageRevision($snapshot->conversation_id);
+                }
             }
         }
     }

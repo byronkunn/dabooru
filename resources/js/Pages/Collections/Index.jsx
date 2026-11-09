@@ -1,94 +1,45 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 import AppLayout, { TopBar } from '@/Layouts/AppLayout';
-import { WorkCell } from '@/Components/Work';
+import { LibraryTabs } from '@/Components/DestinationTabs';
+import CollectionView, { CollectionCover } from '@/Components/CollectionView';
+import CollectionDialog from '@/Components/CollectionDialog';
+import { AdminErrors } from '@/Components/AdminUi';
+import useLibraryRefresh from '@/Lib/useLibraryRefresh';
 
-export default function CollectionsIndex({ collections, collection, posts, nextPage, previousPage }) {
+export default function CollectionsIndex({ collections, collection, allSaved, showAll, ...view }) {
+    useLibraryRefresh();
+    const [creating, setCreating] = useState(false);
     const create = useForm({ name: '' });
-    const rename = useForm({ name: collection?.name ?? '' });
-
-    return (
-        <AppLayout rightRail={false}>
-            <Head title={collection?.name ?? 'Saved works'} />
-            <TopBar title={collection?.name ?? 'Saved works'} back={collection ? route('collections.index') : undefined} />
-            <div className="space-y-5 p-3.5 md:p-5">
-                <nav aria-label="Saved collections" className="flex flex-wrap gap-2">
-                    <Link href={route('collections.index')} className={collection ? 'chip' : 'chip is-active'}>All saved</Link>
-                    {collections.map((list) => (
-                        <Link key={list.id} href={route('collections.show', list.id)} className={`chip max-w-full !whitespace-normal break-words ${collection?.id === list.id ? 'is-active' : ''}`}>
-                            {list.name}
-                        </Link>
-                    ))}
-                </nav>
-
-                <form onSubmit={(e) => {
-                    e.preventDefault();
-                    create.post(route('collections.store'), { onSuccess: () => create.reset() });
-                }}>
-                    <label className="field-label" htmlFor="collection-name">New private collection</label>
-                    <div className="flex flex-wrap gap-2">
-                        <input id="collection-name" className="field-input min-w-0 flex-1" value={create.data.name} onChange={(e) => create.setData('name', e.target.value)} maxLength={80} required />
-                        <button className="btn-primary" disabled={create.processing}>Create</button>
-                    </div>
-                    {create.errors.name && <p className="field-hint text-ink-expl">{create.errors.name}</p>}
-                </form>
-
-                {collection && (
-                    <form onSubmit={(e) => {
-                        e.preventDefault();
-                        rename.patch(route('collections.update', collection.id), { preserveScroll: true });
-                    }}>
-                        <label className="field-label" htmlFor="rename-collection">Collection name</label>
-                        <div className="flex flex-wrap gap-2">
-                            <input id="rename-collection" className="field-input min-w-0 flex-1" value={rename.data.name} onChange={(e) => rename.setData('name', e.target.value)} maxLength={80} required />
-                            <button className="btn-ghost" disabled={rename.processing}>Rename</button>
-                            <button type="button" className="btn-ghost" onClick={() => {
-                                if (window.confirm('Delete this collection? Its works will stay in All saved.')) {
-                                    router.delete(route('collections.destroy', collection.id));
-                                }
-                            }}>Delete collection</button>
+    return <AppLayout rightRail={false}>
+        <Head title={collection?.name ?? (showAll ? 'All Saved' : 'Collections')} />
+        {collection || showAll ? <CollectionView collection={collection ?? allSaved} {...view} /> : <>
+            <TopBar title="Library" search={false} tabs={<LibraryTabs />} actions={<button type="button" className="btn-primary" onClick={() => setCreating(true)}>New collection</button>} />
+            <div className="space-y-4 p-3.5 md:p-5">
+                <p className="text-sm text-ink-muted">Personal shelves for saved illustrations, videos, albums, and comics. Collections are private unless you share a link.</p>
+                <nav aria-label="Saved collections" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {[allSaved, ...collections].map((folder) => <Link key={folder.id ?? 'all'} href={folder.id ? route('collections.show', folder.id) : route('collections.index', { view: 'all' })}
+                        className="flex min-w-0 items-center gap-3 rounded-xl border border-ink-line p-3 hover:border-ink-brand">
+                        <CollectionCover collection={folder} className="h-16 w-16" />
+                        <div className="min-w-0">
+                            <h2 className="break-words font-bold">{folder.name}</h2>
+                            <p className="text-sm text-ink-muted">{folder.count} {folder.count === 1 ? 'work' : 'works'}{folder.id && <> · {folder.isPublic ? 'Public' : folder.shared ? 'Shared by link' : 'Private'}</>}</p>
                         </div>
-                        {rename.errors.name && <p className="field-hint text-ink-expl">{rename.errors.name}</p>}
-                    </form>
-                )}
-
-                {collection && (
-                    <section className="panel space-y-2">
-                        <h2 className="font-bold">Collection sharing</h2>
-                        {collection.shareUrl ? <>
-                            <p className="text-sm text-ink-muted">Anyone with the link can browse the works they’re allowed to see.</p>
-                            <input aria-label="Collection share link" className="field-input" readOnly value={collection.shareUrl} onFocus={(event) => event.target.select()} />
-                            <div className="flex flex-wrap gap-2">
-                                <Link href={collection.shareUrl} className="btn-ghost">Open shared view</Link>
-                                <button type="button" className="btn-ghost" onClick={() => router.patch(route('collections.share', collection.id), { shared: false }, { preserveScroll: true })}>Make private</button>
-                            </div>
-                        </> : <>
-                            <p className="text-sm text-ink-muted">This collection is private. Create a link when you’re ready to share it.</p>
-                            <button type="button" className="btn-ghost" onClick={() => router.patch(route('collections.share', collection.id), { shared: true }, { preserveScroll: true })}>Create share link</button>
-                        </>}
-                    </section>
-                )}
-
-                {posts.length === 0 ? (
-                    <p className="py-12 text-center text-sm text-ink-muted">No works here yet. Open a work to save it or add it to a collection.</p>
-                ) : (
-                    <div className="columns-2 gap-3 lg:columns-3">
-                        {posts.map((post) => (
-                            <div key={post.id} className="mb-4 break-inside-avoid">
-                                <WorkCell post={post} />
-                                {collection && (
-                                    <button type="button" className="btn-ghost px-2 text-xs" onClick={() => router.delete(route('collections.posts.remove', [collection.id, post.id]), { preserveScroll: true })}>
-                                        Remove from collection
-                                    </button>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )}
-                <div className="flex gap-2">
-                    {previousPage && <Link className="btn-ghost" href={previousPage}>Previous</Link>}
-                    {nextPage && <Link className="btn-ghost" href={nextPage}>Next</Link>}
-                </div>
+                    </Link>)}
+                </nav>
+                {collections.length === 0 && <p className="text-sm text-ink-muted">Create a collection, then open a work and choose Save to collection.</p>}
             </div>
-        </AppLayout>
-    );
+        </>}
+        {creating && <CollectionDialog title="New collection" onClose={() => { if (!create.processing) setCreating(false); }}>
+            <form className="space-y-3" onSubmit={(event) => {
+                event.preventDefault();
+                create.post(route('collections.store'), { onSuccess: () => { create.reset(); setCreating(false); } });
+            }}>
+                <label className="block field-label">New collection name<input className="field-input mt-1" required maxLength={80} value={create.data.name} onChange={(event) => create.setData('name', event.target.value)} /></label>
+                <p className="text-sm text-ink-muted">Private by default. You can enable link sharing later.</p>
+                <AdminErrors errors={create.errors} />
+                <button className="btn-primary" disabled={create.processing}>Create collection</button>
+            </form>
+        </CollectionDialog>}
+    </AppLayout>;
 }

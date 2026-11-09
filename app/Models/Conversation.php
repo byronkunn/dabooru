@@ -36,6 +36,11 @@ class Conversation extends Model
         return $query->whereIn('conversations.kind', self::MESSAGING_KINDS);
     }
 
+    public static function bumpMessageRevision(int $id): void
+    {
+        static::whereKey($id)->increment('message_revision');
+    }
+
     public function participants(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'conversation_participants')->withPivot(self::PIVOT_FIELDS);

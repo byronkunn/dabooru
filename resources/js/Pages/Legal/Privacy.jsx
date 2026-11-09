@@ -19,6 +19,9 @@ export default function Privacy({ updated }) {
                     <li><strong className="text-ink-text">Activity:</strong> posts you upload, likes, comments, follows, bookmarks, reading position, and messages you send.</li>
                     <li><strong className="text-ink-text">Technical:</strong> IP address and user agent in server logs and the session, for security and abuse prevention.</li>
                     <li><strong className="text-ink-text">Views:</strong> a per-day record that you viewed a post, stored as your user id (or a hash for logged-out visitors) so a view is counted once.</li>
+                    <li><strong className="text-ink-text">Creator analytics:</strong> a referring-page category (such as Gallery, Discover, or tags), follow/unfollow counts, and comic pages reached. Guest comic visits use a hashed session identifier. Creators receive aggregate counts, not viewer identities or external referring URLs.</li>
+                    <li><strong className="text-ink-text">Studio planner:</strong> private ideas, notes, deadlines, and publishing schedules you save. Scheduled drafts become public when published.</li>
+                    <li><strong className="text-ink-text">Collections:</strong> folder names, saved-work membership, and any share links you enable.</li>
                 </UL>
             </section>
 
@@ -50,6 +53,8 @@ export default function Privacy({ updated }) {
                     from people who have not opted in to explicit content, and DMs are only visible to the
                     people in the conversation.
                 </P>
+                <P>Creator Studio analytics and planner entries are private to the account owner. Shared artwork statistics describe uploads; they do not establish ownership of the artwork.</P>
+                <P>Collection folders are private unless you share them by link. Anyone with an active link can see the folder name and works permitted by their content settings. Making a folder private revokes that link; deleting a folder does not delete its original media.</P>
             </section>
 
             <section className="space-y-3">

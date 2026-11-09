@@ -92,7 +92,7 @@ class Post extends Model
 
     public function bookmarkedBy(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'bookmarks');
+        return $this->belongsToMany(User::class, 'bookmarks')->withTimestamps();
     }
 
     /* ---------------- scopes ---------------- */

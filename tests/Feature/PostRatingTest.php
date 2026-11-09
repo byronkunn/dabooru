@@ -77,7 +77,7 @@ class PostRatingTest extends TestCase
         foreach ([[$user->id, $post->user_id], [$post->user_id, $user->id]] as [$blocker, $blocked]) {
             $block = Block::create(['blocker_id' => $blocker, 'blocked_id' => $blocked]);
             $this->actingAs($user)->put(route('posts.stars', $post), ['stars' => 5])->assertForbidden();
-            $this->get(route('posts.show', $post))->assertInertia(fn ($page) => $page->where('starRating.canRate', false));
+            $this->get(route('posts.show', $post))->assertNotFound();
             $block->delete();
         }
         $this->assertDatabaseCount('post_ratings', 0);

@@ -1,10 +1,11 @@
+import { InboxTabs } from '@/Components/DestinationTabs';
 import { Link, router, useForm } from '@inertiajs/react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { useState } from 'react';
 import { Icon } from '@/Components/Icons';
 
 const TABS = [
-    ['all', 'All'], ['direct', 'DMs'], ['requests', 'Requests'], ['unread', 'Unread'], ['archived', 'Archive'],
+    ['all', 'All'], ['requests', 'Requests'], ['unread', 'Unread'], ['archived', 'Archive'],
 ];
 
 export function ChatDialog({ title, onClose, children }) {
@@ -12,7 +13,7 @@ export function ChatDialog({ title, onClose, children }) {
         <Dialog open onClose={onClose} className="relative z-[85]">
             <div className="fixed inset-0 bg-black/70" aria-hidden="true" />
             <div className="fixed inset-0 grid place-items-center overflow-y-auto p-4">
-                <DialogPanel className="w-full max-w-lg rounded-2xl border border-ink-line bg-ink-surface p-5 shadow-2xl">
+                <DialogPanel className="max-h-[calc(100dvh-32px)] w-full max-w-lg overflow-y-auto rounded-2xl border border-ink-line bg-ink-surface p-5 shadow-2xl">
                     <div className="mb-4 flex items-center justify-between gap-3">
                         <DialogTitle className="text-base font-bold">{title}</DialogTitle>
                         <button type="button" className="btn-icon-flat h-9 w-9" onClick={onClose} aria-label="Close">
@@ -36,36 +37,19 @@ export function FormErrors({ errors }) {
 }
 
 function NewChat({ onClose }) {
-    const form = useForm({ kind: 'direct' });
     const [username, setUsername] = useState('');
 
-    const create = (event) => {
-        event.preventDefault();
-        if (form.data.kind === 'direct') {
-            router.get(route('messages.index'), { to: username.replace(/^@/, '').trim() });
-            return;
-        }
-        form.post(route('messages.rooms.store'), { onSuccess: onClose });
-    };
-
     return (
-        <ChatDialog title="New chat" onClose={onClose}>
-            <form onSubmit={create} className="space-y-3">
-                <label className="block text-sm">Chat type
-                    <select className="field-input mt-1" value={form.data.kind} onChange={(event) => form.setData('kind', event.target.value)}>
-                        <option value="direct">Direct message</option>
-                        <option value="saved">Saved Messages</option>
-                    </select>
+        <ChatDialog title="New direct message" onClose={onClose}>
+            <form onSubmit={(event) => {
+                event.preventDefault();
+                const handle = username.trim().replace(/^@/, '');
+                if (handle) router.get(route('messages.index'), { to: handle });
+            }} className="space-y-3">
+                <label className="block text-sm">Username
+                    <input className="field-input mt-1" value={username} onChange={(event) => setUsername(event.target.value)} required />
                 </label>
-                {form.data.kind === 'direct' ? (
-                    <label className="block text-sm">Username
-                        <input className="field-input mt-1" value={username} onChange={(event) => setUsername(event.target.value)} required />
-                    </label>
-                ) : null}
-                <FormErrors errors={form.errors} />
-                <button type="submit" className="btn-primary" disabled={form.processing}>
-                    Open chat
-                </button>
+                <button type="submit" className="btn-primary">Open chat</button>
             </form>
         </ChatDialog>
     );
@@ -107,14 +91,18 @@ export default function Inbox({ conversations, filters = {}, folders = [], priva
     const [newChat, setNewChat] = useState(false);
     const [showPrivacy, setShowPrivacy] = useState(false);
     const [search, setSearch] = useState(filters.q ?? '');
-    const tab = filters.tab ?? 'all';
+    const tab = filters.tab === 'direct' ? 'all' : (filters.tab ?? 'all');
+    const showSavedShortcut = tab === 'all' && !filters.q && !filters.folder;
+    const saved = conversations.find((chat) => chat.kind === 'saved');
+    const listed = showSavedShortcut ? conversations.filter((chat) => chat.kind !== 'saved') : conversations;
     const inboxUrl = (params) => route('messages.index', { q: filters.q || undefined, tab, folder: filters.folder, ...params });
 
     return (
         <section aria-label="Inbox" className="min-h-0 min-w-0 overflow-y-auto border-ink-line lg:border-r">
+            <InboxTabs />
             <div className="space-y-3 border-b border-ink-line p-3">
                 <div className="flex items-center justify-between gap-2">
-                    <Link href={route('messages.index')} className="text-base font-bold">Messages</Link>
+                    <h1 className="text-base font-bold">Inbox</h1>
                     <div className="flex flex-wrap justify-end gap-1">
                         {privacy && <button type="button" className="btn-ghost px-2 text-xs" onClick={() => setShowPrivacy(true)}>Privacy</button>}
                         <button type="button" className="btn-primary px-2 text-xs" onClick={() => setNewChat(true)}>New chat</button>
@@ -146,7 +134,12 @@ export default function Inbox({ conversations, filters = {}, folders = [], priva
                     </label>
                 )}
             </div>
-            {conversations.length ? conversations.map((chat) => (
+            {showSavedShortcut && <Link href={saved ? route('messages.show', saved.id) : route('messages.rooms.store')}
+                method={saved ? 'get' : 'post'} as={saved ? 'a' : 'button'} data={saved ? {} : { kind: 'saved' }}
+                className="flex min-h-12 w-full items-center gap-2 border-b border-ink-line px-3 text-left text-sm font-semibold hover:bg-ink-raised">
+                <Icon name="bookmark" className="h-4 w-4 text-ink-brand" /> Saved Messages
+            </Link>}
+            {listed.length ? listed.map((chat) => (
                 <Link key={chat.id} href={route('messages.show', { conversation: chat.id, q: chat.searchMessages ? filters.q : undefined })}
                     aria-current={chat.id === currentId ? 'page' : undefined}
                     className={`flex min-h-[65px] items-center gap-2.5 border-b border-ink-line px-3 py-2.5 hover:bg-ink-raised ${chat.id === currentId ? 'bg-ink-raised' : ''}`}>

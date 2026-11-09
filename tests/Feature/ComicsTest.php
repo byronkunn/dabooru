@@ -7,8 +7,11 @@ use App\Models\ComicChapter;
 use App\Models\ComicPage;
 use App\Models\Media;
 use App\Models\Post;
+use App\Models\PostMedia;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
+use Tests\Support\FakeImage;
 use Tests\TestCase;
 
 class ComicsTest extends TestCase
@@ -44,6 +47,41 @@ class ComicsTest extends TestCase
                 ->where('comic.chapters.0.number', 2));
     }
 
+    public function test_cover_images_fall_back_to_originals_across_comic_lists(): void
+    {
+        $comic = $this->makeComic();
+        $media = $comic->cover();
+        $this->assertSame($media->url(), $media->thumbUrl());
+
+        foreach ([
+            ['/comics', 'comics.0.cover'],
+            ['/u/mangaka?tab=comics', 'comics.0.cover'],
+        ] as [$url, $key]) {
+            $this->get($url)->assertOk()->assertInertia(fn ($page) => $page->where($key, $media->url()));
+        }
+
+        $this->getJson('/search/suggest?q=Neon')->assertOk()->assertJsonPath('comics.0.avatar', $media->url());
+
+        $media->update(['thumb_path' => 'pages/cover-thumb.jpg']);
+        $this->get('/comics')->assertOk()->assertInertia(fn ($page) => $page->where('comics.0.cover', $media->thumbUrl()));
+    }
+
+    public function test_chapter_post_thumbnail_uses_first_page_when_no_separate_thumbnail_exists(): void
+    {
+        $comic = $this->makeComic();
+        $chapter = $comic->chapters()->firstOrFail();
+        $media = $chapter->pages()->firstOrFail()->media;
+        $post = Post::create(['user_id' => $comic->user_id, 'type' => 'comic', 'rating' => 'sfw', 'comic_chapter_id' => $chapter->id]);
+        PostMedia::create(['post_id' => $post->id, 'media_id' => $media->id, 'position' => 0]);
+        $this->get(route('posts.show', $post))->assertInertia(fn ($page) => $page
+            ->component('Posts/Show')->where('post.media.0.thumb', $media->url()));
+        $media->update(['thumb_path' => 'pages/preview.jpg']);
+        $this->get(route('posts.show', $post))->assertInertia(fn ($page) => $page
+            ->where('post.media.0.thumb', $media->thumbUrl()));
+        $video = Media::create(['user_id' => $comic->user_id, 'disk' => 'public', 'kind' => 'video', 'path' => 'video.mp4']);
+        $this->assertSame('', $video->thumbUrl());
+    }
+
     public function test_reader_returns_all_pages_of_the_chapter(): void
     {
         $this->makeComic();
@@ -77,9 +115,9 @@ class ComicsTest extends TestCase
 
     public function test_creating_a_series_with_cover_stores_media(): void
     {
-        \Illuminate\Support\Facades\Storage::fake('public');
+        Storage::fake('public');
         $artist = User::factory()->create();
-        $cover = \Tests\Support\FakeImage::upload('cover.png', 600, 800);
+        $cover = FakeImage::upload('cover.png', 600, 800);
 
         $this->actingAs($artist)
             ->post(route('comics.series.store'), [

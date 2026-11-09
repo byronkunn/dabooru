@@ -64,6 +64,7 @@ Artisan::command('messages:expire', function () {
                     $message = Message::lockForUpdate()->find($entry->id);
                     if ($message) {
                         $message->delete();
+                        DB::afterCommit(fn () => Conversation::bumpMessageRevision($message->conversation_id));
                         MessageAttachments::purgeAfterCommit($message->media_id);
                     }
                 });
@@ -72,3 +73,11 @@ Artisan::command('messages:expire', function () {
 })->purpose('Remove expired chat messages and their unused attachments');
 
 Schedule::command('messages:expire')->everyMinute()->withoutOverlapping();
+
+Artisan::command('studio:publish-scheduled', function () {
+    $result = \App\Support\ScheduledStudioPlans::deliverDue();
+    $this->info(json_encode($result));
+    return $result['failed'] ? 1 : 0;
+})->purpose('Publish due Creator Studio drafts and report failed releases');
+
+Schedule::command('studio:publish-scheduled')->everyMinute()->withoutOverlapping();

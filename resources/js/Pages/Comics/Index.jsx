@@ -1,15 +1,19 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 import { SeriesCard } from '@/Components/Work';
+import AdSlot from '@/Components/AdSlot';
+import SearchBox from '@/Components/SearchBox';
 
-export default function ComicsIndex({ comics, continueReading = [] }) {
+export default function ComicsIndex({ comics, continueReading = [], searchQuery = '' }) {
     const { auth } = usePage().props;
     return (
         <AppLayout>
             <Head title="Comics" />
-            <TopBar title="Comics" subtitle="Series, newest first" actions={<Link href={route('comics.chapters.create')} className="btn-primary hidden md:inline-flex">New series</Link>} />
+            <TopBar title="Comics" search={false} subtitle="Series, newest first" actions={auth.user && <Link href={route('comics.chapters.create')} className="btn-ghost text-xs sm:text-sm">New series</Link>} />
             <div className="p-3.5 md:p-5">
-                {auth.user && <Link href={route('chapters.inbox')} className="btn-ghost mb-4">Chapter inbox</Link>}
+                <SearchBox scope="comics" initial={searchQuery} className="mx-auto mb-4 max-w-xl" />
+                <AdSlot className="mb-4 xl:hidden" placement="comics-mobile" compact />
+                {auth.user && <Link href={route('chapters.inbox')} className="btn-ghost mb-4">New Chapters</Link>}
                 {continueReading.length > 0 && (
                     <section aria-labelledby="continue-reading" className="mb-6">
                         <h2 id="continue-reading" className="mb-3 text-lg font-bold">Continue Reading</h2>
@@ -28,7 +32,7 @@ export default function ComicsIndex({ comics, continueReading = [] }) {
                 )}
                 {comics.length === 0 ? (
                     <div className="grid place-items-center gap-3 py-24 text-center">
-                        <p className="text-sm text-ink-muted">No series yet.</p>
+                        <p className="text-sm text-ink-muted">{searchQuery ? 'No comics match your search.' : 'No series yet.'}</p>
                         <Link href={route('comics.chapters.create')} className="btn-primary">Start a series</Link>
                     </div>
                 ) : (

@@ -87,6 +87,23 @@ function ReportCard({ report, viewer }) {
     );
 }
 
+function CaseRow({ report, query }) {
+    const href = route('admin.reports', { ...query, target_type: report.reportable_type, target_id: report.reportable_id });
+    return (
+        <li className="panel flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+                <p className="flex flex-wrap gap-2 text-xs text-ink-muted">
+                    {report.urgent && <strong className="rounded bg-ink-expl/15 px-2 py-0.5 text-ink-expl">Urgent</strong>}
+                    <span>{report.case_count} reports in this view</span>
+                    {report.related_open > 0 && <span>· {report.related_open} open overall</span>}
+                </p>
+                <p className="mt-1 break-words text-sm font-semibold">{report.reportable_type} #{report.reportable_id}{report.preview && ` · ${report.preview}`}</p>
+            </div>
+            <Link href={href} className="btn-primary">Review case</Link>
+        </li>
+    );
+}
+
 export default function AdminReports({ reports, status, counts, filters, urgentCount, previousPage, nextPage }) {
     const { auth } = usePage().props;
     const query = { ...filters, status };
@@ -103,7 +120,9 @@ export default function AdminReports({ reports, status, counts, filters, urgentC
                     {[['mine', 'My cases'], ['unassigned', 'Unassigned']].map(([key, label]) => <Link key={key} className={filters.assignment === key ? 'chip is-active' : 'chip'} href={route('admin.reports', { ...query, assignment: filters.assignment === key ? null : key })}>{label}</Link>)}
                 </nav>}
                 {(filters.report || filters.target_id) && <Link href={route('admin.reports')} className="link-brand text-sm">Back to all reports</Link>}
-                {reports.length > 0 ? <ul className="space-y-3">{reports.map((report) => <ReportCard key={`${report.id}-${report.status}`} report={report} viewer={auth.user} />)}</ul>
+                {reports.length > 0 ? <ul className="space-y-3">{reports.map((report) => report.case_count > 1
+                    ? <CaseRow key={report.id} report={report} query={query} />
+                    : <ReportCard key={`${report.id}-${report.status}`} report={report} viewer={auth.user} />)}</ul>
                     : <p className="py-14 text-center text-sm text-ink-muted">No reports match this view.</p>}
                 <AdminPagination {...{ previousPage, nextPage }} />
             </div>

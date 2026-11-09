@@ -81,11 +81,17 @@ class AdminWorkspaceTest extends TestCase
         $this->assertEqualsCanonicalizing([$admin->id, $moderator->id], $alertRecipients);
         $this->actingAs($moderator)->get('/admin')->assertInertia(fn ($page) => $page
             ->where('urgentCount', 1)
+            ->has('reports', 1)
             ->where('reports.0.reason', 'minor')
+            ->where('reports.0.case_count', 2)
             ->where('reports.0.related_open', 2)
             ->where('reports.0.sensitive', true)
-            ->where('reports.0.image', null)
-            ->where('reports.1.sensitive', true));
+            ->where('reports.0.image', null));
+        $this->get(route('admin.reports', ['target_type' => 'Post', 'target_id' => $post->id]))
+            ->assertInertia(fn ($page) => $page->has('reports', 2)
+                ->where('reports.0.reason', 'minor')
+                ->where('reports.1.reason', 'spam')
+                ->where('reports.1.sensitive', true));
     }
 
     public function test_dmca_takedowns_prevent_restoration_until_the_notice_is_resolved(): void

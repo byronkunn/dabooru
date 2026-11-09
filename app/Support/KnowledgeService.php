@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\AppNotification;
 use App\Models\KnowledgeRevision;
+use App\Models\ModerationAction;
 use App\Models\Post;
 use App\Models\Tag;
 use App\Models\User;
@@ -165,6 +166,7 @@ class KnowledgeService
                 throw ValidationException::withMessages(['aliases' => "The name {$name} belongs to another tag. Propose a merge instead."]);
             }
         }
+
         foreach (array_merge($after['related'], $after['implies']) as $id) {
             $other = Tag::findOrFail($id);
             if ($other->id === $tag->id || $other->merged_into_id) {
@@ -196,6 +198,13 @@ class KnowledgeService
         $tag->fill($fields);
         $tag->version++;
         $tag->save();
+        if ($merged) {
+            DB::table('tag_user')->insertOrIgnoreUsing(
+                ['tag_id', 'user_id'],
+                DB::table('tag_user')->where('tag_id', $tag->id)->selectRaw('? as tag_id, user_id', [$merged])
+            );
+            DB::table('tag_user')->where('tag_id', $tag->id)->delete();
+        }
         DB::table('tag_aliases')->where('tag_id', $tag->id)->delete();
         foreach ($after['aliases'] as $name) {
             DB::table('tag_aliases')->insert(['name' => $name, 'tag_id' => $tag->id]);
@@ -208,11 +217,55 @@ class KnowledgeService
         }
     }
 
+    public static function mergeTags(User $admin, int $sourceId, int $destinationId, int $baseVersion, int $destinationVersion, string $reason): void
+    {
+        abort_unless($admin->isAdmin() && self::canContribute($admin), 403);
+        DB::transaction(function () use ($admin, $sourceId, $destinationId, $baseVersion, $destinationVersion, $reason) {
+            $tags = Tag::whereIn('id', [$sourceId, $destinationId])->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+            $source = $tags->get($sourceId);
+            $destination = $tags->get($destinationId);
+            abort_unless($source && $destination, 404);
+            if ($sourceId === $destinationId || $source->merged_into_id || $destination->merged_into_id) {
+                throw ValidationException::withMessages(['destination_id' => 'Choose two different canonical tags.']);
+            }
+            self::checkVersion($source, $baseVersion);
+            self::checkVersion($destination, $destinationVersion);
+            if (DB::table('tag_relations')->where('tag_id', $sourceId)->orWhere('related_tag_id', $sourceId)->exists()) {
+                throw ValidationException::withMessages(['destination_id' => 'This tag has related or implied relationships. Review and remove those relationships before merging; they are not silently discarded.']);
+            }
+            $postIds = DB::table('post_tag')->where('tag_id', $sourceId)->orderBy('post_id')->pluck('post_id');
+            $revisionIds = [];
+            foreach ($postIds as $id) {
+                $post = Post::withoutGlobalScope('published')->withTrashed()->lockForUpdate()->findOrFail($id);
+                $before = self::snapshot($post);
+                $names = array_map(fn ($name) => $name === $source->name ? $destination->name : $name, $before['tags']);
+                $version = $post->tag_version;
+                Tag::syncFor($post, $names, audit: false);
+                $revisionIds[] = KnowledgeRevision::create([
+                    'target_type' => 'post', 'target_id' => $post->id,
+                    'user_id' => $admin->id, 'reviewer_id' => $admin->id,
+                    'before' => $before, 'after' => self::snapshot($post->fresh()),
+                    'base_version' => $version, 'summary' => $reason, 'status' => 'accepted',
+                ])->id;
+            }
+            $after = self::snapshot($source);
+            $after['merged_into_id'] = $destinationId;
+            $revisionIds[] = self::propose($admin, 'tag', $sourceId, $after, $source->version, $reason)->id;
+            ModerationAction::record($admin, 'knowledge_merge', 'tag', $sourceId, null, $reason, [
+                'destination_id' => $destinationId, 'affected_posts' => $postIds->count(),
+                'revision_ids' => $revisionIds,
+            ]);
+        });
+    }
+
     public static function revert(KnowledgeRevision $revision, User $moderator, string $summary): void
     {
         DB::transaction(function () use ($revision, $moderator, $summary) {
             $revision = KnowledgeRevision::lockForUpdate()->findOrFail($revision->id);
             abort_unless($revision->status === 'accepted', 409, 'Only accepted revisions can be reverted.');
+            if (ModerationAction::where('action', 'knowledge_merge')->whereJsonContains('meta->revision_ids', $revision->id)->exists()) {
+                throw ValidationException::withMessages(['revision' => 'This revision belongs to a tag merge. Media, redirects, and followers changed together; a single-revision revert is unsafe. Make a coordinated correction instead.']);
+            }
             $target = self::target($revision->target_type, $revision->target_id, true);
             $current = $revision->target_type === 'bulk'
                 ? ['posts' => collect(array_keys($revision->after['posts']))->mapWithKeys(fn ($id) => [$id => self::snapshot(Post::lockForUpdate()->findOrFail($id))])->all()]

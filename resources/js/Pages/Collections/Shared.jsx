@@ -1,18 +1,12 @@
-import { Head, Link } from '@inertiajs/react';
-import AppLayout, { TopBar } from '@/Layouts/AppLayout';
-import { Masonry } from '@/Components/Work';
-import { AdminPagination } from '@/Components/AdminUi';
+import { Head } from '@inertiajs/react';
+import AppLayout from '@/Layouts/AppLayout';
+import CollectionView from '@/Components/CollectionView';
+import useLibraryRefresh from '@/Lib/useLibraryRefresh';
 
-export default function Shared({ name, owner, posts, nextPage, previousPage }) {
-    return (
-        <AppLayout>
-            <Head title={name} />
-            <TopBar title={name} />
-            <div className="space-y-4 p-3.5 md:p-5">
-                <p className="text-sm text-ink-muted">A collection shared by <Link href={route('profile.show', owner)} className="link-brand">@{owner}</Link></p>
-                {posts.length > 0 ? <Masonry posts={posts} /> : <p className="py-12 text-center text-sm text-ink-muted">No visible works in this collection.</p>}
-                <AdminPagination {...{ previousPage, nextPage }} />
-            </div>
-        </AppLayout>
-    );
+export default function Shared({ name, ...view }) {
+    useLibraryRefresh();
+    return <AppLayout rightRail={false}>
+        <Head title={name} />
+        <CollectionView {...view} readOnly />
+    </AppLayout>;
 }

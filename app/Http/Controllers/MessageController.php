@@ -14,6 +14,8 @@ use App\Models\User;
 use App\Support\AgeGate;
 use App\Support\ChatAccess;
 use App\Support\MessageAttachments;
+use Illuminate\Database\Eloquent\Relations\Pivot;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -90,6 +92,7 @@ class MessageController extends Controller
         $search = $filters['q'] ?? null;
         $chat = $conversation;
         $other = $chat->kind === 'direct' ? $chat->participants()->where('users.id', '!=', $viewer->id)->first() : null;
+        $state = $this->threadState($chat, $viewer, $member, $other);
         $readable = ChatAccess::readable($chat, $viewer);
         $pinned = (clone $readable)->whereNull('removed_at')->whereNotNull('pinned_at')
             ->latest('pinned_at')->first();
@@ -104,26 +107,13 @@ class MessageController extends Controller
         $replies = (clone $readable)->whereIn('messages.id', $messages->pluck('reply_to_id')->filter()->unique())
             ->with('user')->get()->keyBy('id');
 
-        if (! $before && $search === null) {
-            $lastRead = $messages->last()?->id ?? 0;
-            DB::table('conversation_participants')->where('conversation_id', $chat->id)->where('user_id', $viewer->id)
-                ->where(fn ($query) => $query->whereNull('last_read_message_id')->orWhere('last_read_message_id', '<', $lastRead))
-                ->update(['last_read_message_id' => $lastRead, 'last_read_at' => now(), 'updated_at' => now()]);
-            if ($member->marked_unread) {
-                $chat->participants()->updateExistingPivot($viewer->id, ['marked_unread' => false]);
-            }
-        }
-
         $reactions = DB::table('message_reactions')->whereIn('message_id', $ids)
             ->selectRaw('message_id, emoji, count(*) as total, max(case when user_id = ? then 1 else 0 end) as mine', [$viewer->id])
             ->groupBy('message_id', 'emoji')->get()->groupBy('message_id');
         $choices = DB::table('message_choices')->whereIn('message_id', $messages->filter(fn ($message) => $message->interactive)->modelKeys())
             ->selectRaw('message_id, option_index, count(*) as total, max(case when user_id = ? then 1 else 0 end) as mine', [$viewer->id])
             ->groupBy('message_id', 'option_index')->get()->groupBy('message_id');
-        $receipts = $other && Setting::enabled($viewer->id, 'chat_read_receipts', false)
-            && Setting::enabled($other->id, 'chat_read_receipts', false) ? (int) $other->pivot->last_read_message_id : null;
         $canForwardOthers = ! $other || Setting::enabled($other->id, 'chat_allow_forwarding');
-        $canSend = ChatAccess::canPost($chat, $viewer, $other);
 
         Inertia::encryptHistory();
 
@@ -133,17 +123,19 @@ class MessageController extends Controller
                 'title' => $chat->title ?? $other?->name ?? 'Deleted account',
                 'kind' => $chat->kind,
                 'with' => $this->person($other),
-                'canSend' => $canSend,
+                'canSend' => $state['canSend'],
+                'readPosition' => (int) $member->last_read_message_id,
+                'markedUnread' => (bool) $member->marked_unread,
+                'syncToken' => $this->syncToken($state),
                 'preferences' => $member->only(['pinned', 'archived', 'muted', 'folder']),
                 'request' => $chat->kind === 'direct' && $chat->request_status !== 'accepted' ? [
                     'status' => $chat->request_status,
                     'mine' => (int) $chat->requested_by === $viewer->id,
-                    'canAccept' => ChatAccess::canContact($viewer, $other),
-                    'textOnly' => $chat->request_status === 'draft' && $other && ! ChatAccess::follows($other, $viewer),
+                    'canAccept' => $state['canAccept'],
+                    'textOnly' => $chat->request_status === 'draft',
                 ] : null,
-                'typing' => $chat->request_status === 'accepted' ? $chat->participants()->where('users.id', '!=', $viewer->id)
-                    ->wherePivot('typing_until', '>', now())->limit(3)->pluck('users.name') : [],
-                'readThrough' => $receipts,
+                'typing' => $state['typing'],
+                'readThrough' => $state['readThrough'],
                 'pinned' => $pinned ? ['id' => $pinned->id, 'label' => $this->preview($pinned)] : null,
                 'messages' => $messages->map(fn (Message $message) => [
                     'id' => $message->id,
@@ -179,17 +171,57 @@ class MessageController extends Controller
         ]);
     }
 
+    public function sync(Request $request, Conversation $conversation): JsonResponse
+    {
+        $viewer = $request->user();
+        $member = ChatAccess::requireMember($conversation, $viewer);
+        $other = $conversation->kind === 'direct' ? $conversation->participants()->whereKeyNot($viewer->id)->first() : null;
+
+        return response()->json([
+            'token' => $this->syncToken($this->threadState($conversation, $viewer, $member, $other)),
+        ])->header('Cache-Control', 'private, no-store');
+    }
+
+    private function threadState(Conversation $chat, User $viewer, Pivot $member, ?User $other): array
+    {
+        $presence = $chat->request_status === 'accepted' && ChatAccess::canContact($viewer, $other);
+
+        return [
+            'revision' => (int) $chat->message_revision,
+            'inboxRevision' => Conversation::forMessaging()
+                ->join('conversation_participants', 'conversation_participants.conversation_id', '=', 'conversations.id')
+                ->where('conversation_participants.user_id', $viewer->id)->sum('conversations.message_revision'),
+            'status' => $chat->request_status,
+            'canSend' => ChatAccess::canPost($chat, $viewer, $other),
+            'canAccept' => $chat->request_status === 'pending' && ChatAccess::canContact($viewer, $other),
+            'typing' => $presence && $other->pivot->typing_until > now()->toDateTimeString() ? [$other->name] : [],
+            'readThrough' => $presence && Setting::enabled($viewer->id, 'chat_read_receipts', false)
+                && Setting::enabled($other->id, 'chat_read_receipts', false) ? (int) $other->pivot->last_read_message_id : null,
+            'readPosition' => (int) $member->last_read_message_id,
+            'markedUnread' => (bool) $member->marked_unread,
+            'preferences' => $member->only(['pinned', 'archived', 'muted', 'folder']),
+            'expires' => $chat->messages()->where('expires_at', '<=', now())->reorder()->count(),
+            'timer' => (int) $chat->auto_delete_seconds,
+        ];
+    }
+
+    private function syncToken(array $state): string
+    {
+        return hash('sha256', json_encode($state, JSON_THROW_ON_ERROR));
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
             'conversation_id' => ['required_without:to', 'nullable', 'prohibits:to', 'integer', 'exists:conversations,id'],
             'to' => ['required_without:conversation_id', 'nullable', 'string', 'exists:users,username'],
-            'body' => ['nullable', 'string', 'max:4000', 'required_without_all:file,shared_post_id,forward_id,interactive,sticker_post_id'],
+            'body' => ['nullable', 'string', 'max:4000', 'required_without_all:file,shared_post_id,forward_id,interactive,sticker_post_id,sticker_upload_id'],
             'file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,gif,mp4,webm,mp3,m4a,ogg,wav,opus,pdf,zip', 'max:40960'],
             'reply_to_id' => ['nullable', 'integer'],
             'shared_post_id' => ['nullable', 'integer', 'prohibits:forward_id'],
-            'sticker_pack_id' => ['nullable', 'integer', 'required_with:sticker_post_id', 'prohibits:shared_post_id,forward_id'],
-            'sticker_post_id' => ['nullable', 'integer', 'required_with:sticker_pack_id'],
+            'sticker_pack_id' => ['nullable', 'integer', 'required_with:sticker_post_id,sticker_upload_id', 'prohibits:shared_post_id,forward_id,file,interactive'],
+            'sticker_post_id' => ['nullable', 'integer', 'prohibits:sticker_upload_id'],
+            'sticker_upload_id' => ['nullable', 'integer'],
             'forward_id' => ['nullable', 'integer', 'prohibits:file,interactive,shared_post_id'],
             'silent' => ['sometimes', 'boolean'],
             'spoiler' => ['sometimes', 'boolean'],
@@ -199,7 +231,7 @@ class MessageController extends Controller
             'interactive.title' => ['required_with:interactive', 'string', 'max:140'],
             'interactive.options' => ['required_with:interactive', 'array', 'list', 'min:2', 'max:10'],
             'interactive.options.*' => ['required', 'string', 'max:100', 'distinct'],
-            'send_at' => ['nullable', 'date', 'after:now', 'before:+1 year', 'prohibits:file,forward_id,shared_post_id,reply_to_id,interactive,sticker_post_id'],
+            'send_at' => ['nullable', 'date', 'after:now', 'before:+1 year', 'prohibits:file,forward_id,shared_post_id,reply_to_id,interactive,sticker_post_id,sticker_upload_id'],
         ]);
         $viewer = $request->user();
         $thread = isset($data['conversation_id']) ? Conversation::findOrFail($data['conversation_id']) : null;
@@ -225,19 +257,19 @@ class MessageController extends Controller
                 abort_unless(ChatAccess::canPost($chat, $viewer, $other), 403, 'Sending is unavailable for this conversation.');
 
                 if ($chat->request_status === 'draft') {
-                    $following = ChatAccess::follows($other, $viewer);
-                    if (! $following && ($request->hasFile('file')
-                        || isset($data['forward_id']) || isset($data['shared_post_id']) || isset($data['interactive']) || isset($data['sticker_post_id'])
-                        || isset($data['send_at']) || ($data['spoiler'] ?? false) || ($data['body'] ?? '') === '')) {
+                    if ($request->hasFile('file')
+                        || isset($data['forward_id']) || isset($data['shared_post_id']) || isset($data['interactive']) || isset($data['sticker_post_id']) || isset($data['sticker_upload_id'])
+                        || isset($data['reply_to_id']) || isset($data['send_at']) || ($data['spoiler'] ?? false)
+                        || ($data['silent'] ?? false) || trim($data['body'] ?? '') === '') {
                         throw ValidationException::withMessages(['body' => 'A new message request must be text only.']);
                     }
-                    if (isset($data['send_at'])) {
-                        throw ValidationException::withMessages(['send_at' => 'Send a message before scheduling a new conversation.']);
-                    }
-                    $chat->update(['request_status' => $following ? 'accepted' : 'pending']);
+                    $chat->update(['request_status' => 'pending', 'requested_by' => $viewer->id]);
                 }
 
                 if (isset($data['send_at'])) {
+                    if ($chat->request_status === 'declined') {
+                        throw ValidationException::withMessages(['send_at' => 'Send a message to reopen this chat before scheduling.']);
+                    }
                     if ($data['spoiler'] ?? false) {
                         throw ValidationException::withMessages(['send_at' => 'Scheduled messages support plain text.']);
                     }
@@ -250,6 +282,7 @@ class MessageController extends Controller
                         'body' => $data['body'], 'silent' => $data['silent'] ?? false,
                         'send_at' => Carbon::parse($data['send_at'])->utc(),
                     ]);
+                    Conversation::bumpMessageRevision($chat->id);
 
                     return $chat;
                 }
@@ -263,11 +296,17 @@ class MessageController extends Controller
                 $spoiler = $data['spoiler'] ?? false;
                 $attachmentName = null;
                 $packId = null;
-                if (isset($data['sticker_pack_id'], $data['sticker_post_id'])) {
-                    $pack = StickerPack::findOrFail($data['sticker_pack_id']);
-                    $postId = (int) $data['sticker_post_id'];
-                    abort_unless(in_array($postId, array_map('intval', $pack->post_ids), true)
-                        && StickerPack::eligible($viewer)->where('posts.user_id', $pack->user_id)->whereKey($postId)->exists(), 404);
+                if (isset($data['sticker_pack_id'])) {
+                    $pack = StickerPack::availableTo($viewer)->lockForUpdate()->findOrFail($data['sticker_pack_id']);
+                    if (isset($data['sticker_upload_id'])) {
+                        $sticker = $pack->stickers()->findOrFail($data['sticker_upload_id']);
+                        $forwardedMedia = Media::lockForUpdate()->findOrFail($sticker->media_id);
+                        $attachmentName = $sticker->title;
+                    } else {
+                        $postId = (int) ($data['sticker_post_id'] ?? 0);
+                        abort_unless(in_array($postId, array_map('intval', $pack->post_ids), true)
+                            && StickerPack::eligible($viewer)->where('posts.user_id', $pack->user_id)->whereKey($postId)->exists(), 404);
+                    }
                     $packId = $pack->id;
                 }
 
@@ -303,6 +342,10 @@ class MessageController extends Controller
                     'silent' => $data['silent'] ?? false, 'interactive' => $data['interactive'] ?? null,
                     'spoiler' => $spoiler, 'attachment_name' => $attachmentName, 'sticker_pack_id' => $packId,
                 ]);
+                if ($chat->request_status === 'declined') {
+                    $chat->update(['request_status' => 'accepted']);
+                    $chat->participants()->updateExistingPivot($viewer->id, ['archived' => false]);
+                }
                 ChatAccess::messageSent($chat, $viewer, $message);
 
                 return $chat;
@@ -337,7 +380,7 @@ class MessageController extends Controller
         if ($media->kind === 'audio' && in_array($mime, ['video/mp4', 'video/webm'], true)) {
             $mime = str_replace('video/', 'audio/', $mime);
         }
-        if (! in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm',
+        if (! in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'video/mp4', 'video/webm',
             'audio/webm', 'audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/ogg', 'audio/wav', 'audio/x-wav', 'application/ogg'], true)) {
             $mime = 'application/octet-stream';
         }
@@ -364,6 +407,10 @@ class MessageController extends Controller
         $media['url'] = route('messages.attachment', [$message, 'original'], false);
         $media['name'] = $message->attachment_name;
         $media['thumb'] = $message->media->thumb_path ? route('messages.attachment', [$message, 'thumb'], false) : null;
+        if ($message->sticker_pack_id) {
+            $media['thumb'] = null;
+            $media['sticker'] = true;
+        }
 
         return $media;
     }
@@ -443,6 +490,7 @@ class MessageController extends Controller
         }
 
         return $message?->body ?? $message?->interactive['title'] ?? match (true) {
+            (bool) $message?->sticker_pack_id => 'Sent a sticker',
             (bool) $message?->media_id => 'Sent an attachment',
             (bool) $message?->shared_post_id => 'Shared an Inkwell work',
             default => '',

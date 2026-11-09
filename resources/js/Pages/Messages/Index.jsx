@@ -1,10 +1,18 @@
 import { Head, usePoll } from '@inertiajs/react';
+import { useEffect, useRef } from 'react';
+import usePageVisibility from './usePageVisibility';
 import AppLayout from '@/Layouts/AppLayout';
 import { Icon } from '@/Components/Icons';
 import Inbox from './Inbox';
 
 export default function MessagesIndex(props) {
-    usePoll(6000, { only: ['conversations', 'auth', 'hasMore', 'requestCount'], preserveScroll: true });
+    const visible = usePageVisibility();
+    const poll = usePoll(6000, { only: ['conversations', 'auth', 'hasMore', 'requestCount'], preserveScroll: true }, { autoStart: false });
+    const { start, stop } = useRef(poll).current;
+    useEffect(() => {
+        if (visible) start();
+        else stop();
+    }, [visible, start, stop]);
 
     return (
         <AppLayout rightRail={false} footer={false}>

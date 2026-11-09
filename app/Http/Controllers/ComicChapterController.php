@@ -83,7 +83,7 @@ class ComicChapterController extends Controller
             'number' => ['required', 'integer', 'min:1', 'max:100000'],
             'title' => ['nullable', 'string', 'max:160'],
             'rating' => ['required', 'in:sfw,suggestive,explicit'],
-            'tags' => ['nullable', 'string', 'max:500'],
+            'tags' => ['nullable', 'string', 'max:2050'],
             'pages' => ['required', 'array', 'min:1', 'max:60'],
             'pages.*' => ['image', 'mimes:jpg,jpeg,png,webp,avif', 'max:15360'],
             'publish' => ['boolean'],

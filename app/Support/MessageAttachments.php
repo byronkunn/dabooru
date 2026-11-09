@@ -160,6 +160,7 @@ class MessageAttachments
     private static function inUse(Media $media): bool
     {
         return Message::where('media_id', $media->id)->exists()
+            || DB::table('stickers')->where('media_id', $media->id)->exists()
             || DB::table('reports')->where('evidence_media_id', $media->id)->exists()
             || self::usedOutsideMessaging($media);
     }

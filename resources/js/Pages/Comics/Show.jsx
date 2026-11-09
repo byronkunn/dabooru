@@ -9,6 +9,7 @@ export default function ComicShow({ comic }) {
         <AppLayout>
             <Head title={comic.title} />
             <TopBar
+                searchScope="comics"
                 title={comic.title}
                 subtitle={`${comic.status} · ${comic.chapters.length} chapter${comic.chapters.length === 1 ? '' : 's'} · ${comic.rating_label}`}
                 back={route('comics.index')}

@@ -1,4 +1,4 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import AdminLayout, { AdminTopBar } from '@/Layouts/AdminLayout';
 import { AdminErrors, AdminPagination } from '@/Components/AdminUi';
 
@@ -21,7 +21,7 @@ function ShelfForm({ shelf }) {
                 <textarea className="field-input mt-1" required rows={4} maxLength={4000} placeholder={'/p/42\n/comics/series-name\n/u/artist'} value={form.data.entryText} onChange={(event) => form.setData('entryText', event.target.value)} />
                 <span className="field-hint">Up to 12 links, one per line, in display order.</span>
             </label>
-            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.data.published} onChange={(event) => form.setData('published', event.target.checked)} /> Show on Discover</label>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.data.published} onChange={(event) => form.setData('published', event.target.checked)} /> Published status (archived; no public page)</label>
             <AdminErrors errors={form.errors} />
             <button className="btn-primary" disabled={form.processing}>Save shelf</button>
         </form>
@@ -32,7 +32,7 @@ export default function AdminShelves({ shelves, nextPage, previousPage }) {
     return (
         <AdminLayout>
             <Head title="Curated shelves" />
-            <AdminTopBar title="Curated shelves" actions={<Link href={route('shelves.index')} className="btn-ghost">View Discover</Link>} />
+            <AdminTopBar title="Curated shelves" />
             <div className="space-y-3 p-3.5 md:p-5">
                 <details className="panel"><summary className="cursor-pointer font-bold">Create shelf</summary><div className="mt-3"><ShelfForm /></div></details>
                 {shelves.map((shelf) => <details className="panel" key={shelf.id}>

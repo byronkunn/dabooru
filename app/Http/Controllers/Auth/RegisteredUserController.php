@@ -56,6 +56,7 @@ class RegisteredUserController extends Controller
         Auth::login($user);
         \App\Support\AgeGate::confirm();
 
-        return redirect(route('gallery', absolute: false));
+        // a brand new account has no signals, so offer the short setup first
+        return redirect(route('setup.show', absolute: false));
     }
 }

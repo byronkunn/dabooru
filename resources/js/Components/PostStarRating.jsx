@@ -27,9 +27,9 @@ export default function PostStarRating({ postId, rating }) {
     };
 
     return (
-        <section className="mt-4 rounded-xl border border-ink-line bg-ink-surface p-3" aria-label="Post star rating">
+        <section className="mt-3 rounded-xl border border-ink-line bg-ink-surface p-2.5 md:p-3" aria-label="Post star rating">
             <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-sm font-bold">Rate this work</h2>
+                <h2 className="text-[13px] font-bold md:text-sm">Rate this work</h2>
                 <p className="text-xs text-ink-muted">
                     {rating.count ? `${rating.average.toFixed(1)} / 5 · ${rating.count} rating${rating.count === 1 ? '' : 's'}` : 'No ratings yet'}
                 </p>
@@ -45,9 +45,9 @@ export default function PostStarRating({ postId, rating }) {
                             onMouseEnter={() => { if (rating.canRate) setPreview(stars); }}
                             onFocus={() => setPreview(stars)}
                             onBlur={() => setPreview(null)}
-                            className={`grid h-11 w-11 place-items-center rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink-brand disabled:cursor-default ${stars <= selected ? 'text-ink-brand' : 'text-ink-faint'}`}
+                            className={`grid h-9 w-9 place-items-center rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink-brand disabled:cursor-default md:h-11 md:w-11 ${stars <= selected ? 'text-ink-brand' : 'text-ink-faint'}`}
                         >
-                            <Icon name={stars <= selected ? 'starFilled' : 'star'} className="h-7 w-7" />
+                            <Icon name={stars <= selected ? 'starFilled' : 'star'} className="h-6 w-6 md:h-7 md:w-7" />
                         </button>
                     ))}
                 </div>

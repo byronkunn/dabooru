@@ -28,7 +28,7 @@ class MessagingTest extends TestCase
         $this->assertDatabaseCount('conversations', 1);
     }
 
-    public function test_text_message_is_visible_to_the_recipient_and_opening_the_thread_clears_unread(): void
+    public function test_only_acknowledging_a_visible_message_clears_unread(): void
     {
         $sender = User::factory()->create();
         $recipient = User::factory()->create();
@@ -47,8 +47,10 @@ class MessagingTest extends TestCase
         $this->get(route('messages.show', $thread))->assertInertia(fn ($page) => $page
             ->component('Messages/Show')
             ->where('conversation.messages.0.body', 'Synthetic QA message')
-            ->where('conversation.messages.0.mine', false));
-
+            ->where('conversation.messages.0.mine', false)
+            ->where('auth.unread_messages', 1));
+        $this->postJson(route('messages.read', $thread), ['message_id' => Message::sole()->id])
+            ->assertOk()->assertJsonPath('unread', 0);
         $this->get(route('messages.index'))->assertInertia(fn ($page) => $page->where('auth.unread_messages', 0));
     }
 
@@ -153,15 +155,16 @@ class MessagingTest extends TestCase
         $alice = User::factory()->create();
         $bob = User::factory()->create();
         $thread = Conversation::between($alice->id, $bob->id);
-        $thread->messages()->create(['user_id' => $bob->id, 'body' => 'First']);
+        $first = $thread->messages()->create(['user_id' => $bob->id, 'body' => 'First']);
 
-        $this->actingAs($alice)->get(route('messages.show', $thread))->assertInertia(fn ($page) => $page
-            ->where('auth.unread_messages', 0));
+        $this->actingAs($alice)->postJson(route('messages.read', $thread), ['message_id' => $first->id])
+            ->assertOk()->assertJsonPath('unread', 0);
         $this->actingAs($bob)->post(route('messages.store'), [
             'conversation_id' => $thread->id, 'body' => 'Same second',
         ])->assertRedirect();
         $this->actingAs($alice)->get(route('messages.index'))->assertInertia(fn ($page) => $page
             ->where('auth.unread_messages', 1));
-        $this->get(route('messages.show', $thread))->assertInertia(fn ($page) => $page->where('auth.unread_messages', 0));
+        $this->postJson(route('messages.read', $thread), ['message_id' => Message::latest('id')->firstOrFail()->id])
+            ->assertOk()->assertJsonPath('unread', 0);
     }
 }

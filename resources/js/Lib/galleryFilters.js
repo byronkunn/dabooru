@@ -1,7 +1,7 @@
 export const clearedGalleryFilters = {
     window: 'week', format: 'all', tag: '', q: '',
     min_duration: '', max_duration: '', tags: [], exclude_tags: [],
-    min_likes: '', min_views: '',
+    min_likes: '', min_views: '', min_stars: '',
 };
 
 export function patchGalleryFilters(filters, patch) {
@@ -39,6 +39,7 @@ export function galleryFilterChips(filters, formatOptions, windowOptions) {
     if (filters.exclude_tags?.length) chips.push({ key: 'exclude_tags', label: `Exclude: ${filters.exclude_tags.map((t) => `#${t}`).join(', ')}`, patch: { exclude_tags: [] } });
     if (filters.min_likes) chips.push({ key: 'min_likes', label: `${filters.min_likes}+ likes`, patch: { min_likes: '' } });
     if (filters.min_views) chips.push({ key: 'min_views', label: `${filters.min_views}+ views`, patch: { min_views: '' } });
+    if (filters.min_stars) chips.push({ key: 'min_stars', label: `${filters.min_stars}+ stars`, patch: { min_stars: '' } });
     return chips;
 }
 

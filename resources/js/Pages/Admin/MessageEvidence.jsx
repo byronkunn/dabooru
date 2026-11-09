@@ -2,7 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { useState } from 'react';
 
-export default function MessageEvidence({ reportId, body, attachment }) {
+export default function MessageEvidence({ reportId, body, attachment, work }) {
     const [show, setShow] = useState(false);
     return (
         <AdminLayout>
@@ -12,6 +12,10 @@ export default function MessageEvidence({ reportId, body, attachment }) {
                 <h1 className="text-xl font-bold">Reported message</h1>
                 <p className="text-sm text-ink-muted">Access to this evidence is logged. Only the reported message is available here.</p>
                 {body && <p className="whitespace-pre-wrap break-words rounded-xl bg-ink-raised p-4">{body}</p>}
+                {work && <section className="rounded-xl bg-ink-raised p-4">
+                    <p className="text-xs text-ink-muted">Shared artwork #{work.post_id}</p>
+                    {work.url ? <Link className="link-brand" href={work.url}>{work.title}</Link> : <p>{work.title} · unavailable</p>}
+                </section>}
                 {attachment && (show ? (
                     attachment.kind === 'video' ? <video controls playsInline src={attachment.url} className="max-h-96 max-w-full" /> :
                     attachment.kind === 'audio' ? <audio controls src={attachment.url} className="max-w-full" /> :

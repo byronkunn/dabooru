@@ -9,7 +9,7 @@ export default function KnowledgeRevision({ revision }) {
     const keys = [...new Set([...Object.keys(revision.before), ...Object.keys(revision.after)])].filter((key) => JSON.stringify(revision.before[key]) !== JSON.stringify(revision.after[key]));
     return (
         <AppLayout>
-            <Head title={`Revision #${revision.id}`} /><TopBar title={`Revision #${revision.id}`} back={revision.target_url} />
+            <Head title={`Revision #${revision.id}`} /><TopBar title={`Revision #${revision.id}`} searchScope="knowledge" back={revision.target_url} />
             <div className="mx-auto max-w-3xl space-y-5 p-4 md:p-6">
                 <h1 className="text-xl font-bold">{revision.summary}</h1>
                 <p className="text-ink-muted">{revision.status} · {revision.editor ? `@${revision.editor}` : 'Deleted contributor'}{revision.reviewer ? ` · reviewed by @${revision.reviewer}` : ''}</p>

@@ -2,9 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Block;
+use App\Models\Like;
 use App\Models\Media;
 use App\Models\Post;
 use App\Models\PostMedia;
+use App\Models\PostRating;
 use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -37,6 +40,79 @@ class GalleryTest extends TestCase
                 ->where('filters.format', 'all')
                 ->where('filters.sort', 'top')
                 ->where('filters.explicit', false));
+    }
+
+    public function test_sidebar_discovery_uses_recent_artist_activity_and_visible_weekly_likes(): void
+    {
+        $viewer = User::factory()->create(['show_explicit' => false]);
+        $rising = User::factory()->create(['name' => 'Rising artist']);
+        $inactive = User::factory()->create(['name' => 'Inactive artist']);
+        $blocked = User::factory()->create(['name' => 'Blocked artist']);
+        $olderPost = Post::create(['user_id' => $rising->id, 'type' => 'image', 'rating' => 'sfw', 'title' => 'Older upload']);
+        $olderPost->forceFill(['created_at' => now()->subDays(45)])->save();
+        $firstRecent = Post::create(['user_id' => $rising->id, 'type' => 'image', 'rating' => 'sfw', 'title' => 'Recent upload one']);
+        Post::create(['user_id' => $rising->id, 'type' => 'image', 'rating' => 'sfw', 'title' => 'Recent upload two']);
+        $inactivePost = Post::create(['user_id' => $inactive->id, 'type' => 'image', 'rating' => 'sfw', 'title' => 'Inactive upload']);
+        $inactivePost->forceFill(['created_at' => now()->subDays(45)])->save();
+        $blockedPost = Post::create(['user_id' => $blocked->id, 'type' => 'image', 'rating' => 'sfw', 'title' => 'Blocked upload']);
+        $popular = Post::create(['user_id' => $rising->id, 'type' => 'image', 'rating' => 'sfw', 'title' => 'Popular']);
+        $lessPopular = Post::create(['user_id' => $inactive->id, 'type' => 'image', 'rating' => 'sfw', 'title' => 'Less popular']);
+        $cachedPopular = Post::create(['user_id' => $inactive->id, 'type' => 'image', 'rating' => 'sfw', 'title' => 'Cached popularity', 'likes_count' => 2]);
+        $explicit = Post::create(['user_id' => $rising->id, 'type' => 'image', 'rating' => 'explicit', 'title' => 'Hidden explicit']);
+        foreach ([[$popular, 3], [$lessPopular, 1], [$blockedPost, 5], [$explicit, 7]] as [$post, $likes]) {
+            for ($i = 0; $i < $likes; $i++) {
+                Like::create(['user_id' => User::factory()->create()->id, 'post_id' => $post->id]);
+            }
+        }
+        Like::create(['user_id' => User::factory()->create()->id, 'post_id' => $olderPost->id])
+            ->forceFill(['created_at' => now()->subDays(10)])->save();
+        Block::create(['blocker_id' => $viewer->id, 'blocked_id' => $blocked->id]);
+
+        $this->actingAs($viewer)->get('/')->assertInertia(fn ($page) => $page
+            ->has('discoveryRail.risingArtists', 2)->where('discoveryRail.risingArtists.0.username', $rising->username)
+            ->where('discoveryRail.risingArtists.0.recent_posts_count', 3)
+            ->has('discoveryRail.popularWorks', 3)->where('discoveryRail.popularWorks.0.id', $popular->id)
+            ->where('discoveryRail.popularWorks.1.id', $lessPopular->id)
+            ->where('discoveryRail.popularWorks.2.id', $cachedPopular->id)
+            ->where('discoveryRail.popularWorks.2.lifetime_likes', 2));
+        $this->get(route('profile.show', $rising->username))
+            ->assertInertia(fn ($page) => $page->has('discoveryRail.risingArtists', 2));
+    }
+
+    public function test_sidebar_respects_rating_preference_and_gallery_override(): void
+    {
+        $viewer = User::factory()->create(['show_explicit' => true]);
+        $mixedArtist = User::factory()->create(['name' => 'Mixed artist']);
+        $explicitArtist = User::factory()->create(['name' => 'Explicit artist']);
+        $safe = Post::create(['user_id' => $mixedArtist->id, 'type' => 'image', 'rating' => 'sfw', 'title' => 'Safe', 'likes_count' => 1]);
+        Post::create(['user_id' => $mixedArtist->id, 'type' => 'image', 'rating' => 'explicit', 'title' => 'Explicit', 'likes_count' => 3]);
+        Post::create(['user_id' => $explicitArtist->id, 'type' => 'image', 'rating' => 'explicit', 'title' => 'Explicit only', 'likes_count' => 2]);
+
+        $this->actingAs($viewer)->get('/?explicit=0')->assertInertia(fn ($page) => $page
+            ->where('filters.explicit', false)
+            ->has('discoveryRail.risingArtists', 1)
+            ->where('discoveryRail.risingArtists.0.username', $mixedArtist->username)
+            ->where('discoveryRail.risingArtists.0.recent_posts_count', 1)
+            ->has('discoveryRail.popularWorks', 1)
+            ->where('discoveryRail.popularWorks.0.id', $safe->id));
+
+        $this->get('/?explicit=1')->assertInertia(fn ($page) => $page
+            ->has('discoveryRail.risingArtists', 2)
+            ->where('discoveryRail.risingArtists.0.recent_posts_count', 2)
+            ->has('discoveryRail.popularWorks', 3));
+
+        $viewer->update(['show_explicit' => false]);
+        $this->get('/?explicit=1')->assertInertia(fn ($page) => $page
+            ->where('filters.explicit', true)
+            ->has('discoveryRail.risingArtists', 1)
+            ->where('discoveryRail.risingArtists.0.recent_posts_count', 1)
+            ->has('discoveryRail.popularWorks', 1));
+
+        $viewer->update(['show_explicit' => true]);
+        $this->get(route('profile.show', ['username' => $mixedArtist->username, 'explicit' => 0]))
+            ->assertInertia(fn ($page) => $page
+                ->has('discoveryRail.risingArtists', 2)
+                ->has('discoveryRail.popularWorks', 3));
     }
 
     public function test_gallery_filters_by_format(): void
@@ -171,6 +247,59 @@ class GalleryTest extends TestCase
         // without a duration bound the requested format is left alone
         $this->get('/?window=all&format=image')->assertOk()
             ->assertInertia(fn ($page) => $page->where('filters.format', 'image')->where('durationNarrowed', false));
+    }
+
+    public function test_star_filter_uses_the_average_and_any_includes_unrated_works(): void
+    {
+        $artist = User::factory()->create();
+        $voters = User::factory()->count(3)->create();
+        $make = function (array $scores, string $rating = 'sfw') use ($artist, $voters) {
+            $post = Post::create(['user_id' => $artist->id, 'type' => 'image', 'rating' => $rating]);
+            foreach ($scores as $index => $stars) {
+                PostRating::create(['post_id' => $post->id, 'user_id' => $voters[$index]->id, 'stars' => $stars]);
+            }
+
+            return $post;
+        };
+        $unrated = $make([]);
+        $below = $make([5, 3, 3]);
+        $boundary = $make([5, 3]);
+        $perfect = $make([5, 5]);
+        $make([5], 'explicit');
+
+        $this->get('/?window=all&min_stars=4')->assertOk()->assertInertia(fn ($page) => $page
+            ->where('filters.min_stars', 4)->has('posts', 2)
+            ->where('posts.0.id', $perfect->id)->where('posts.1.id', $boundary->id));
+        $this->getJson('/?window=all&min_stars=5')->assertOk()
+            ->assertJsonCount(1, 'posts')->assertJsonPath('posts.0.id', $perfect->id);
+        $this->getJson('/?window=all&min_stars=1')->assertOk()->assertJsonCount(3, 'posts');
+        $this->get('/?window=all')->assertInertia(fn ($page) => $page
+            ->where('filters.min_stars', '')->has('posts', 4));
+        foreach (['0', '-1', '6', '4.5', 'invalid', ''] as $invalid) {
+            $this->get('/?window=all&min_stars='.$invalid)->assertInertia(fn ($page) => $page
+                ->where('filters.min_stars', '')->has('posts', 4));
+        }
+    }
+
+    public function test_star_filter_combines_with_tags_format_sort_and_pagination(): void
+    {
+        $artist = User::factory()->create();
+        $voter = User::factory()->create();
+        $ids = [];
+        for ($i = 0; $i < 40; $i++) {
+            $post = Post::create(['user_id' => $artist->id, 'type' => 'image', 'rating' => 'sfw', 'views' => $i]);
+            Tag::syncFor($post, ['study']);
+            PostRating::create(['post_id' => $post->id, 'user_id' => $voter->id, 'stars' => 4]);
+            $ids[] = $post->id;
+        }
+        $query = '/?window=all&format=image&tags=study&sort=views&min_stars=4';
+        $this->get($query)->assertInertia(fn ($page) => $page
+            ->where('filters.min_stars', 4)->where('filters.sort', 'views')
+            ->has('posts', 36)->where('posts.0.id', $ids[39])->where('hasMore', true));
+        $this->getJson($query.'&page=2')->assertOk()->assertJsonCount(4, 'posts')
+            ->assertJsonPath('posts.0.id', $ids[3])->assertJsonPath('hasMore', false);
+        $this->getJson($query.'&format=video')->assertJsonCount(0, 'posts');
+        $this->getJson($query.'&exclude_tags=study')->assertJsonCount(0, 'posts');
     }
 
     public function test_invalid_filters_fall_back_to_defaults(): void

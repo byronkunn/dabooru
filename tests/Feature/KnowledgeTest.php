@@ -175,7 +175,7 @@ class KnowledgeTest extends TestCase
         $post = Post::create(['type' => 'image', 'rating' => 'sfw', 'title' => 'Study']);
         Tag::syncFor($post, ['aqua painting']);
         $this->assertSame(['watercolor'], $post->tags()->pluck('name')->all());
-        $this->get('/search?q='.urlencode('tag:"aqua painting"'))->assertOk()->assertInertia(fn ($page) => $page->where('counts.works', 1));
+        $this->get('/?q='.urlencode('tag:"aqua painting"'))->assertOk()->assertInertia(fn ($page) => $page->has('posts', 1));
         $this->get('/tags/autocomplete?q=aqua')->assertOk()->assertJsonPath('tags.0.name', 'watercolor');
         $this->get('/?window=all&tag='.urlencode('aqua painting'))->assertOk()->assertInertia(fn ($page) => $page->where('filters.tag', 'watercolor'));
     }
@@ -356,9 +356,16 @@ class KnowledgeTest extends TestCase
     {
         $tag = $this->tag();
         $destination = $this->tag('watercolour');
+        $follower = User::factory()->create();
+        $follower->followedTags()->attach([$tag->id, $destination->id]);
+        $otherFollower = User::factory()->create();
+        $otherFollower->followedTags()->attach($tag->id);
         $this->actingAs($this->moderator())->post($this->url('propose', 'tag', $tag->id),
             $this->payload($tag, ['merged_into_id' => $destination->id]))->assertSessionHasNoErrors();
         $this->assertSame('watercolour', Tag::canonicalName('watercolor'));
+        $this->assertDatabaseMissing('tag_user', ['tag_id' => $tag->id]);
+        $this->assertDatabaseHas('tag_user', ['tag_id' => $destination->id, 'user_id' => $otherFollower->id]);
+        $this->assertSame(1, $follower->followedTags()->count());
         $this->get($this->url('show', 'tag', $tag->id))->assertRedirect($this->url('show', 'tag', $destination->id));
     }
 
@@ -473,6 +480,6 @@ class KnowledgeTest extends TestCase
         $this->seed(KnowledgeSeeder::class);
         $this->assertSame($count, Tag::count());
         $this->assertSame('Community-maintained definition.', $tag->fresh()->wiki);
-        $this->assertDatabaseCount('wiki_pages', 2);
+        $this->assertDatabaseCount('wiki_pages', 3);
     }
 }

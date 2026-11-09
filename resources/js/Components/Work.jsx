@@ -1,7 +1,12 @@
-import { Link, router } from '@inertiajs/react';
-import { Fragment, useState } from 'react';
+import WorkLink from '@/Components/WorkLink';
+import { clearWorkEngagement, getWorkEngagement } from '@/Lib/workEngagement';
+import { Link, router, usePage } from '@inertiajs/react';
+import { shouldBlurMedia } from '@/Lib/mediaVisibility';
+import { Fragment, useEffect, useState } from 'react';
 import { Icon } from '@/Components/Icons';
-import { KIND_ICON, KIND_LABEL, RATING_CLASS, compact } from '@/Lib/format';
+import MediaThumbnail from '@/Components/MediaThumbnail';
+import { KIND_ICON, KIND_LABEL, RATING_CLASS, compact, workArtistName } from '@/Lib/format';
+import SaveWorkActions from '@/Components/SaveWorkActions';
 
 /* ------------------------------------------------------------------ media */
 export function MediaViewer({ media, blurred, onReveal, className = '' }) {
@@ -60,7 +65,11 @@ export function BlurGate({ label, onReveal }) {
             <div className="flex flex-col items-center gap-2">
                 <span className="text-[13px] font-semibold text-[#e7dfea]">{label}</span>
                 <span className="text-xs text-ink-muted">Hidden by your feed settings</span>
-                <button type="button" onClick={onReveal} className="rounded-full border border-white/20 bg-white/10 px-3.5 py-2 text-[12.5px] font-bold backdrop-blur">
+                <button type="button" onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onReveal();
+                }} className="rounded-full border border-white/20 bg-white/10 px-3.5 py-2 text-[12.5px] font-bold backdrop-blur">
                     Show
                 </button>
             </div>
@@ -69,25 +78,30 @@ export function BlurGate({ label, onReveal }) {
 }
 
 /* ------------------------------------------------------------------ gallery cell */
+export function ArtistName({ post, className = '' }) {
+    const name = workArtistName(post, 'Unknown artist');
+    const href = post.credited_artist ? route('profile.show', post.credited_artist.username)
+        : post.external_artist?.page_url || (post.artist_name ? route('artists.show', { name: post.artist_name }) : null);
+    return href ? <Link href={href} className={`${className} hover:underline`}>{name}</Link>
+        : <span className={className}>{name}</span>;
+}
+
 export function WorkCell({ post, wide = false }) {
+    const { auth } = usePage().props;
     const [revealed, setRevealed] = useState(false);
     const cover = post.media?.[0];
-    const blurred = post.rating === 'explicit' && !revealed;
+    const blurred = shouldBlurMedia(post.rating, auth?.user?.show_explicit, revealed);
     const isPlayable = post.type === 'gif' || post.type === 'video';
 
     return (
-        <Link
-            href={post.url}
+        <div
             className="group mb-3.5 block break-inside-avoid overflow-hidden rounded-card border border-ink-line bg-ink-surface hover-lift focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-brand/60 no-tap-highlight"
-            aria-label={`${post.title ?? 'Untitled'}${post.user?.name ? ' by ' + post.user.name : ''}`}
         >
-            <div className="relative overflow-hidden bg-[#1c1820]" style={{ aspectRatio: cover?.aspect_ratio || 1 }}>
+            <WorkLink href={post.url} aria-label={`${post.title ?? 'Untitled'} by ${post.artist_name || post.user?.name || 'Unknown artist'}`}
+                className="relative block overflow-hidden bg-[#1c1820]" style={{ aspectRatio: cover?.aspect_ratio || 1 }}>
                 {cover && (
-                    <img
-                        src={cover.thumb || cover.url}
-                        alt=""
-                        loading="lazy"
-                        decoding="async"
+                    <MediaThumbnail
+                        media={cover}
                         className={`h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03] ${blurred ? 'blur-2xl' : ''}`}
                     />
                 )}
@@ -119,17 +133,15 @@ export function WorkCell({ post, wide = false }) {
                         {post.media.length}
                     </span>
                 )}
-            </div>
+            </WorkLink>
 
             <div className="flex flex-col gap-1.5 p-2.5">
                 {post.artist_name || post.external_artist ? (
                     <div className="flex min-w-0 flex-col">
                         <div className="flex items-center gap-1.5">
-                            <span className="truncate text-[13px] font-bold text-ink-text">
-                                {post.artist_name || post.external_artist.name}
-                            </span>
+                            <ArtistName post={post} className="truncate text-[13px] font-bold text-ink-text" />
                             <span className="shrink-0 rounded bg-amber-500/15 px-1 py-0.5 text-[10px] font-bold text-amber-300">
-                                External
+                                {post.credited_artist ? 'Artist' : 'Credit'}
                             </span>
                         </div>
                         {post.user && (
@@ -155,7 +167,7 @@ export function WorkCell({ post, wide = false }) {
                         {post.user && <span className="hidden truncate text-[13px] text-ink-muted sm:inline">@{post.user.username}</span>}
                     </div>
                 )}
-                {!wide && post.title && <p className="line-clamp-2 text-[13px] leading-snug text-[#d8d0dd]">{post.title}</p>}
+                {!wide && post.title && <WorkLink href={post.url} className="line-clamp-2 text-[13px] leading-snug text-[#d8d0dd] hover:underline">{post.title}</WorkLink>}
                 <div className="flex items-center gap-3.5 text-xs text-ink-muted">
                     <span className="inline-flex items-center gap-1">
                         <Icon name="heart" className="h-3.5 w-3.5" /> {compact(post.likes)}
@@ -165,31 +177,39 @@ export function WorkCell({ post, wide = false }) {
                     </span>
                 </div>
             </div>
-        </Link>
+        </div>
     );
 }
 
 /* ------------------------------------------------------------------ feed card */
-export function PostCard({ post, liked = false, saved = false }) {
-    const [isLiked, setLiked] = useState(liked);
-    const [isSaved, setSaved] = useState(saved);
+export function PostCard({ post, liked = false, saved = false, viewerId }) {
+    const { auth } = usePage().props;
+    const [returned] = useState(() => getWorkEngagement(viewerId, post.id));
+    const [isLiked, setLiked] = useState(returned?.liked ?? liked);
+    useEffect(() => clearWorkEngagement(viewerId, post.id, returned), [viewerId, post.id, returned]);
     const [revealed, setRevealed] = useState(false);
     const cover = post.media?.[0];
-    const blurred = post.rating === 'explicit' && !revealed;
+    const blurred = shouldBlurMedia(post.rating, auth?.user?.show_explicit, revealed);
 
-    const toggle = (kind) => {
-        const url = kind === 'like' ? `/p/${post.id}/like` : `/p/${post.id}/save`;
-        const active = kind === 'like' ? isLiked : isSaved;
+    const toggleLike = () => {
+        const url = `/p/${post.id}/like`;
+        const active = isLiked;
 
-        if (kind === 'like') setLiked(!active);
-        else setSaved(!active);
+        setLiked(!active);
 
-        router[active ? 'delete' : 'post'](url, {}, { preserveScroll: true, preserveState: true });
+        router[active ? 'delete' : 'post'](url, {}, {
+            preserveScroll: true, preserveState: true,
+            onError: () => setLiked(active),
+        });
     };
 
     return (
         <article className="grid grid-cols-[40px_minmax(0,1fr)] gap-2.5 border-b border-ink-line px-3.5 py-3.5 hover:bg-white/[0.015] md:grid-cols-[48px_minmax(0,1fr)] md:gap-3 md:px-5 md:py-4">
-            {post.user ? (
+            {post.external_artist ? (
+                <span className="grid h-10 w-10 place-items-center rounded-full bg-amber-500/15 text-amber-300 md:h-12 md:w-12">
+                    <Icon name="gallery" className="h-5 w-5" />
+                </span>
+            ) : post.user ? (
                 <Link href={route('profile.show', post.user.username)}>
                     <img src={post.user.avatar} alt="" className="h-10 w-10 rounded-full bg-ink-raised object-cover md:h-12 md:w-12" />
                 </Link>
@@ -202,9 +222,9 @@ export function PostCard({ post, liked = false, saved = false }) {
                 <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-[14.5px]">
                     {post.artist_name || post.external_artist ? (
                         <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="font-bold text-ink-text">{post.artist_name || post.external_artist.name}</span>
+                            <ArtistName post={post} className="font-bold text-ink-text" />
                             <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10.5px] font-bold text-amber-300">
-                                External artist
+                                {post.credited_artist ? 'Verified artist credit' : 'Artist credit'}
                             </span>
                             {(post.source_url || post.external_artist?.url) && (
                                 <a
@@ -241,9 +261,6 @@ export function PostCard({ post, liked = false, saved = false }) {
                     </time>
                     <span className="ml-auto flex items-center gap-1.5">
                         <span className={RATING_CLASS[post.rating]}>{post.rating_label}</span>
-                        <button type="button" className="btn-icon-flat h-8 w-8" aria-label="More options">
-                            <Icon name="more" className="h-4 w-4" />
-                        </button>
                     </span>
                 </div>
 
@@ -252,7 +269,7 @@ export function PostCard({ post, liked = false, saved = false }) {
 
                     {post.type === 'comic' && post.chapter ? (
                         <Link href={post.chapter.url} className="flex items-center gap-3.5 rounded-2xl border border-ink-line bg-ink-raised p-3.5 hover:border-[#4a3c58]">
-                            {cover && <img src={cover.thumb || cover.url} alt="" loading="lazy" className="h-[146px] w-[110px] shrink-0 rounded-xl object-cover" />}
+                            {cover && <MediaThumbnail media={cover} className={`h-[146px] w-[110px] shrink-0 rounded-xl object-cover ${blurred ? 'blur-2xl' : ''}`} />}
                             <div className="min-w-0">
                                 <p className="text-[15px] font-bold">
                                     {post.chapter.comic.title} · Ch. {post.chapter.number}
@@ -268,33 +285,31 @@ export function PostCard({ post, liked = false, saved = false }) {
                     ) : post.media?.length > 1 ? (
                         <div className="grid grid-cols-2 gap-1 overflow-hidden rounded-2xl border border-ink-line">
                             {post.media.slice(0, 4).map((m) => (
-                                <Link key={m.id} href={post.url} className="relative aspect-square bg-black">
-                                    <img src={m.thumb || m.url} alt="" loading="lazy" className={`h-full w-full object-cover ${blurred ? 'blur-2xl' : ''}`} />
-                                </Link>
+                                <WorkLink key={m.id} href={post.url} className="relative aspect-square bg-black">
+                                    <MediaThumbnail media={m} className={`h-full w-full object-cover ${blurred ? 'blur-2xl' : ''}`} />
+                                </WorkLink>
                             ))}
                         </div>
                     ) : cover ? (
-                        <Link href={post.url} className="relative block max-h-[520px] overflow-hidden rounded-2xl border border-ink-line bg-black">
+                        <WorkLink href={post.url} className="relative block max-h-[520px] overflow-hidden rounded-2xl border border-ink-line bg-black">
                             <MediaViewer media={cover} blurred={blurred} onReveal={() => setRevealed(true)} className="max-h-[520px]" />
                             {post.type === 'album' && (
                                 <span className="absolute bottom-2.5 right-2.5 rounded-full border border-white/15 bg-black/70 px-2.5 py-1 text-xs font-bold backdrop-blur">
                                     {post.media.length} pieces
                                 </span>
                             )}
-                        </Link>
+                        </WorkLink>
                     ) : null}
                 </div>
 
-                <div className="mt-3 flex max-w-[460px] items-center justify-between text-[13px] text-ink-muted">
-                    <button type="button" onClick={() => toggle('like')} className={`flex min-h-9 items-center gap-1.5 rounded-full px-2 hover:bg-white/5 hover:text-ink-text ${isLiked ? 'text-[#e8607d]' : ''}`} aria-pressed={isLiked}>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
+                    <button type="button" onClick={toggleLike} className={`flex min-h-9 items-center gap-1.5 rounded-full px-2 hover:bg-white/5 hover:text-ink-text ${isLiked ? 'text-[#e8607d]' : ''}`} aria-label={isLiked ? 'Unlike work' : 'Like work'} aria-pressed={isLiked}>
                         <Icon name="heart" className="h-[18px] w-[18px]" /> {compact(post.likes)}
                     </button>
-                    <Link href={post.url} className="flex min-h-9 items-center gap-1.5 rounded-full px-2 hover:bg-white/5 hover:text-ink-text">
+                    <WorkLink href={post.url} className="flex min-h-9 items-center gap-1.5 rounded-full px-2 hover:bg-white/5 hover:text-ink-text">
                         <Icon name="comment" className="h-[18px] w-[18px]" /> {compact(post.comments)}
-                    </Link>
-                    <button type="button" onClick={() => toggle('save')} className={`flex min-h-9 items-center gap-1.5 rounded-full px-2 hover:bg-white/5 hover:text-ink-text ${isSaved ? 'text-ink-brand' : ''}`} aria-pressed={isSaved}>
-                        <Icon name="save" className="h-[18px] w-[18px]" /> Save
-                    </button>
+                    </WorkLink>
+                    <SaveWorkActions postId={post.id} saved={returned?.saved ?? saved} compact />
                     <button
                         type="button"
                         onClick={() => navigator.clipboard?.writeText(window.location.origin + post.url)}

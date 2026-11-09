@@ -1,74 +1,458 @@
 {
-  "/private/tmp/inkwell-feature-graph.XWXIiI/models/ReadingProgress.php": {
-    "mtime": 1794062096.2193472,
-    "hash": "640137e348be7e4572d890ba92f3a8c0"
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/app/Http/Controllers/ComicController.php": {
+    "mtime": 1794158405.9386017,
+    "hash": "31bfe7ebf0df4c8fba9bbdb40962e000"
   },
-  "/private/tmp/inkwell-feature-graph.XWXIiI/models/KnowledgeRevision.php": {
-    "mtime": 1794062096.2197928,
-    "hash": "756af04cf540b69dd9087a30740859bc"
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/app/Http/Controllers/NotificationController.php": {
+    "mtime": 1794158405.9394886,
+    "hash": "d80782cc59deb2632e9407987d001254"
   },
-  "/private/tmp/inkwell-feature-graph.XWXIiI/models/SavedCollection.php": {
-    "mtime": 1794062096.2195542,
-    "hash": "5683dc16461eea23bb3022ce5c3863ba"
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/app/Http/Controllers/ChapterInboxController.php": {
+    "mtime": 1794158405.94084,
+    "hash": "9aa6876b9a6bf1aaa627b291e695bcda"
   },
-  "/private/tmp/inkwell-feature-graph.XWXIiI/models/Post.php": {
-    "mtime": 1794062096.2184434,
-    "hash": "24764a1d3faff1469486f618e40405f7"
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/app/Http/Controllers/SearchController.php": {
+    "mtime": 1794158405.9360578,
+    "hash": "28085b28f21339dccb473f1141b1eba6"
   },
-  "/private/tmp/inkwell-feature-graph.XWXIiI/models/Tag.php": {
-    "mtime": 1794062096.218248,
-    "hash": "c571b4675270e2ba12ee7ce803a61d17"
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/app/Http/Controllers/FollowingController.php": {
+    "mtime": 1794158405.9352849,
+    "hash": "65af226251c8e7c7ee17ae64e1a25e26"
   },
-  "/private/tmp/inkwell-feature-graph.XWXIiI/models/Comic.php": {
-    "mtime": 1794062096.2186246,
-    "hash": "93cea841cebab0f774846a829f04ff8e"
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/app/Http/Controllers/StudioController.php": {
+    "mtime": 1794158405.9390392,
+    "hash": "4d315355c3fc46b698607c215f6d6a5a"
   },
-  "/private/tmp/inkwell-feature-graph.XWXIiI/models/ComicFollow.php": {
-    "mtime": 1794062096.219111,
-    "hash": "6499f85c21e8e4c6f583fb63290a79ba"
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/app/Http/Controllers/ArtistController.php": {
+    "mtime": 1794158405.936716,
+    "hash": "46b14e186f725a057ed490b8c4f21e60"
   },
-  "/private/tmp/inkwell-feature-graph.XWXIiI/models/PostView.php": {
-    "mtime": 1794062096.220127,
-    "hash": "6a9759f4ca559d0c432ce104efb890a2"
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/app/Http/Controllers/ProfileController.php": {
+    "mtime": 1794158405.936393,
+    "hash": "7dc05becbafe652f83ad460ca1550141"
   },
-  "/private/tmp/inkwell-feature-graph.XWXIiI/controllers/ComicController.php": {
-    "mtime": 1794062096.215293,
-    "hash": "02e773b14d260a46390740ec239f93ca"
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/app/Http/Controllers/MessageController.php": {
+    "mtime": 1794158405.938211,
+    "hash": "0b83e627db5c00492516ab7419856fd2"
   },
-  "/private/tmp/inkwell-feature-graph.XWXIiI/controllers/NotificationController.php": {
-    "mtime": 1794062096.2162197,
-    "hash": "8c88976b48b03797dcd50092a70b762a"
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/app/Http/Controllers/DiscoverController.php": {
+    "mtime": 1794158405.9337437,
+    "hash": "16aba4a93fa37e6355df88c63fba2f18"
   },
-  "/private/tmp/inkwell-feature-graph.XWXIiI/controllers/SearchController.php": {
-    "mtime": 1794062096.2148812,
-    "hash": "198907a2a008a213c7b3ecbb53f7e667"
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/app/Http/Controllers/SavedCollectionController.php": {
+    "mtime": 1794158405.9398441,
+    "hash": "b61b285bf692a3a85e427538d6028756"
   },
-  "/private/tmp/inkwell-feature-graph.XWXIiI/controllers/FollowingController.php": {
-    "mtime": 1794062096.215876,
-    "hash": "e56d72b6ea2ba3ce58ec29a2a2191893"
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/app/Http/Controllers/GalleryController.php": {
+    "mtime": 1794158405.934527,
+    "hash": "c00a44a85c37af67a85cd295003359d3"
   },
-  "/private/tmp/inkwell-feature-graph.XWXIiI/controllers/ProfileController.php": {
-    "mtime": 1794062096.2160397,
-    "hash": "80f27f6235813b10089c4de798bee8d5"
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/app/Http/Controllers/SettingsController.php": {
+    "mtime": 1794158405.937585,
+    "hash": "ad74eb9b248d44062adce4646f570cbf"
   },
-  "/private/tmp/inkwell-feature-graph.XWXIiI/controllers/SavedCollectionController.php": {
-    "mtime": 1794062096.2157,
-    "hash": "fcb4e984c8ee249bc10dc07c83ae17ab"
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/app/Http/Controllers/SavedSearchController.php": {
+    "mtime": 1794158405.9403467,
+    "hash": "9e0993753c9e0227afbe8c67b8407df8"
   },
-  "/private/tmp/inkwell-feature-graph.XWXIiI/controllers/UploadController.php": {
-    "mtime": 1794062096.2150865,
-    "hash": "6d1cdc611cd3ff04921f302b5774a84d"
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/PostTags.jsx": {
+    "mtime": 1794158405.916213,
+    "hash": "9f473fd39df24d159efb65be022c2116"
   },
-  "/private/tmp/inkwell-feature-graph.XWXIiI/controllers/GalleryController.php": {
-    "mtime": 1794062096.2146227,
-    "hash": "fe346fa982e7b41112c774f769c839f8"
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/ResponsiveNavLink.jsx": {
+    "mtime": 1794158405.9165065,
+    "hash": "8053c060d01a160d027c36bc592ad81f"
   },
-  "/private/tmp/inkwell-feature-graph.XWXIiI/controllers/KnowledgeController.php": {
-    "mtime": 1794062096.2164252,
-    "hash": "ea8ee3fb7df0b6a757464212bc844637"
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/Icons.jsx": {
+    "mtime": 1794158405.916901,
+    "hash": "b58e3718863cfa8b517c3bf2d3a4eea3"
   },
-  "/private/tmp/inkwell-feature-graph.XWXIiI/controllers/ComicChapterController.php": {
-    "mtime": 1794062096.2154899,
-    "hash": "b4e0f8c25cea30d798544c472394b3ba"
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/PostStarRating.jsx": {
+    "mtime": 1794158405.9172428,
+    "hash": "12480954d08f4f2260ea5c012fd5608b"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/LegalPage.jsx": {
+    "mtime": 1794158405.9175558,
+    "hash": "572c1c001549bfdbb02b48c3c3f78dc8"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/Dropdown.jsx": {
+    "mtime": 1794158405.9178593,
+    "hash": "b58f89f2f47c67e5874e0b877c1a588d"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/DangerButton.jsx": {
+    "mtime": 1794158405.9181623,
+    "hash": "0107427b76ecbdf37f397dfadfbc410b"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/TagField.jsx": {
+    "mtime": 1794158405.9186165,
+    "hash": "8abce8284af6038abf0a379d0958991f"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/AdminUi.jsx": {
+    "mtime": 1794158405.9189823,
+    "hash": "06c8a6d994a069617acc0bc37ad8e526"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/SiteAnnouncement.jsx": {
+    "mtime": 1794158405.919281,
+    "hash": "2989f0890e39febb1c555f12006cbe86"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/SecondaryButton.jsx": {
+    "mtime": 1794158405.919638,
+    "hash": "b0836dbde3b5db848eed9de707f99c91"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/TagFollowButton.jsx": {
+    "mtime": 1794158405.919948,
+    "hash": "5308fb3511ac3ac74364b6c37fbb52b5"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/GalleryFilterSheet.jsx": {
+    "mtime": 1794158405.920567,
+    "hash": "bce3a45d131e03dd6bc0cad6088267ce"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/ProfileImageDialog.jsx": {
+    "mtime": 1794158405.9211614,
+    "hash": "6766ca6d4b60d1c60fda2d2030771b02"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/InputError.jsx": {
+    "mtime": 1794158405.921695,
+    "hash": "7d81dde02171eb0995c9e9b6cf68046d"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/Checkbox.jsx": {
+    "mtime": 1794158405.9221208,
+    "hash": "0e82aa0404afcd4e87ccf664cbba0b73"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/AdSlot.jsx": {
+    "mtime": 1794158405.9224675,
+    "hash": "635181cd708144746107beda7dc147a9"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/KnowledgeUi.jsx": {
+    "mtime": 1794158405.923129,
+    "hash": "1f34c19da534aaa7bea79a5c91909a8e"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/UserFollowButton.jsx": {
+    "mtime": 1794158405.9236488,
+    "hash": "cf9a676e739d30c28eb7202c7171dd77"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/Modal.jsx": {
+    "mtime": 1794158405.924218,
+    "hash": "d197c2856f9bfadfba4e9d7b90e3b71c"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/ProfileActions.jsx": {
+    "mtime": 1794158405.9247582,
+    "hash": "a1412207988320e2e237486d38334928"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/AdminNavigation.jsx": {
+    "mtime": 1794158405.9249837,
+    "hash": "57be2e3cf86697eefb41a460dcc61e34"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/ProfileConnectionsDialog.jsx": {
+    "mtime": 1794158405.925564,
+    "hash": "1caeb49d5c11b3883e93406e5e6348d8"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/InputLabel.jsx": {
+    "mtime": 1794158405.9260418,
+    "hash": "c8d35d29058b530f3f0b0fab03da9971"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/TextInput.jsx": {
+    "mtime": 1794158405.926596,
+    "hash": "310d14dde8bef67c754cdd517857e20d"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/ApplicationLogo.jsx": {
+    "mtime": 1794158405.9268432,
+    "hash": "be133a62e10aec3298104a4210264288"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/FeedTabs.jsx": {
+    "mtime": 1794158405.927101,
+    "hash": "a956a04c798c859f838f62037ddc8601"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/ReportDialog.jsx": {
+    "mtime": 1794158405.927463,
+    "hash": "6cafbcc43a10df9cb941e7e42707dfbb"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/Work.jsx": {
+    "mtime": 1794158405.9278982,
+    "hash": "5d7ae08e2479526004a602b13ba02cfb"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/GalleryAdSlot.jsx": {
+    "mtime": 1794158405.928237,
+    "hash": "744a0ec81667731b553f08586a42759f"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/NavLink.jsx": {
+    "mtime": 1794158405.928546,
+    "hash": "625ea3841f0dc614de2b680f08ba36fd"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/PrimaryButton.jsx": {
+    "mtime": 1794158405.9287791,
+    "hash": "33795708f025e8732f02630d7088c184"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/SearchBox.jsx": {
+    "mtime": 1794158405.9291987,
+    "hash": "acec33122455c7a97c274243cd472daa"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Components/MediaThumbnail.jsx": {
+    "mtime": 1794158405.9296188,
+    "hash": "573515a2b5efd0e164620b2635e2f9f3"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Layouts/AdminLayout.jsx": {
+    "mtime": 1794158405.8839037,
+    "hash": "73032e9132aa90ae4ad219fb8627e764"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Layouts/AppLayout.jsx": {
+    "mtime": 1794158405.884678,
+    "hash": "2af7e1fc877c0dae875e832de7217a5a"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Layouts/AuthenticatedLayout.jsx": {
+    "mtime": 1794158405.8852835,
+    "hash": "e9d14be349bb9fd0c6c911a0f1dc97d5"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Layouts/GuestLayout.jsx": {
+    "mtime": 1794158405.8856127,
+    "hash": "6b2f88bb10b2a409d89ae2bfdb211da3"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Welcome.jsx": {
+    "mtime": 1794158405.9033248,
+    "hash": "6fbb7f52e6b4076cfba5e728d611ac10"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Dashboard.jsx": {
+    "mtime": 1794158405.9044266,
+    "hash": "de761f7aea50bf68f55afb614e118fda"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Gate.jsx": {
+    "mtime": 1794158405.9102774,
+    "hash": "941efef2f7a269343dd7eaab6c9d04dc"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Settings/Blocked.jsx": {
+    "mtime": 1794158405.8869724,
+    "hash": "29f38a7ebc8d78844eb755e068040892"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Settings/Index.jsx": {
+    "mtime": 1794158405.8877268,
+    "hash": "41c307e323f0cd7846d61dc73025a8b4"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Studio/Index.jsx": {
+    "mtime": 1794158405.8886664,
+    "hash": "3818db09a0c2eb0d2586c605fb2fc0a1"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Comics/Read.jsx": {
+    "mtime": 1794158405.8895254,
+    "hash": "83ef179e5ddc5295fd94af84bbc2d655"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Comics/Upload.jsx": {
+    "mtime": 1794158405.8904123,
+    "hash": "cea9b1c5a46ba5eb47e9257e305a1542"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Comics/Index.jsx": {
+    "mtime": 1794158405.8909266,
+    "hash": "a0df3d2bb98994fb9faef7b25bdbc19f"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Comics/Show.jsx": {
+    "mtime": 1794158405.8913896,
+    "hash": "bad042bf1ada35247830eac08fe27365"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Messages/Composer.jsx": {
+    "mtime": 1794158405.8918333,
+    "hash": "cfa88b6b6becc5455d7908ff15501935"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Messages/Stickers.jsx": {
+    "mtime": 1794158405.8923361,
+    "hash": "98b12d45bd3b223ed6f6934a2b22a860"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Messages/usePageVisibility.js": {
+    "mtime": 1794158405.8927608,
+    "hash": "e2952299ff756ae75642f5000a6c297d"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Messages/Index.jsx": {
+    "mtime": 1794158405.8931375,
+    "hash": "5da2344647ef34b0d7e7dc0ac2e8d81f"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Messages/ChatTools.jsx": {
+    "mtime": 1794158405.8935533,
+    "hash": "7dcf220a47afbcfa6a39733ca4f196d1"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Messages/Show.jsx": {
+    "mtime": 1794158405.8942533,
+    "hash": "276eba030547b5e62573ad015ae899ff"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Messages/Inbox.jsx": {
+    "mtime": 1794158405.894508,
+    "hash": "bd358ee5749e1482e9a4056e25f1a818"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Posts/Edit.jsx": {
+    "mtime": 1794158405.8950047,
+    "hash": "8acffbd87dbcb09fdb59ba8864a7b9aa"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Posts/Show.jsx": {
+    "mtime": 1794158405.8952284,
+    "hash": "25473554b306ceff5dc280e83eef9f78"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Auth/ConfirmPassword.jsx": {
+    "mtime": 1794158405.8956945,
+    "hash": "f128e8b9b39c164b8c3a171fa6055103"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Auth/ResetPassword.jsx": {
+    "mtime": 1794158405.8959694,
+    "hash": "fd8a471cf2bb15328dfb53ba3bdf3812"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Auth/VerifyEmail.jsx": {
+    "mtime": 1794158405.896379,
+    "hash": "ef5c813c1536f97ed125110c9dc5a601"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Auth/ForgotPassword.jsx": {
+    "mtime": 1794158405.8966975,
+    "hash": "699edc6b2e1285d4d90bcb5ffbe785ec"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Auth/Login.jsx": {
+    "mtime": 1794158405.897107,
+    "hash": "652aae32cf992e1a3ad9f4f3e4577223"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Auth/Register.jsx": {
+    "mtime": 1794158405.8974652,
+    "hash": "ff9f50f919c572dc3c59c91bb47f2bba"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Gallery/Index.jsx": {
+    "mtime": 1794158405.8979006,
+    "hash": "23ef03cde744d0bfcf1cb3e7e53b79c5"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Discovery/SavedSearches.jsx": {
+    "mtime": 1794158405.8983827,
+    "hash": "1c7b4e73cab336e0cb05e43b375acb9b"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Discovery/ChapterInbox.jsx": {
+    "mtime": 1794158405.898604,
+    "hash": "a201729ab6ba7005f1857fe78c024971"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Discovery/Discover.jsx": {
+    "mtime": 1794158405.8989007,
+    "hash": "3f194ad6162bd146f359e6bd528e327f"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Admin/Dmca.jsx": {
+    "mtime": 1794158405.8997362,
+    "hash": "d760506fb18167618d9a0e794861639f"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Admin/Users.jsx": {
+    "mtime": 1794158405.9000638,
+    "hash": "e623383aca770508ab0c91d38c85dea7"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Admin/Analytics.jsx": {
+    "mtime": 1794158405.9003704,
+    "hash": "a24daabc08c4ed5188cab5661c58f753"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Admin/MessageEvidence.jsx": {
+    "mtime": 1794158405.9007416,
+    "hash": "801d5774e3b2692a03159b1993d18b17"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Admin/Log.jsx": {
+    "mtime": 1794158405.901043,
+    "hash": "105dae7932233c81845b468da7a2cd97"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Admin/Announcements.jsx": {
+    "mtime": 1794158405.901398,
+    "hash": "689d2a9cfe800853808e30e387425365"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Admin/CreditClaims.jsx": {
+    "mtime": 1794158405.9016476,
+    "hash": "ba0c0c51c4b980decf3051cdac683340"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Admin/SiteLogs.jsx": {
+    "mtime": 1794158405.9020507,
+    "hash": "946b1094468e7fd71b0d273ef8138245"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Admin/Shelves.jsx": {
+    "mtime": 1794158405.902361,
+    "hash": "ab5065a283a9bc8c8dab1b5b7e588253"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Admin/Reports.jsx": {
+    "mtime": 1794158405.9026754,
+    "hash": "6890abdf721f2ab022d94e480342efce"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Search/Index.jsx": {
+    "mtime": 1794158405.904189,
+    "hash": "50d4991d0347ce38acd596a1db608219"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Profile/Edit.jsx": {
+    "mtime": 1794158405.9054604,
+    "hash": "b0aeecf017898ec79aca6c330431e2be"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Profile/Show.jsx": {
+    "mtime": 1794158405.9058475,
+    "hash": "e760f34846900d6027306836bcb669fa"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Profile/Partials/UpdateProfileInformationForm.jsx": {
+    "mtime": 1794158405.906458,
+    "hash": "f89cf27175ea809aba72171006f3ad1d"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Profile/Partials/UpdatePasswordForm.jsx": {
+    "mtime": 1794158405.9068532,
+    "hash": "9f88abf80ce58e2d05d7c52e962a3fec"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Profile/Partials/DeleteUserForm.jsx": {
+    "mtime": 1794158405.9072647,
+    "hash": "0c3bbaccd04068733895725e3ee60229"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Knowledge/Changes.jsx": {
+    "mtime": 1794158405.9079034,
+    "hash": "71d0d2328ffefc6ac248bdc9e3b1e1fb"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Knowledge/Revision.jsx": {
+    "mtime": 1794158405.9084826,
+    "hash": "0753d6d508ee640242a30dc37814ffa7"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Knowledge/Index.jsx": {
+    "mtime": 1794158405.9090543,
+    "hash": "ec88daff31c036514dc31b96176ce1f2"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Knowledge/Show.jsx": {
+    "mtime": 1794158405.909914,
+    "hash": "3ce95279519d1a289738044f0ac131c2"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Artists/Index.jsx": {
+    "mtime": 1794158405.91078,
+    "hash": "d4ddcf9e7b849d336a981d780ac36e9c"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Artists/Show.jsx": {
+    "mtime": 1794158405.9111323,
+    "hash": "eef5a6d2af46103efceec5e85851a815"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Following/Index.jsx": {
+    "mtime": 1794158405.9115975,
+    "hash": "833d120d4cd47d0c7c2c77941ec42abb"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Legal/Dmca.jsx": {
+    "mtime": 1794158405.912033,
+    "hash": "d6180333551652c7bb7afc32abd01b9b"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Legal/Privacy.jsx": {
+    "mtime": 1794158405.9123323,
+    "hash": "0e99d2546842327b74b2611a738a47a4"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Legal/ContentPolicy.jsx": {
+    "mtime": 1794158405.912692,
+    "hash": "c853876df67765e3c3e12fabc005b50b"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Legal/DmcaSent.jsx": {
+    "mtime": 1794158405.9133565,
+    "hash": "6d86e05dc8b9dfd5b82e1eb61a4dc776"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Legal/Terms.jsx": {
+    "mtime": 1794158405.9136853,
+    "hash": "653fe1c935b69e04ec7bfeafcda8819e"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Collections/Shared.jsx": {
+    "mtime": 1794158405.9143693,
+    "hash": "71533cbab4c1c2281e72d55e944fc660"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Collections/Index.jsx": {
+    "mtime": 1794158405.914677,
+    "hash": "6e18f94d3ee6ae8226ca8851c5534cd0"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Notifications/Index.jsx": {
+    "mtime": 1794158405.9151328,
+    "hash": "8077cefae047cf531d8c5aecce10e28c"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/resources/js/Pages/Upload/Create.jsx": {
+    "mtime": 1794158405.915603,
+    "hash": "8ddfe84230344c88f229440849282645"
+  },
+  "/private/tmp/inkwell-ui-review-graph.my9U3P/routes/web.php": {
+    "mtime": 1794158405.9459186,
+    "hash": "8f01823a1775fa714011aacfb63bae11"
   }
 }

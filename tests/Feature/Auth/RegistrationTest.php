@@ -30,11 +30,13 @@ class RegistrationTest extends TestCase
 
     public function test_new_users_can_register(): void
     {
-        $this->post('/register', $this->payload())->assertRedirect(route('gallery', absolute: false));
+        // a new account is offered the optional feed setup before the gallery
+        $this->post('/register', $this->payload())->assertRedirect(route('setup.show', absolute: false));
 
         $this->assertAuthenticated();
         $user = User::where('username', 'test_user')->firstOrFail();
         $this->assertNotNull($user->age_confirmed_at);
+        $this->assertNull($user->setup_completed_at, 'setup is pending until filled in or skipped');
     }
 
     public function test_underage_registration_is_rejected(): void

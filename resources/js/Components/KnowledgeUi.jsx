@@ -1,5 +1,6 @@
 import { Link, useForm } from '@inertiajs/react';
 import { useEffect, useId, useState } from 'react';
+import { categoryColor, categoryLabel } from '@/Lib/tagCategories';
 
 export function Errors({ errors }) {
     return Object.keys(errors).length > 0 && (
@@ -92,7 +93,7 @@ export function TagPicker({ label, selected, onChange, namesOnly = false }) {
             <label htmlFor={id} className="field-label">{label}</label>
             <div className="mb-2 flex flex-wrap gap-2">
                 {selected.map((tag) => (
-                    <button key={tag.id ?? tag.name} type="button" className="chip" onClick={() => onChange(selected.filter((item) => item !== tag))} aria-label={`Remove ${tag.name}`}>
+                    <button key={tag.id ?? tag.name} type="button" title={categoryLabel(tag.category ?? 'general')} className={`chip ${categoryColor(tag.category ?? 'general')}`} onClick={() => onChange(selected.filter((item) => item !== tag))} aria-label={`Remove ${tag.name}`}>
                         {tag.name} ×
                     </button>
                 ))}
@@ -110,7 +111,7 @@ export function TagPicker({ label, selected, onChange, namesOnly = false }) {
             <div className="mt-1 flex flex-col gap-1">
                 {results.map((tag) => (
                     <button key={tag.id} type="button" className="rounded-xl bg-ink-raised p-2 text-left hover:text-ink-brand" onClick={() => add(tag)}>
-                        <b>{tag.name}</b> <span className="text-xs text-ink-muted">{tag.category} · {tag.count} works</span>
+                        <b>{tag.name}</b> <span className={`chip text-xs ${categoryColor(tag.category)}`}>{categoryLabel(tag.category)} · {tag.count} works</span>
                         {tag.definition && <span className="block text-xs text-ink-muted">{tag.definition}</span>}
                     </button>
                 ))}

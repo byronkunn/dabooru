@@ -44,7 +44,7 @@ class UploadController extends Controller
             'type' => ['required', 'in:image,gif,video,album'],
             'title' => ['nullable', 'string', 'max:160'],
             'caption' => ['nullable', 'string', 'max:1000'],
-            'tags' => ['nullable', 'string', 'max:500'],
+            'tags' => ['nullable', 'string', 'max:2050'],
             'rating' => ['required', 'in:sfw,suggestive,explicit'],
             'draft' => ['sometimes', 'boolean'],
             'is_original' => ['nullable', 'boolean'],

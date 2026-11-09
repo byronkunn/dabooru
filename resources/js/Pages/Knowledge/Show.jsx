@@ -3,6 +3,8 @@ import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 import { WorkCell } from '@/Components/Work';
 import { Errors, Pagination, ReportKnowledge, RevisionList, TagPicker } from '@/Components/KnowledgeUi';
 import { useState } from 'react';
+import TagFollowButton from '@/Components/TagFollowButton';
+import { categoryColor, categoryLabel } from '@/Lib/tagCategories';
 
 function Editor({ type, targetId, state, version, categories, relatedTags, trusted }) {
     const { auth } = usePage().props;
@@ -33,7 +35,7 @@ function Editor({ type, targetId, state, version, categories, relatedTags, trust
             }));
 form.post(route('knowledge.propose', { type, id: targetId }), { preserveScroll: true });
         }}>
-            <p className="text-sm text-ink-muted">{trusted ? 'Ordinary edits publish immediately. Structural changes require moderator approval.' : 'Your edits are submitted for moderator approval.'} Include a clear reason and sources for factual claims. No private personal information.</p>
+            <p className="text-sm text-ink-muted">{auth.user?.is_admin ? 'Administrator edits publish immediately, including names, categories, aliases, and definitions.' : trusted ? 'Ordinary edits publish immediately. Structural changes require moderator approval.' : 'Your edits are submitted for moderator approval.'} Include a clear reason and sources for factual claims. No private personal information.</p>
             {type === 'post' ? (
                 <>
                     <p className="text-sm text-ink-muted">Only tags change here, not rating, creator credit, or ownership. Implied tags are added automatically.</p>
@@ -46,7 +48,7 @@ form.post(route('knowledge.propose', { type, id: targetId }), { preserveScroll: 
                     {field(type === 'tag' ? 'name' : 'title', type === 'tag' ? 'Canonical name' : 'Title', { required: true, maxLength: type === 'tag' ? 40 : 160 })}
                     {type === 'tag' && (
                         <label className="block">Category<select className="field-input" value={form.data.category} onChange={(e) => form.setData('category', e.target.value)}>
-                            {categories.map((category) => <option key={category}>{category}</option>)}
+                            {categories.map((category) => <option key={category} value={category}>{categoryLabel(category)}</option>)}
                         </select></label>
                     )}
                     <label className="block">Definition / usage guidance (Markdown, no embedded images)
@@ -65,7 +67,7 @@ form.post(route('knowledge.propose', { type, id: targetId }), { preserveScroll: 
                                 setMergeDestination(selection);
                                 form.setData('merged_into_id', selection[0]?.id ?? null);
                             }} />
-                            <p className="text-sm text-ink-muted">Retag affected works and remove relationships before proposing a merge. Old names and links will redirect.</p>
+                            <p className="text-sm text-ink-muted">Retag affected works and remove relationships before proposing a merge. Old names and links will redirect. {auth.user?.is_admin && <Link href={route('admin.tags.index', { q: state.name })} className="link-brand">Use admin merge to move all affected media automatically.</Link>}</p>
                             {auth.user?.is_admin && form.data.category === 'artist' && (
                                 <>
                                     <label className="block">Moderator-verified artist status<select className="field-input" value={form.data.artist_status} onChange={(e) => form.setData('artist_status', e.target.value)}>
@@ -116,10 +118,11 @@ export default function KnowledgeShow({ type, targetId, state, version, locked, 
     const title = state.name ?? state.title ?? `Tags for work #${targetId}`;
     return (
         <AppLayout>
-            <Head title={title} /><TopBar title={title} back={route('knowledge.index')} />
+            <Head title={title} /><TopBar title={title} searchScope="knowledge" back={route('knowledge.index')} />
+            {type === 'tag' && <div className="px-4 pt-3"><TagFollowButton tag={state.name} /></div>}
             <div className="mx-auto max-w-3xl space-y-5 p-4 md:p-6">
                 <div className="flex flex-wrap items-center gap-2">
-                    {type === 'tag' && <span className="chip">{state.category} · tag ID {targetId}</span>}
+                    {type === 'tag' && <span className={`chip ${categoryColor(state.category)}`}>{categoryLabel(state.category)} · tag ID {targetId}</span>}
                     {locked && <span className="chip">Moderator locked</span>}
                     {auth.user && <button className="btn-ghost" onClick={() => router.post(route('knowledge.watch', { type, id: targetId }), { watching: !watching }, { preserveScroll: true })}>{watching ? 'Unwatch' : 'Watch changes'}</button>}
                     {auth.user?.staff_permissions?.includes('curator') && type !== 'post' && <button className="btn-ghost" disabled={lockForm.processing} onClick={() => { lockForm.transform(() => ({ locked: !locked })); lockForm.post(route('admin.knowledge.lock', { type, id: targetId }), { preserveScroll: true }); }}>{locked ? 'Unlock' : 'Lock page'}</button>}
@@ -140,7 +143,7 @@ export default function KnowledgeShow({ type, targetId, state, version, locked, 
                         {type === 'post' ? <><Link href={route('posts.show', targetId)} className="text-ink-brand">View artwork</Link><p>{state.tags.join(', ') || 'No tags yet.'}</p></> : html ? <div className="prose prose-invert max-w-none break-words [&_a]:text-ink-brand [&_p]:mb-3 [&_h2]:text-xl [&_ul]:list-disc [&_ul]:pl-6" dangerouslySetInnerHTML={{ __html: html }} /> : <p className="text-ink-muted">This page needs a definition and usage examples. Contributions are welcome.</p>}
                         {state.source_url && <a href={state.source_url} rel="nofollow noopener noreferrer" target="_blank" className="block text-ink-brand">Public source</a>}
                         {state.aliases?.length > 0 && <p>Aliases: {state.aliases.join(', ')}</p>}
-                        {relatedTags.length > 0 && <div className="flex flex-wrap gap-2">{relatedTags.map((tag) => <Link key={tag.id} href={route('knowledge.show', { type: 'tag', id: tag.id })} className="chip">{tag.name}{state.implies.includes(tag.id) ? ' (implied)' : ''}</Link>)}</div>}
+                        {relatedTags.length > 0 && <div className="flex flex-wrap gap-2">{relatedTags.map((tag) => <Link key={tag.id} href={route('knowledge.show', { type: 'tag', id: tag.id })} title={categoryLabel(tag.category)} className={`chip ${categoryColor(tag.category)}`}>{tag.name}{state.implies.includes(tag.id) ? ' (implied)' : ''}</Link>)}</div>}
                     </section>
                 )}
                 {tab === 'artwork' && works && (

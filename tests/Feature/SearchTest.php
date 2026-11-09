@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Comic;
 use App\Models\Post;
+use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -14,195 +15,72 @@ class SearchTest extends TestCase
 
     private function library(): array
     {
-        $rin = User::factory()->create(['username' => 'rin_senpai', 'name' => 'Rin Senpai']);
-        $mira = User::factory()->create(['username' => 'mira_ink', 'name' => 'mira.ink']);
+        $artist = User::factory()->create(['username' => 'rin_senpai', 'name' => 'Rin Senpai']);
+        $quiet = Post::create(['user_id' => $artist->id, 'type' => 'image', 'rating' => 'sfw', 'title' => 'Mountain quiet', 'caption' => 'A lake study.']);
+        $adult = Post::create(['user_id' => $artist->id, 'type' => 'image', 'rating' => 'explicit', 'title' => 'Mountain at night']);
+        $other = Post::create(['user_id' => $artist->id, 'type' => 'image', 'rating' => 'sfw', 'title' => 'Tea house', 'caption' => 'Ink and wash.', 'artist_name' => 'Outside Artist']);
+        Tag::syncFor($quiet, ['line art', 'landscape']);
+        Tag::syncFor($other, ['line art']);
 
-        $quiet = Post::create(['user_id' => $rin->id, 'type' => 'image', 'rating' => 'sfw', 'title' => 'Mountain quiet', 'caption' => 'A lake study.', 'likes_count' => 50]);
-        $adult = Post::create(['user_id' => $mira->id, 'type' => 'image', 'rating' => 'explicit', 'title' => 'Mountain at night', 'caption' => 'Explicit alt.', 'likes_count' => 10]);
-        $other = Post::create(['user_id' => $mira->id, 'type' => 'image', 'rating' => 'sfw', 'title' => 'Tea house', 'caption' => 'Ink and wash.', 'likes_count' => 5]);
-
-        Comic::create(['user_id' => $rin->id, 'slug' => 'neon-after-dark', 'title' => 'Neon After Dark', 'rating' => 'explicit', 'status' => 'ongoing']);
-
-        return compact('rin', 'mira', 'quiet', 'adult', 'other');
+        return compact('artist', 'quiet', 'adult', 'other');
     }
 
-    public function test_search_page_renders_without_a_term(): void
+    public function test_old_search_page_redirects_to_browse_and_preserves_search_filters(): void
     {
-        $this->get('/search')
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page
-                ->component('Search/Index')
-                ->where('term', '')
-                ->where('searchable', false));
+        $this->get('/search')->assertRedirect(route('gallery', ['q' => '', 'window' => 'all']));
+        $this->get('/search?q=mountain&artist=Rin&type=image')->assertRedirect(route('gallery', [
+            'q' => 'mountain by:"Rin" type:image', 'window' => 'all',
+        ]));
     }
 
-    public function test_finds_works_by_title(): void
+    public function test_browse_searches_title_caption_handle_and_external_credit(): void
     {
-        ['quiet' => $quiet, 'adult' => $adult] = $this->library();
-
-        $this->get('/search?q=mountain')
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page
-                ->where('searchable', true)
-                ->where('counts.works', 1)          // explicit hidden for guests
-                ->where('works.0.id', $quiet->id));
+        ['quiet' => $quiet, 'other' => $other] = $this->library();
+        foreach (['mountain' => $quiet, 'lake study' => $quiet, 'ink and wash' => $other, 'Outside' => $other] as $term => $post) {
+            $this->get(route('gallery', ['q' => $term, 'window' => 'all']))->assertOk()->assertInertia(fn ($page) => $page
+                ->component('Gallery/Index')->has('posts', 1)->where('posts.0.id', $post->id)->missing('stats'));
+        }
+        $this->get('/?q=rin_senpai&window=all')->assertInertia(fn ($page) => $page->has('posts', 2));
     }
 
-    public function test_finds_works_by_caption(): void
+    public function test_multiple_tags_and_text_are_combined_and_existing_filters_preserved(): void
     {
-        ['other' => $other] = $this->library();
-
-        $this->get('/search?q=ink and wash')
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page
-                ->where('counts.works', 1)
-                ->where('works.0.id', $other->id));
+        ['quiet' => $quiet] = $this->library();
+        $query = 'mountain tag:"line art" #landscape by:rin_senpai type:image -tag:watercolor';
+        $this->get(route('gallery', ['q' => $query, 'window' => 'all', 'sort' => 'newest']))->assertInertia(fn ($page) => $page
+            ->has('posts', 1)->where('posts.0.id', $quiet->id)->where('filters.q', $query)
+            ->where('searchTags.included', ['line art', 'landscape'])->where('searchTags.excluded', ['watercolor'])
+            ->where('filters.sort', 'newest')->where('filters.window', 'all')->where('filters.format', 'image'));
+        $this->get(route('gallery', ['q' => '#landscape -tag:"line art"']))->assertInertia(fn ($page) => $page->has('posts', 0));
     }
 
-    public function test_finds_works_by_artist_handle(): void
+    public function test_explicit_preference_and_query_override_still_apply(): void
     {
         $this->library();
-
-        $this->get('/search?q=rin_senpai')
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page->where('counts.works', 1));
-    }
-
-    public function test_explicit_works_are_hidden_from_guests(): void
-    {
-        ['adult' => $adult] = $this->library();
-
-        $this->get('/search?q=mountain')
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page->where('counts.works', 1));
-
+        $this->get('/?q=mountain')->assertInertia(fn ($page) => $page->has('posts', 1));
         $this->actingAs(User::factory()->create(['show_explicit' => true]))
-            ->get('/search?q=mountain')
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page->where('counts.works', 2));
+            ->get('/?q=mountain')->assertInertia(fn ($page) => $page->has('posts', 2));
+        $this->get('/?q=mountain&explicit=0')->assertInertia(fn ($page) => $page->has('posts', 1));
     }
 
-    public function test_finds_comics_and_people(): void
+    public function test_quoted_work_title_and_literal_percent_are_searchable(): void
     {
-        $this->library();
+        ['quiet' => $quiet] = $this->library();
+        $this->get(route('gallery', ['q' => '"Mountain quiet"']))->assertInertia(fn ($page) => $page
+            ->has('posts', 1)->where('posts.0.id', $quiet->id));
+        $this->get('/?q=%25')->assertInertia(fn ($page) => $page->has('posts', 0));
+    }
 
-        // the seed comic is explicit, so a guest must not see it
-        $this->get('/search?q=neon')
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page
-                ->where('tab', 'works')
-                ->where('counts.comics', 0));
-
+    public function test_autocomplete_returns_tags_artists_works_and_visible_comics(): void
+    {
+        ['artist' => $artist] = $this->library();
+        Comic::create(['user_id' => $artist->id, 'slug' => 'mountain', 'title' => 'Mountain', 'rating' => 'explicit', 'status' => 'ongoing']);
+        $this->getJson('/search/suggest?q=rin')->assertOk()->assertJsonPath('people.0.hint', '@rin_senpai');
+        $this->getJson('/search/suggest?q=line')->assertOk()->assertJsonPath('tags.0.tag', 'line art');
+        $this->getJson('/search/suggest?q=mountain')->assertOk()->assertJsonCount(0, 'comics')->assertJsonCount(1, 'works');
         $this->actingAs(User::factory()->create(['show_explicit' => true]))
-            ->get('/search?q=neon')
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page->where('counts.comics', 1));
-
-        $this->get('/search?q=mira&tab=people')
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page
-                ->where('tab', 'people')
-                ->where('people.0.username', 'mira_ink'));
-    }
-
-    public function test_short_terms_are_not_searched(): void
-    {
-        $this->library();
-
-        $this->get('/search?q=a')
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page
-                ->where('searchable', false)
-                ->where('counts.works', 0));
-    }
-
-    public function test_like_wildcards_in_the_term_are_escaped(): void
-    {
-        $this->library();
-
-        // a bare % must not act as a wildcard
-        $this->get('/search?q=%25')
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page->where('counts.works', 0));
-    }
-
-    public function test_result_tab_falls_back_to_works_for_unknown_values(): void
-    {
-        $this->get('/search?q=art&tab=banana')
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page->where('tab', 'works'));
-    }
-
-    public function test_suggestions_endpoint_returns_people_works_and_comics(): void
-    {
-        $this->library();
-
-        $this->getJson('/search/suggest?q=mira')
-            ->assertOk()
-            ->assertJsonStructure(['people', 'works', 'comics', 'more'])
-            ->assertJsonPath('people.0.hint', '@mira_ink');
-
-        $this->actingAs(User::factory()->create(['show_explicit' => true]))
-            ->getJson('/search/suggest?q=neon')
-            ->assertOk()
-            ->assertJsonPath('comics.0.label', 'Neon After Dark');
-    }
-
-    public function test_suggestions_are_empty_for_short_terms(): void
-    {
-        $this->getJson('/search/suggest?q=x')
-            ->assertOk()
-            ->assertJson(['people' => [], 'works' => [], 'comics' => []]);
-    }
-
-    public function test_finds_works_by_external_artist_name(): void
-    {
-        $uploader = User::factory()->create();
-        $post = Post::create([
-            'user_id' => $uploader->id,
-            'type' => 'image',
-            'rating' => 'sfw',
-            'is_original' => false,
-            'artist_name' => 'Krenz Cushart',
-            'title' => 'Light and Angle',
-        ]);
-
-        $this->get('/search?q=Krenz')
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page
-                ->where('counts.works', 1)
-                ->where('works.0.id', $post->id)
-                ->where('works.0.artist_name', 'Krenz Cushart'));
-    }
-
-    public function test_search_supports_inline_operators_for_type_and_artist(): void
-    {
-        $this->library();
-
-        $this->get('/search?q=by:rin_senpai type:image')
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page
-                ->where('searchable', true)
-                ->where('counts.works', 1)
-                ->where('works.0.title', 'Mountain quiet'));
-    }
-
-    public function test_trending_tags_endpoint_returns_json(): void
-    {
-        $this->getJson(route('search.trending'))
-            ->assertOk()
-            ->assertJsonStructure(['tags']);
-    }
-
-    public function test_gallery_accepts_a_q_parameter(): void
-    {
-        ['other' => $other] = $this->library();
-
-        $this->get('/?q=tea')
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page
-                ->where('filters.q', 'tea')
-                ->has('posts', 1)
-                ->where('posts.0.id', $other->id));
+            ->getJson('/search/suggest?q=mountain')->assertJsonPath('comics.0.label', 'Mountain');
+        $this->getJson('/search/suggest?q=x')->assertOk()->assertJson(['people' => [], 'works' => [], 'comics' => []]);
+        $this->getJson(route('search.trending'))->assertOk()->assertJsonStructure(['tags']);
     }
 }

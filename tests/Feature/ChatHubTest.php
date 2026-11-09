@@ -7,6 +7,7 @@ use App\Models\Message;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Tests\Feature\Concerns\MakesImages;
 use Tests\TestCase;
 
@@ -21,7 +22,7 @@ class ChatHubTest extends TestCase
         $chat = Conversation::sole();
         $url = route('messages.show', $chat);
         $decision = route('messages.request', $chat);
-        $this->actingAs($recipient)->get($url)->assertForbidden();
+        $this->actingAs($recipient)->get($url)->assertInertia(fn ($page) => $page->has('conversation.messages', 0));
 
         $this->actingAs($sender)->post(route('messages.store'), [
             'conversation_id' => $chat->id, 'file' => $this->pngUpload('request.png'),
@@ -50,7 +51,49 @@ class ChatHubTest extends TestCase
 
         $recipient->following()->attach($sender->id);
         $this->post(route('messages.store'), ['to' => $recipient->username, 'body' => 'Hello again'])->assertRedirect();
-        $this->assertSame('accepted', Conversation::where('kind', 'direct')->sole()->request_status);
+        $this->assertSame('pending', Conversation::where('kind', 'direct')->sole()->request_status);
+    }
+
+    public function test_followed_senders_still_require_a_text_request_and_explicit_acceptance(): void
+    {
+        Storage::fake('local');
+        [$sender, $recipient] = User::factory()->count(2)->create();
+        $recipient->following()->attach($sender->id);
+        $this->actingAs($sender)->get(route('messages.index', ['to' => $recipient->username]))->assertRedirect();
+        $chat = Conversation::sole();
+        $this->get(route('messages.show', $chat))->assertInertia(fn ($page) => $page
+            ->where('conversation.request.textOnly', true));
+
+        foreach ([
+            ['file' => $this->pngUpload('request.png')],
+            ['shared_post_id' => 999],
+            ['sticker_pack_id' => 999, 'sticker_post_id' => 999],
+            ['forward_id' => 999],
+            ['reply_to_id' => 999],
+            ['interactive' => ['type' => 'poll', 'title' => 'Question', 'options' => ['Yes', 'No']]],
+            ['send_at' => now()->addHour()->toIso8601String()],
+            ['spoiler' => true],
+            ['silent' => true],
+        ] as $extra) {
+            $this->post(route('messages.store'), [
+                'conversation_id' => $chat->id, 'body' => 'Hello',
+            ] + $extra)->assertSessionHasErrors('body');
+            $this->assertSame('draft', $chat->fresh()->request_status);
+            $this->assertDatabaseCount('messages', 0);
+        }
+
+        $this->post(route('messages.store'), ['conversation_id' => $chat->id, 'body' => 'Hello'])->assertRedirect();
+        foreach ([$sender, $recipient] as $user) {
+            $this->actingAs($user)->post(route('messages.store'), [
+                'conversation_id' => $chat->id, 'body' => 'Not accepted yet',
+            ])->assertForbidden();
+        }
+        $this->assertDatabaseCount('messages', 1);
+        $this->actingAs($recipient)->post(route('messages.request', $chat), ['decision' => 'accepted'])->assertRedirect();
+        $this->actingAs($sender)->post(route('messages.store'), [
+            'conversation_id' => $chat->id, 'file' => $this->pngUpload('accepted.png'),
+        ])->assertRedirect();
+        $this->assertNotNull(Message::latest('id')->firstOrFail()->media_id);
     }
 
     public function test_search_respects_per_user_deletion(): void
@@ -92,7 +135,8 @@ class ChatHubTest extends TestCase
             ->where('conversation.messages.1.reply.label', 'Original')
             ->where('conversation.messages.1.edited', true)
             ->where('conversation.typing.0', $sender->name));
-        $this->get(route('messages.show', $private))->assertOk();
+        $this->postJson(route('messages.read', $chat), ['message_id' => $reply->id])->assertOk();
+        $this->postJson(route('messages.read', $private), ['message_id' => $secret->id])->assertOk();
         $this->travel(3)->minutes();
         $this->artisan('messages:send-scheduled')->assertSuccessful();
         $this->artisan('messages:send-scheduled')->assertSuccessful();

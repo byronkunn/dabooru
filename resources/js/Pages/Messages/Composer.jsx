@@ -1,3 +1,4 @@
+import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { Link, useForm } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/Components/Icons';
@@ -71,7 +72,8 @@ export default function Composer({ conversation, reply, onClearReply, quickRepli
             shared_post_id: postId ?? null,
             interactive,
             sticker_pack_id: sticker?.pack ?? null,
-            sticker_post_id: sticker?.id ?? null,
+            sticker_post_id: sticker && !sticker.upload_id ? sticker.id : null,
+            sticker_upload_id: sticker?.upload_id ?? null,
             send_at: sendAt ? new Date(sendAt).toISOString() : null,
         }));
         form.post(route('messages.store'), {
@@ -133,6 +135,7 @@ export default function Composer({ conversation, reply, onClearReply, quickRepli
                     setCamera(null);
                     if (chunks.length) {
                         setAttachment(new File(chunks, `${video ? 'video' : 'voice'}-note.${extension}`, { type: mimeType }));
+                        setSticker(null);
                         setSendAt('');
                     }
                 }
@@ -163,6 +166,7 @@ export default function Composer({ conversation, reply, onClearReply, quickRepli
                     <button type="button" className="ml-2 underline" onClick={() => setInteractive(null)}>Remove</button>
                 </p>}
                 {sticker && <p className="break-words text-xs">Sticker · {sticker.title}
+                    <img src={sticker.thumbnail} alt="" className="inline-block h-16 w-16 object-contain" />
                     <button type="button" className="ml-2 underline" onClick={() => setSticker(null)}>Remove</button>
                 </p>}
                 {post && <p className="break-all text-xs">Shared work · {post}
@@ -174,42 +178,58 @@ export default function Composer({ conversation, reply, onClearReply, quickRepli
                 <FormErrors errors={form.errors} />
                 {camera && <video ref={preview} autoPlay playsInline muted aria-label="Video note preview" className="h-24 w-24 rounded-xl bg-black object-cover" />}
                 {recordError && <p role="alert" className="text-sm text-ink-expl">{recordError}</p>}
+                {textOnly && <p className="text-xs text-ink-muted">Send one text-only introduction. More messages, stickers and attachments unlock when they accept.</p>}
                 <div className="flex items-end gap-2">
                     {!textOnly && <>
                         <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,audio/*,application/pdf,application/zip"
-                            onChange={(event) => { setAttachment(event.target.files?.[0] ?? null); setSendAt(''); }} hidden />
-                        <button type="button" className="btn-icon-flat h-11 w-11 shrink-0" onClick={() => fileInput.current.click()} aria-label="Attach file">
-                            <Icon name="plus" />
+                            onChange={(event) => { setAttachment(event.target.files?.[0] ?? null); setSticker(null); setSendAt(''); }} hidden />
+                        <Menu>
+                            <MenuButton disabled={form.processing || Boolean(recording)} className="btn-icon-flat h-11 w-11 shrink-0" aria-label="Attachment menu">
+                                <Icon name="attachment" />
+                            </MenuButton>
+                            <MenuItems anchor={{ to: 'top start', gap: 8, padding: 8 }} className="z-50 w-56 max-w-[calc(100vw-16px)] rounded-xl border border-ink-line bg-ink-surface p-1.5 shadow-xl focus:outline-none">
+                                <ToolItem onClick={() => fileInput.current.click()}>Photo, video or file</ToolItem>
+                                <ToolItem onClick={() => record(false)}>Record voice note</ToolItem>
+                                <ToolItem onClick={() => record(true)}>Record video note</ToolItem>
+                                <ToolItem onClick={() => setTool('work')}>Share work</ToolItem>
+                                <ToolItem onClick={() => setTool('interactive')}>Poll or checklist</ToolItem>
+                                <ToolItem onClick={() => setTool('quick')}>Quick replies</ToolItem>
+                            </MenuItems>
+                        </Menu>
+                        <button type="button" className="btn-icon-flat h-11 w-9 shrink-0" disabled={form.processing || Boolean(recording)}
+                            onClick={() => setTool('sticker')} aria-label="Stickers">
+                            <Icon name="sticker" />
                         </button>
                     </>}
                     <textarea aria-label="Message" rows={1} maxLength={4000} placeholder={textOnly ? 'Write your message request' : 'Write a message'}
-                        className="field-input min-h-[44px] min-w-0 flex-1 resize-y text-sm" value={form.data.body}
+                        className="field-input min-h-[44px] min-w-0 flex-1 resize-y text-sm placeholder:truncate" value={form.data.body}
                         onChange={(event) => setBody(event.target.value)} />
                     <button type="submit" aria-label="Send" className="btn-primary h-11 w-11 shrink-0 p-0"
                         disabled={form.processing || recording || (!form.data.body.trim() && !attachment && !interactive && !post && !sticker)}>
                         <Icon name="send" />
                     </button>
+                    {!textOnly && <Menu>
+                        <MenuButton className="btn-icon-flat h-11 w-7 shrink-0" aria-label="Send options" disabled={form.processing || Boolean(recording)}>
+                            <Icon name="more" className="h-4 w-4" />
+                        </MenuButton>
+                        <MenuItems anchor={{ to: 'top end', gap: 8, padding: 8 }} className="z-50 w-64 max-w-[calc(100vw-16px)] rounded-xl border border-ink-line bg-ink-surface p-1.5 shadow-xl focus:outline-none">
+                            <ToolItem onClick={() => setSilent(!silent)}>{silent ? 'Disable silent sending' : 'Send silently'}{silent ? ' (on)' : ''}</ToolItem>
+                            {!sendAt && <ToolItem onClick={() => setSpoiler(!spoiler)}>{spoiler ? 'Remove spoiler' : 'Mark as spoiler'}{spoiler ? ' (on)' : ''}</ToolItem>}
+                            {attachment?.type.startsWith('image/') && <ToolItem onClick={() => setOriginal(!original)}>
+                                {original ? 'Remove original metadata' : 'Keep original file and metadata'}
+                            </ToolItem>}
+                            {!draft && conversation.request?.status !== 'declined' && !attachment && !post && !interactive && !sticker && !reply &&
+                                <ToolItem onClick={() => setTool('schedule')}>Schedule message</ToolItem>}
+                        </MenuItems>
+                    </Menu>}
                 </div>
-                {!textOnly && <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-muted">
-                    {recording ? <button type="button" className="min-h-8 hover:underline" onClick={() => record(recording === 'video')}>Stop recording</button> : <>
-                        <button type="button" className="min-h-8 hover:underline" onClick={() => record(false)}>Voice note</button>
-                        <button type="button" className="min-h-8 hover:underline" onClick={() => record(true)}>Video note</button>
-                    </>}
-                    <button type="button" className="min-h-8 hover:underline" onClick={() => setTool('work')}>Share work</button>
-                    <button type="button" className="min-h-8 hover:underline" onClick={() => setTool('sticker')}>Stickers</button>
-                    <button type="button" className="min-h-8 hover:underline" onClick={() => setTool('quick')}>Quick replies</button>
-                    <button type="button" className="min-h-8 hover:underline" onClick={() => setTool('interactive')}>Poll or checklist</button>
-                    {!draft && !attachment && !post && !interactive && !sticker && !reply &&
-                        <button type="button" className="min-h-8 hover:underline" onClick={() => setTool('schedule')}>Schedule</button>}
-                    {!sendAt && <label className="flex min-h-8 items-center gap-1.5"><input type="checkbox" checked={spoiler} onChange={(event) => setSpoiler(event.target.checked)} /> Spoiler</label>}
-                    {attachment?.type.startsWith('image/') && <label className="flex min-h-8 items-center gap-1.5" title="Includes the image’s original metadata">
-                        <input type="checkbox" checked={original} onChange={(event) => setOriginal(event.target.checked)} /> Keep original file and metadata
-                    </label>}
-                    <label className="flex min-h-8 items-center gap-1.5"><input type="checkbox" checked={silent} onChange={(event) => setSilent(event.target.checked)} /> Send silently</label>
-                </div>}
+                {recording && <button type="button" className="btn-ghost text-sm" onClick={() => record(recording === 'video')}>Stop recording {recording === 'video' ? 'video' : 'voice'} note</button>}
+                {(silent || spoiler || original) && <p className="text-xs text-ink-brand" role="status">
+                    {[silent && 'Silent sending', spoiler && !sendAt && 'Spoiler', original && 'Original metadata included'].filter(Boolean).join(' · ')}
+                </p>}
             </form>
-            {tool === 'sticker' ? <StickerPicker onClose={() => setTool(null)} onPick={(entry) => {
-                setSticker(entry); setPost(''); setSendAt(''); setTool(null);
+            {tool === 'sticker' ? <StickerPicker conversationId={conversation.id} onClose={() => setTool(null)} onPick={(entry) => {
+                setSticker(entry); clearAttachment(); setInteractive(null); setPost(''); setSendAt(''); setTool(null);
             }} /> : tool === 'quick' ? <QuickReplies replies={quickReplies} onClose={() => setTool(null)} onUse={(text) => {
                 setBody([form.data.body, text].filter(Boolean).join('\n').slice(0, 4000));
                 setTool(null);
@@ -217,11 +237,16 @@ export default function Composer({ conversation, reply, onClearReply, quickRepli
                 onSave={(value) => {
                     if (tool === 'work') { setPost(value); setSticker(null); setSendAt(''); }
                     if (tool === 'schedule') setSendAt(value);
-                    if (tool === 'interactive') { setInteractive(value); setSendAt(''); }
+                    if (tool === 'interactive') { setInteractive(value); setSticker(null); setSendAt(''); }
                     setTool(null);
                 }} />}
         </>
     );
+}
+
+function ToolItem({ onClick, children }) {
+    return <MenuItem><button type="button" onClick={onClick}
+        className="block min-h-11 w-full rounded-lg px-3 py-2 text-left text-sm data-[focus]:bg-ink-raised">{children}</button></MenuItem>;
 }
 
 function ComposerTool({ tool, post, sendAt, interactive, onClose, onSave }) {
@@ -278,31 +303,51 @@ function QuickReplies({ replies, onUse, onClose }) {
     );
 }
 
-function StickerPicker({ onClose, onPick }) {
+function StickerPicker({ conversationId, onClose, onPick }) {
     const [packs, setPacks] = useState(null);
     const [failed, setFailed] = useState(false);
+    const [attempt, setAttempt] = useState(0);
+    const [search, setSearch] = useState('');
+    const [selectedPack, setSelectedPack] = useState(null);
     useEffect(() => {
         const controller = new AbortController();
-        axios.get(route('messages.stickers.picker'), { signal: controller.signal })
-            .then(({ data }) => setPacks(data)).catch(() => { if (!controller.signal.aborted) setFailed(true); });
-        return () => controller.abort();
-    }, []);
+        setFailed(false);
+        const timer = setTimeout(() => {
+            axios.get(route('messages.stickers.picker'), { params: { q: search.trim() || undefined }, signal: controller.signal })
+                .then(({ data }) => setPacks(data)).catch(() => { if (!controller.signal.aborted) setFailed(true); });
+        }, 250);
+        return () => { clearTimeout(timer); controller.abort(); };
+    }, [attempt, search]);
     const available = packs?.filter((pack) => pack.stickers.length);
+    const query = search.trim().toLocaleLowerCase();
+    const matching = available?.filter((pack) => selectedPack === null || selectedPack === pack.id).map((pack) => ({
+        ...pack,
+        stickers: pack.stickers.filter((entry) => `${entry.title} ${pack.title} ${pack.artist}`.toLocaleLowerCase().includes(query)),
+    })).filter((pack) => pack.stickers.length);
     return (
-        <ChatDialog title="Send a sticker" onClose={onClose}>
-            <div className="max-h-[55dvh] space-y-4 overflow-y-auto">
-                {failed ? <p role="alert">Couldn’t load sticker packs.</p> : !packs ? <p>Loading sticker packs…</p>
-                    : !available.length && <p className="text-sm text-ink-muted">No sticker packs have been published yet.</p>}
-                {available?.map((pack) => <div key={pack.id}>
+        <ChatDialog title="Choose a sticker" onClose={onClose}>
+            <input type="search" aria-label="Search stickers" placeholder="Search stickers or packs" className="field-input mb-3"
+                value={search} onChange={(event) => { setSearch(event.target.value); setSelectedPack(null); }} />
+            {available?.length > 0 && <div className="mb-3 flex gap-2 overflow-x-auto pb-2" role="group" aria-label="Sticker packs">
+                <button type="button" className="btn-ghost shrink-0 text-xs" aria-pressed={selectedPack === null} onClick={() => setSelectedPack(null)}>All packs</button>
+                {available.map((pack) => <button key={pack.id} type="button" aria-pressed={selectedPack === pack.id}
+                    className={`shrink-0 rounded-lg border px-3 py-2 text-xs ${selectedPack === pack.id ? 'border-ink-brand text-ink-brand' : 'border-ink-line'}`}
+                    onClick={() => setSelectedPack(pack.id)}>{pack.title}</button>)}
+            </div>}
+            <div className="max-h-[45dvh] space-y-4 overflow-y-auto">
+                {failed ? <div role="alert">Couldn’t load sticker packs. <button type="button" className="underline" onClick={() => setAttempt(attempt + 1)}>Retry</button></div> : !packs ? <p>Loading sticker packs…</p>
+                    : !available.length && <p className="text-sm text-ink-muted">{query ? 'No matching sticker packs.' : 'No sticker packs are available yet.'}</p>}
+                {available?.length > 0 && !matching.length && <p className="text-sm text-ink-muted">No matching stickers.</p>}
+                {matching?.map((pack) => <div key={pack.id}>
                     <p className="mb-2 text-sm font-bold">{pack.title} · @{pack.artist}</p>
                     <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
-                        {pack.stickers.map((entry) => <button key={entry.id} type="button" onClick={() => onPick({ ...entry, pack: pack.id })}
+                        {pack.stickers.map((entry) => <button key={`${entry.upload_id ? 'upload' : 'post'}-${entry.id}`} type="button" aria-label={`Choose sticker: ${entry.title}`} onClick={() => onPick({ ...entry, pack: pack.id })}
                             className="overflow-hidden rounded-lg bg-ink-raised p-1 hover:ring-1 hover:ring-ink-brand">
                             <img src={entry.thumbnail} alt={entry.title} loading="lazy" className="aspect-square w-full object-contain" />
                         </button>)}
                     </div>
                 </div>)}
-                <Link href={route('messages.stickers.index')} className="link-brand text-sm">Browse or publish packs</Link>
+                <Link href={route('messages.stickers.index', { return_chat: conversationId })} className="link-brand text-sm">Browse or publish packs</Link>
             </div>
         </ChatDialog>
     );

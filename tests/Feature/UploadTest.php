@@ -79,6 +79,29 @@ class UploadTest extends TestCase
         $this->assertSame(3, Post::firstOrFail()->media()->count());
     }
 
+    public function test_uploads_accept_thirty_full_length_tags(): void
+    {
+        $tags = array_map(fn ($number) => str_repeat('a', 38).sprintf('%02d', $number), range(1, 30));
+        $this->actingAs(User::factory()->create())->post(route('upload.store'), [
+            'type' => 'image', 'rating' => 'sfw', 'tags' => implode(', ', $tags),
+            'files' => FakeImage::upload('tagged.png'),
+        ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $this->assertSame(30, Post::firstOrFail()->tags()->count());
+    }
+
+    public function test_uploads_reject_thirty_one_tags_before_saving_media(): void
+    {
+        $this->actingAs(User::factory()->create())->post(route('upload.store'), [
+            'type' => 'image', 'rating' => 'sfw',
+            'tags' => implode(', ', array_map(fn ($number) => 'tag-'.$number, range(1, 31))),
+            'files' => FakeImage::upload('too-many.png'),
+        ])->assertSessionHasErrors('tags');
+
+        $this->assertDatabaseCount('posts', 0);
+        $this->assertDatabaseCount('media', 0);
+    }
+
     public function test_explicit_rating_is_stored_and_hidden_from_guests(): void
     {
         $user = User::factory()->create();

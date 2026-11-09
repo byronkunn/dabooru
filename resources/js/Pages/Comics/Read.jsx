@@ -1,6 +1,9 @@
+import { Listbox, ListboxButton, ListboxLabel, ListboxOption, ListboxOptions } from '@headlessui/react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Icon } from '@/Components/Icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
+
+const SLIDESHOW_INTERVALS = [3, 5, 10, 15];
 
 export default function ComicRead({ comic, chapter, pages, startPage = 1, defaultMode = 'page' }) {
     const { auth } = usePage().props;
@@ -8,10 +11,51 @@ export default function ComicRead({ comic, chapter, pages, startPage = 1, defaul
     const [page, setPage] = useState(startPage);
     const [showChrome, setShowChrome] = useState(true);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [slideshow, setSlideshow] = useState(false);
+    const [intervalSeconds, setIntervalSeconds] = useState(() => {
+        const saved = Number(localStorage.getItem('inkwell.readerInterval'));
+        return SLIDESHOW_INTERVALS.includes(saved) ? saved : 10;
+    });
+    const [loadedSource, setLoadedSource] = useState(null);
+    const [imageError, setImageError] = useState(null);
+    const [visible, setVisible] = useState(!document.hidden);
     const bodyRef = useRef(null);
     const scrollPages = useRef([]);
     const resumePage = useRef(startPage);
     const total = pages.length;
+    const source = pages[page - 1]?.url;
+
+    useEffect(() => {
+        const onVisibilityChange = () => setVisible(!document.hidden);
+        document.addEventListener('visibilitychange', onVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem('inkwell.readerInterval', String(intervalSeconds));
+    }, [intervalSeconds]);
+
+    useEffect(() => {
+        if (!slideshow || mode !== 'page' || !visible || loadedSource !== source || imageError === source) return;
+        if (page >= total) {
+            setSlideshow(false);
+            setShowChrome(true);
+            return;
+        }
+        const timer = setTimeout(() => setPage((current) => Math.min(total, current + 1)), intervalSeconds * 1000);
+        return () => clearTimeout(timer);
+    }, [slideshow, mode, visible, loadedSource, source, imageError, page, total, intervalSeconds]);
+
+    const toggleSlideshow = () => {
+        if (slideshow) {
+            setSlideshow(false);
+            return;
+        }
+        setMode('page');
+        setImageError(null);
+        if (page >= total) setPage(1);
+        setSlideshow(true);
+    };
 
     useEffect(() => {
         const onFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
@@ -49,7 +93,7 @@ export default function ComicRead({ comic, chapter, pages, startPage = 1, defaul
 
     useEffect(() => {
         const onKey = (e) => {
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            if (e.target.closest('input, textarea, select, button, a, [contenteditable="true"]')) return;
 
             if (e.key === 'f' || e.key === 'F') {
                 e.preventDefault();
@@ -111,7 +155,7 @@ export default function ComicRead({ comic, chapter, pages, startPage = 1, defaul
                         <button type="button" onClick={() => setMode('page')} aria-pressed={mode === 'page'} className={`min-h-9 rounded-full px-3 text-[12.5px] font-bold ${mode === 'page' ? 'bg-ink-brand text-[#1c1017]' : 'text-ink-muted'}`}>
                             Page
                         </button>
-                        <button type="button" onClick={() => setMode('scroll')} aria-pressed={mode === 'scroll'} className={`min-h-9 rounded-full px-3 text-[12.5px] font-bold ${mode === 'scroll' ? 'bg-ink-brand text-[#1c1017]' : 'text-ink-muted'}`}>
+                        <button type="button" onClick={() => { setSlideshow(false); setMode('scroll'); }} aria-pressed={mode === 'scroll'} className={`min-h-9 rounded-full px-3 text-[12.5px] font-bold ${mode === 'scroll' ? 'bg-ink-brand text-[#1c1017]' : 'text-ink-muted'}`}>
                             Scroll
                         </button>
                     </div>
@@ -131,7 +175,10 @@ export default function ComicRead({ comic, chapter, pages, startPage = 1, defaul
                 {mode === 'page' ? (
                     <div className="relative grid h-full place-items-center overflow-auto p-0 md:p-4">
                         <img
-                            src={pages[page - 1]?.url}
+                            key={source}
+                            src={source}
+                            onLoad={() => { setLoadedSource(source); setImageError(null); }}
+                            onError={() => { setImageError(source); setSlideshow(false); setShowChrome(true); }}
                             alt={`Page ${page} of ${total}`}
                             className="max-h-full max-w-full object-contain select-none md:rounded md:shadow-[0_20px_60px_-20px_#000]"
                             width={pages[page - 1]?.width}
@@ -182,6 +229,35 @@ export default function ComicRead({ comic, chapter, pages, startPage = 1, defaul
                 )}
             </div>
 
+            <div className={`shrink-0 border-t border-ink-line bg-ink-bg/95 px-2.5 py-2 ${showChrome ? '' : 'hidden'}`}>
+                <div className="flex flex-wrap items-center gap-2">
+                    <button type="button" onClick={toggleSlideshow} disabled={total < 2}
+                        aria-pressed={slideshow} className="btn-soft min-h-10 text-xs disabled:opacity-30">
+                        {slideshow ? 'Pause slideshow' : 'Start slideshow'}
+                    </button>
+                    <Listbox value={intervalSeconds} onChange={setIntervalSeconds}>
+                        <div className="flex items-center gap-2 text-xs text-ink-muted">
+                            <ListboxLabel>Interval</ListboxLabel>
+                            <ListboxButton aria-label="Slideshow interval" className="field-input flex w-auto items-center gap-2 py-2 text-xs">
+                                {intervalSeconds} seconds
+                                <span aria-hidden="true">▾</span>
+                            </ListboxButton>
+                            <ListboxOptions anchor={{ to: 'top end', gap: 8, padding: 8 }}
+                                className="z-[80] max-h-[min(18rem,calc(100dvh-16px))] w-40 max-w-[calc(100vw-16px)] overflow-y-auto rounded-xl border border-ink-line bg-ink-surface p-1 shadow-xl focus:outline-none">
+                                {SLIDESHOW_INTERVALS.map((seconds) => <ListboxOption key={seconds} value={seconds}
+                                    className="flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2 text-xs text-ink-text data-[focus]:bg-ink-raised data-[selected]:text-ink-brand">
+                                    {seconds} seconds
+                                    {seconds === intervalSeconds && <Icon name="check" className="h-4 w-4" />}
+                                </ListboxOption>)}
+                            </ListboxOptions>
+                        </div>
+                    </Listbox>
+                    <span className="text-xs text-ink-muted" role="status">
+                        {slideshow ? (visible ? 'Playing' : 'Paused while tab is hidden') : page === total ? 'End of chapter' : 'Slideshow paused'}
+                    </span>
+                </div>
+                {imageError === source && <p role="alert" className="mt-2 text-xs text-ink-expl">This page could not load. Slideshow paused. Reload the reader to retry.</p>}
+            </div>
             {mode === 'page' && (
                 <footer className={`flex shrink-0 items-center gap-2.5 border-t border-ink-line bg-ink-bg/95 px-2.5 py-2 transition-all duration-200 md:px-3.5 ${showChrome ? 'opacity-100' : 'pointer-events-none translate-y-full opacity-0'}`}>
                     <button type="button" onClick={() => go(page - 1)} disabled={page === 1} className="btn-soft min-h-10 min-w-11 disabled:opacity-30" aria-label="Previous page">

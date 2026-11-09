@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Support\ChatAccess;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -13,6 +14,24 @@ use Illuminate\Validation\Rule;
 
 class ChatMessageController extends Controller
 {
+    public function read(Request $request, Conversation $conversation): JsonResponse
+    {
+        $viewer = $request->user();
+        ChatAccess::requireMember($conversation, $viewer);
+        $data = $request->validate(['message_id' => ['required', 'integer', 'min:1']]);
+        $message = ChatAccess::readable($conversation, $viewer)->whereNull('removed_at')->findOrFail($data['message_id']);
+        $participant = DB::table('conversation_participants')->where('conversation_id', $conversation->id)->where('user_id', $viewer->id);
+
+        DB::transaction(function () use ($participant, $message) {
+            (clone $participant)->where(fn ($query) => $query->whereNull('last_read_message_id')
+                ->orWhere('last_read_message_id', '<', $message->id))
+                ->update(['last_read_message_id' => $message->id, 'last_read_at' => now(), 'updated_at' => now()]);
+            (clone $participant)->where('marked_unread', true)->update(['marked_unread' => false]);
+        });
+
+        return response()->json(['unread' => ChatAccess::unreadCount($viewer)]);
+    }
+
     public function typing(Request $request, Conversation $conversation): Response
     {
         $viewer = $request->user();
@@ -39,6 +58,7 @@ class ChatMessageController extends Controller
             abort_unless($message->user_id === $viewer->id && ! $message->removed_at
                 && ChatAccess::canPost($chat, $viewer, $other), 403);
             $message->update(['body' => $data['body'], 'edited_at' => now()]);
+            Conversation::bumpMessageRevision($chat->id);
         });
 
         return back();
@@ -48,7 +68,10 @@ class ChatMessageController extends Controller
     {
         $viewer = $request->user();
         ChatAccess::requireMessage($message, $viewer);
-        DB::table('message_hides')->insertOrIgnore(['message_id' => $message->id, 'user_id' => $viewer->id]);
+        DB::transaction(function () use ($message, $viewer) {
+            DB::table('message_hides')->insertOrIgnore(['message_id' => $message->id, 'user_id' => $viewer->id]);
+            Conversation::bumpMessageRevision($message->conversation_id);
+        });
 
         return back();
     }
@@ -67,6 +90,7 @@ class ChatMessageController extends Controller
             if ($data['pinned']) {
                 $current->update(['pinned_at' => now()]);
             }
+            Conversation::bumpMessageRevision($chat->id);
         });
 
         return back();
@@ -78,9 +102,11 @@ class ChatMessageController extends Controller
         $viewer = $request->user();
 
         DB::transaction(function () use ($viewer, $message, $data) {
+            Conversation::lockForUpdate()->findOrFail($message->conversation_id);
             $current = Message::lockForUpdate()->findOrFail($message->id);
             ChatAccess::requireMessage($current, $viewer);
             abort_if($current->removed_at || ! ChatAccess::canInteract($current->conversation, $viewer), 403);
+            Conversation::bumpMessageRevision($current->conversation_id);
             $key = ['message_id' => $current->id, 'user_id' => $viewer->id];
             if ($data['emoji'] === null) {
                 DB::table('message_reactions')->where($key)->delete();
@@ -97,9 +123,11 @@ class ChatMessageController extends Controller
         $data = $request->validate(['index' => ['required', 'integer', 'min:0', 'max:9'], 'selected' => ['required', 'boolean']]);
         $viewer = $request->user();
         DB::transaction(function () use ($message, $viewer, $data) {
+            Conversation::lockForUpdate()->findOrFail($message->conversation_id);
             $current = Message::lockForUpdate()->findOrFail($message->id);
             ChatAccess::requireMessage($current, $viewer);
             abort_if(! ChatAccess::canInteract($current->conversation, $viewer) || $current->removed_at || ! isset($current->interactive['options'][$data['index']]), 403);
+            Conversation::bumpMessageRevision($current->conversation_id);
             $choices = DB::table('message_choices')->where('message_id', $current->id)->where('user_id', $viewer->id);
             if ($current->interactive['type'] === 'checklist') {
                 DB::table('message_choices')->where('message_id', $current->id)->where('option_index', $data['index'])->delete();
@@ -124,8 +152,14 @@ class ChatMessageController extends Controller
     public function unschedule(Request $request, Conversation $conversation, int $scheduled): RedirectResponse
     {
         ChatAccess::requireMember($conversation, $request->user());
-        DB::table('scheduled_messages')->where('conversation_id', $conversation->id)->where('user_id', $request->user()->id)
-            ->where('id', $scheduled)->whereIn('status', ['pending', 'failed'])->delete();
+        DB::transaction(function () use ($request, $conversation, $scheduled) {
+            Conversation::lockForUpdate()->findOrFail($conversation->id);
+            $deleted = DB::table('scheduled_messages')->where('conversation_id', $conversation->id)->where('user_id', $request->user()->id)
+                ->where('id', $scheduled)->whereIn('status', ['pending', 'failed'])->delete();
+            if ($deleted) {
+                Conversation::bumpMessageRevision($conversation->id);
+            }
+        });
 
         return back();
     }

@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Resources\PostResource;
-use App\Models\Block;
 use App\Models\Comic;
 use App\Models\CuratedShelf;
 use App\Models\ModerationAction;
@@ -16,48 +14,6 @@ use Inertia\Inertia;
 
 class CuratedShelfController extends Controller
 {
-    public function index(Request $request)
-    {
-        $viewer = $request->user();
-        $explicit = (bool) $viewer?->show_explicit;
-        $shelves = CuratedShelf::where('published', true)->latest()->orderByDesc('id')->simplePaginate(8);
-        $entries = $shelves->getCollection()->flatMap(fn ($shelf) => $shelf->entries);
-        $works = Post::visibleTo($viewer)->visibleRating($explicit)->with(['user', 'media.media', 'chapter.comic'])
-            ->whereIn('id', $entries->where('kind', 'work')->pluck('id'))->get()->keyBy('id');
-        $comics = Comic::visibleRating($explicit)
-            ->when($viewer, fn ($query) => $query->whereNotIn('user_id', Block::counterpartIds($viewer->id)))
-            ->with(['coverMedia', 'chapters' => fn ($query) => $query->limit(1)
-                ->when(! $explicit, fn ($query) => $query->where('rating', '!=', 'explicit'))
-                ->with('pages.media')])
-            ->whereIn('id', $entries->where('kind', 'comic')->pluck('id'))->get()->keyBy('id');
-        $artists = User::whereNull('banned_at')->where('is_unsorted', false)
-            ->when($viewer, fn ($query) => $query->whereNotIn('id', Block::counterpartIds($viewer->id)))
-            ->whereIn('id', $entries->where('kind', 'artist')->pluck('id'))->get()->keyBy('id');
-
-        return Inertia::render('Discovery/Shelves', [
-            'shelves' => $shelves->getCollection()->map(fn ($shelf) => $shelf->only(['id', 'title', 'description']) + [
-                'entries' => collect($shelf->entries)->map(function ($entry) use ($works, $comics, $artists) {
-                    $target = match ($entry['kind']) {
-                        'work' => $works->get($entry['id']),
-                        'comic' => $comics->get($entry['id']),
-                        'artist' => $artists->get($entry['id']),
-                    };
-                    if (! $target) {
-                        return null;
-                    }
-
-                    return ['kind' => $entry['kind'], 'id' => $entry['id']] + match ($entry['kind']) {
-                        'work' => ['post' => (new PostResource($target))->resolve()],
-                        'comic' => ['title' => $target->title, 'image' => $target->cover()?->thumbUrl() ?: $target->cover()?->url(),
-                            'url' => route('comics.show', $target->slug, false)],
-                        'artist' => ['title' => $target->name, 'image' => $target->avatarUrl(), 'url' => route('profile.show', $target->username, false)],
-                    };
-                })->filter()->values(),
-            ])->filter(fn ($shelf) => $shelf['entries']->isNotEmpty())->values(),
-            'nextPage' => $shelves->nextPageUrl(), 'previousPage' => $shelves->previousPageUrl(),
-        ]);
-    }
-
     public function manage()
     {
         $shelves = CuratedShelf::latest()->orderByDesc('id')->simplePaginate(15);

@@ -5,7 +5,9 @@ import { Icon } from '@/Components/Icons';
 export const ADMIN_NAV = [
     { label: 'Reports', href: 'admin.reports', icon: 'flag', route: 'admin.reports*', permission: 'moderator' },
     { label: 'People & roles', shortLabel: 'People', href: 'admin.users', icon: 'user', route: 'admin.users*', permission: 'admin' },
+    { label: 'Announcements', shortLabel: 'Notices', href: 'admin.announcements.index', icon: 'bell', route: 'admin.announcements.*', permission: 'admin' },
     { label: 'Community edits', shortLabel: 'Community', href: 'admin.knowledge', icon: 'bookmark', route: 'admin.knowledge*', permission: 'curator' },
+    { label: 'Tags & merges', shortLabel: 'Tags', href: 'admin.tags.index', icon: 'bookmark', route: 'admin.tags.*', permission: 'admin' },
     { label: 'Curated shelves', shortLabel: 'Shelves', href: 'admin.shelves', icon: 'gallery', route: 'admin.shelves*', permission: 'curator' },
     { label: 'Artist credit claims', shortLabel: 'Credits', href: 'admin.credit-claims', icon: 'user', route: 'admin.credit-claims*', permission: 'curator' },
     { label: 'DMCA notices', shortLabel: 'DMCA', href: 'admin.dmca', icon: 'flag', route: 'admin.dmca*', permission: 'admin' },

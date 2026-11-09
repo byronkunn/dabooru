@@ -1,26 +1,30 @@
+import { returnToWorkSource } from '@/Components/WorkLink';
+import { rememberWorkEngagement } from '@/Lib/workEngagement';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import AppLayout, { TopBar, RatingBadge } from '@/Layouts/AppLayout';
-import { MediaViewer, WorkCell } from '@/Components/Work';
+import { ArtistName, BlurGate, MediaViewer, WorkCell } from '@/Components/Work';
 import { Icon } from '@/Components/Icons';
 import { compact } from '@/Lib/format';
 import { useEffect, useState } from 'react';
 import ReportDialog from '@/Components/ReportDialog';
 import PostStarRating from '@/Components/PostStarRating';
+import PostTags from '@/Components/PostTags';
+import AdSlot from '@/Components/AdSlot';
+import UserFollowButton from '@/Components/UserFollowButton';
+import { shouldBlurMedia } from '@/Lib/mediaVisibility';
+import PostComments from '@/Components/PostComments';
+import SaveWorkActions from '@/Components/SaveWorkActions';
 
-export default function PostShow({ post, comments, more, liked, saved, followedAuthor, creditClaim, starRating, collections = [] }) {
+export default function PostShow({ post, comments, canComment, commentPagination, more, liked, saved, followedAuthor, creditClaim, starRating, tagEditing }) {
     const { auth } = usePage().props;
     const [revealed, setRevealed] = useState(false);
     const [isLiked, setLiked] = useState(liked);
-    const [isSaved, setSaved] = useState(saved);
-    const [isFollowing, setFollowing] = useState(followedAuthor);
     const [reporting, setReporting] = useState(false);
     const [lightboxIndex, setLightboxIndex] = useState(null);
     const [copied, setCopied] = useState(false);
-    const form = useForm({ body: '' });
     const creditForm = useForm({ evidence: '' });
-    const collectionForm = useForm({ collection: '' });
 
-    const blurred = post.rating === 'explicit' && !revealed;
+    const blurred = shouldBlurMedia(post.rating, auth?.user?.show_explicit, revealed);
     const isVideo = post.media?.[0]?.kind === 'video';
 
     useEffect(() => {
@@ -40,22 +44,70 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const submitComment = (e) => {
-        e.preventDefault();
-        if (!form.data.body.trim()) return;
-        form.post(route('comments.store', post.id), {
-            preserveScroll: true,
-            onSuccess: () => form.reset(),
-        });
-    };
-
     return (
         <AppLayout>
             <Head title={post.title ?? 'Work'} />
-            <TopBar title="Work" back={route('gallery')} />
+            <TopBar title="Work" back={route('gallery')} onBack={returnToWorkSource} />
 
             <article className="mx-auto max-w-[720px] border-b border-ink-line px-4 pb-4 pt-4 md:px-5">
-                <div className="flex items-center gap-2.5">
+                {post.type === 'comic' && post.chapter && (
+                    <div className="flex flex-wrap items-center gap-2.5 rounded-2xl border border-ink-line bg-ink-raised p-4">
+                        <img src={post.media?.[0]?.thumb} alt="" className={`h-[132px] w-[99px] rounded-xl object-cover ${blurred ? 'blur-2xl' : ''}`} />
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[15px] font-bold">{post.chapter.comic.title}</p>
+                            <p className="mt-1 text-[13px] text-ink-muted">
+                                Chapter {post.chapter.number} · {post.chapter.pages} pages
+                            </p>
+                        </div>
+                        <div className="flex w-full gap-2 sm:w-auto">
+                            <Link href={route('comics.show', post.chapter.comic.slug)} className="btn-ghost flex-1 sm:flex-none">
+                                Series page
+                            </Link>
+                            <Link href={post.chapter.url} className="btn-primary flex-1 sm:flex-none">
+                                Read chapter
+                            </Link>
+                        </div>
+                    </div>
+                )}
+
+                {post.media?.length > 1 && (
+                    <div className={`grid gap-2 ${post.type === 'comic' ? 'mt-4' : ''} ${post.type === 'album' ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2'}`}>
+                        {post.media.map((m, index) => (
+                            <div key={m.id} className="relative overflow-hidden rounded-xl border border-ink-line">
+                            <button
+                                type="button"
+                                onClick={() => setLightboxIndex(index)}
+                                className="group relative overflow-hidden rounded-xl border border-ink-line text-left focus:outline-none focus:ring-2 focus:ring-ink-brand"
+                            >
+                                <MediaViewer media={m} blurred={false} className={blurred ? 'blur-2xl' : ''} />
+                                <span className="absolute bottom-1.5 right-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[10.5px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">
+                                    Expand
+                                </span>
+                            </button>
+                            {blurred && <BlurGate label="Explicit content" onReveal={() => setRevealed(true)} />}
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {post.media?.length === 1 && (
+                    <div className={`relative overflow-hidden rounded-2xl border border-ink-line bg-black ${post.type === 'comic' ? 'mt-4' : ''}`}>
+                        {post.media[0].kind === 'image' ? (
+                            <button
+                                type="button"
+                                onClick={() => setLightboxIndex(0)}
+                                className="block w-full text-left focus:outline-none"
+                            >
+                                <MediaViewer media={post.media[0]} blurred={false} className={blurred ? 'blur-2xl' : ''} />
+                            </button>
+                        ) : (
+                            <MediaViewer media={post.media[0]} blurred={blurred} onReveal={() => setRevealed(true)} />
+                        )}
+                        {blurred && post.media[0].kind === 'image' && <BlurGate label="Explicit content" onReveal={() => setRevealed(true)} />}
+                    </div>
+                )}
+
+                <div className="mt-4 flex flex-wrap items-center gap-2.5">
                     {post.artist_name || post.external_artist ? (
                         <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-amber-500/20 text-amber-300">
                             <span className="text-base font-bold">✎</span>
@@ -73,11 +125,9 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
                         {post.artist_name || post.external_artist ? (
                             <div>
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                    <span className="block truncate text-[15px] font-bold">
-                                        {post.artist_name || post.external_artist.name}
-                                    </span>
+                                    <ArtistName post={post} className="block truncate text-[15px] font-bold" />
                                     <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10.5px] font-bold text-amber-300">
-                                        Artist not on site
+                                        {post.credited_artist ? 'Verified artist credit' : 'Artist credit page'}
                                     </span>
                                 </div>
                                 <p className="truncate text-[12.5px] text-ink-muted">
@@ -111,6 +161,9 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
                             </>
                         )}
                     </div>
+                    {auth.user && post.user && auth.user.id !== post.user.id && (
+                        <UserFollowButton username={post.user.username} following={followedAuthor} />
+                    )}
                     <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
                         <RatingBadge rating={post.rating} label={post.rating_label} />
                         {auth.user && post.user && auth.user.id === post.user.id && (
@@ -131,18 +184,6 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
                                 </button>
                             </>
                         )}
-                        {auth.user && post.user && auth.user.id !== post.user.id && (
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setFollowing(!isFollowing);
-                                    router[isFollowing ? 'delete' : 'post'](route(isFollowing ? 'users.unfollow' : 'users.follow', post.user.username), {}, { preserveScroll: true });
-                                }}
-                                className={isFollowing ? 'btn-ghost h-9 px-3 text-[13px]' : 'btn-primary h-9 px-3 text-[13px]'}
-                            >
-                                {isFollowing ? 'Following' : 'Follow'}
-                            </button>
-                        )}
                     </div>
                 </div>
 
@@ -151,11 +192,10 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
                         <div className="min-w-0">
                             <p className="text-xs font-bold uppercase tracking-wider text-amber-300">{post.credited_artist ? 'Artist credit' : 'External artist'}</p>
                             <p className="mt-0.5 text-[14px] text-ink-text">
-                                Created by {post.credited_artist
-                                    ? <Link href={route('profile.show', post.credited_artist.username)} className="link-brand font-bold">{post.credited_artist.name}</Link>
-                                    : <b className="text-white">{post.artist_name || post.external_artist.name}</b>}.
+                                Created by <ArtistName post={post} className="link-brand font-bold" />.
                                 {post.credited_artist && post.artist_name && <span className="ml-1 text-ink-muted">Originally credited as {post.artist_name}.</span>}
                             </p>
+                            {!post.credited_artist && <p className="mt-1 text-xs text-ink-muted">Artist credit, not an account. Shared by a community member.</p>}
                         </div>
                         {(post.source_url || post.external_artist?.url) && (
                             <a
@@ -194,70 +234,7 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
                 {post.title && <h2 className="mt-4 text-xl font-bold tracking-[-0.02em]">{post.title}</h2>}
                 {post.caption && <p className="mt-2 whitespace-pre-wrap text-[15px] leading-relaxed text-[#dfd7e5]">{post.caption}</p>}
 
-                {post.tags?.length > 0 && (
-                    <nav className="mt-3 flex flex-wrap gap-2" aria-label="Work tags">
-                        {post.tags.map((tag) => (
-                            <Link key={tag} href={route('gallery', { tag, window: 'all' })} className="chip max-w-full !whitespace-normal break-words">#{tag}</Link>
-                        ))}
-                    </nav>
-                )}
-                <Link href={route('knowledge.show', { type: 'post', id: post.id })} className="mt-3 inline-block text-sm text-ink-brand hover:underline">
-                    Improve tags / view tag history
-                </Link>
-
-                {post.type === 'comic' && post.chapter && (
-                    <div className="mt-4 flex flex-wrap items-center gap-2.5 rounded-2xl border border-ink-line bg-ink-raised p-4">
-                        <img src={post.media?.[0]?.thumb} alt="" className="h-[132px] w-[99px] rounded-xl object-cover" />
-                        <div className="min-w-0 flex-1">
-                            <p className="text-[15px] font-bold">{post.chapter.comic.title}</p>
-                            <p className="mt-1 text-[13px] text-ink-muted">
-                                Chapter {post.chapter.number} · {post.chapter.pages} pages
-                            </p>
-                        </div>
-                        <div className="flex w-full gap-2 sm:w-auto">
-                            <Link href={route('comics.show', post.chapter.comic.slug)} className="btn-ghost flex-1 sm:flex-none">
-                                Series page
-                            </Link>
-                            <Link href={post.chapter.url} className="btn-primary flex-1 sm:flex-none">
-                                Read chapter
-                            </Link>
-                        </div>
-                    </div>
-                )}
-
-                {post.media?.length > 1 && (
-                    <div className={`mt-4 grid gap-2 ${post.type === 'album' ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2'}`}>
-                        {post.media.map((m, index) => (
-                            <button
-                                key={m.id}
-                                type="button"
-                                onClick={() => setLightboxIndex(index)}
-                                className="group relative overflow-hidden rounded-xl border border-ink-line text-left focus:outline-none focus:ring-2 focus:ring-ink-brand"
-                            >
-                                <MediaViewer media={m} blurred={false} />
-                                <span className="absolute bottom-1.5 right-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[10.5px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">
-                                    Expand
-                                </span>
-                            </button>
-                        ))}
-                    </div>
-                )}
-
-                {post.media?.length === 1 && (
-                    <div className="mt-4 overflow-hidden rounded-2xl border border-ink-line bg-black">
-                        {post.media[0].kind === 'image' ? (
-                            <button
-                                type="button"
-                                onClick={() => setLightboxIndex(0)}
-                                className="block w-full text-left focus:outline-none"
-                            >
-                                <MediaViewer media={post.media[0]} blurred={blurred} onReveal={() => setRevealed(true)} />
-                            </button>
-                        ) : (
-                            <MediaViewer media={post.media[0]} blurred={blurred} onReveal={() => setRevealed(true)} />
-                        )}
-                    </div>
-                )}
+                <PostTags key={`tags-${post.id}`} post={post} editing={tagEditing} />
 
                 <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-ink-line pb-4 text-[13.5px] text-ink-muted">
                     <span>
@@ -272,31 +249,23 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
                     <span className="ml-auto text-xs">{post.rating === 'explicit' ? '18+ · visible with explicit on' : 'All ages'}</span>
                 </div>
 
-                <PostStarRating key={post.id} postId={post.id} rating={starRating} />
-
-                <div className="mt-3 flex flex-wrap items-center gap-2">
+                <div className="mt-2.5 flex flex-wrap items-center gap-1.5 sm:gap-2">
                     <button
                         type="button"
                         onClick={() => {
                             setLiked(!isLiked);
-                            router[isLiked ? 'delete' : 'post'](route(isLiked ? 'posts.unlike' : 'posts.like', post.id), {}, { preserveScroll: true });
+                            router[isLiked ? 'delete' : 'post'](route(isLiked ? 'posts.unlike' : 'posts.like', post.id), {}, {
+                                preserveScroll: true,
+                                onSuccess: () => auth.user && rememberWorkEngagement(auth.user.id, post.id, 'liked', !isLiked),
+                                onError: () => setLiked(isLiked),
+                            });
                         }}
                         className={`btn-ghost gap-2 ${isLiked ? 'border-[#e8607d]/50 text-[#e8607d]' : ''}`}
                         aria-pressed={isLiked}
                     >
                         <Icon name="heart" className="h-4 w-4" /> {isLiked ? 'Liked' : 'Like'}
                     </button>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setSaved(!isSaved);
-                            router[isSaved ? 'delete' : 'post'](route(isSaved ? 'posts.unsave' : 'posts.save', post.id), {}, { preserveScroll: true });
-                        }}
-                        className={`btn-ghost gap-2 ${isSaved ? 'border-ink-brand/50 text-ink-brand' : ''}`}
-                        aria-pressed={isSaved}
-                    >
-                        <Icon name="save" className="h-4 w-4" /> {isSaved ? 'Saved' : 'Save'}
-                    </button>
+                    <SaveWorkActions postId={post.id} saved={saved} />
                     <button
                         type="button"
                         onClick={copyLink}
@@ -328,96 +297,19 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
                         </button>
                     )}
                 </div>
-                {auth.user && (
-                    <div className="mt-3">
-                        {collections.length > 0 ? (
-                            <form className="flex flex-wrap items-center gap-2" onSubmit={(e) => {
-                                e.preventDefault();
-                                if (!collectionForm.data.collection) return;
-                                collectionForm.post(route('collections.posts.add', [collectionForm.data.collection, post.id]), {
-                                    preserveScroll: true,
-                                    onSuccess: () => setSaved(true),
-                                });
-                            }}>
-                                <label className="sr-only" htmlFor="post-collection">Private collection</label>
-                                <select id="post-collection" className="field-input w-auto max-w-full" value={collectionForm.data.collection} onChange={(e) => collectionForm.setData('collection', e.target.value)} required>
-                                    <option value="">Choose a collection</option>
-                                    {collections.map((list) => <option key={list.id} value={list.id}>{list.name}</option>)}
-                                </select>
-                                <button className="btn-ghost" disabled={collectionForm.processing || !collectionForm.data.collection}>Add to collection</button>
-                            </form>
-                        ) : (
-                            <Link className="link-brand text-sm" href={route('collections.index')}>Organize saved works in collections</Link>
-                        )}
-                    </div>
-                )}
+                <PostStarRating key={post.id} postId={post.id} rating={starRating} />
+
             </article>
+            <AdSlot className="mx-4 my-3 max-w-[720px] xl:hidden" placement="post-mobile" compact />
 
-            {/* comments */}
-            <section className="mx-auto max-w-[720px]" aria-label="Comments">
-                {auth.user ? (
-                    <form onSubmit={submitComment} className="flex items-start gap-2.5 border-b border-ink-line px-4 py-3.5 md:px-5">
-                        <img src={auth.user.avatar} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
-                        <textarea
-                            value={form.data.body}
-                            onChange={(e) => form.setData('body', e.target.value)}
-                            placeholder="Add a reply…"
-                            rows={2}
-                            maxLength={2000}
-                            className="field-input min-h-[52px] min-w-0 flex-1 resize-none border-0 bg-transparent px-0 text-[15px] focus:ring-0"
-                        />
-                        <button type="submit" disabled={form.processing || !form.data.body.trim()} className="btn-primary self-end">
-                            Reply
-                        </button>
-                    </form>
-                ) : (
-                    <div className="flex items-center justify-between gap-3 border-b border-ink-line px-4 py-4 md:px-5">
-                        <p className="text-sm text-ink-muted">Log in to reply.</p>
-                        <Link href={route('login')} className="btn-primary">
-                            Log in
-                        </Link>
-                    </div>
-                )}
-
-                {comments.length === 0 ? (
-                    <p className="px-5 py-10 text-center text-sm text-ink-muted">No comments yet.</p>
-                ) : (
-                    comments.map((comment) => (
-                        <div key={comment.id} className="grid grid-cols-[36px_minmax(0,1fr)] gap-2.5 border-b border-ink-line px-4 py-3.5 md:px-5">
-                            <img src={comment.user.avatar} alt="" className="h-9 w-9 rounded-full object-cover" />
-                            <div className="min-w-0">
-                                <p className="flex flex-wrap items-center gap-1.5 text-[14px]">
-                                    <Link href={route('profile.show', comment.user.username)} className="font-bold hover:underline">
-                                        {comment.user.name}
-                                    </Link>
-                                    <span className="text-[13px] text-ink-muted">@{comment.user.username}</span>
-                                    <span className="text-ink-muted">·</span>
-                                    <span className="text-[13px] text-ink-muted">{comment.created_at_human}</span>
-                                </p>
-                                <p className="mt-1 whitespace-pre-wrap text-[14.5px] leading-snug">{comment.body}</p>
-                                {auth.user?.id === comment.user.id && (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            if (window.confirm('Delete this comment?')) router.delete(route('comments.destroy', comment.id), { preserveScroll: true });
-                                        }}
-                                        className="mt-1 text-[12px] text-ink-faint hover:text-[#ff98a9]"
-                                    >
-                                        Delete
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    ))
-                )}
-            </section>
+            <PostComments key={`${post.id}-${auth.user?.id}`} post={post} comments={comments} canComment={canComment} pagination={commentPagination} />
 
             {reporting && <ReportDialog type="post" id={post.id} onClose={() => setReporting(false)} />}
 
             {more.length > 0 && (
                 <section className="mx-auto max-w-[720px] px-3 py-5 md:px-5">
                     <h2 className="mb-3 px-1 text-[15px] font-bold">
-                        {post.user ? `More from ${post.user.name}` : 'More from the library'}
+                        {post.artist_name ? `More credited to ${post.artist_name}` : post.user ? `More from ${post.user.name}` : 'More from the library'}
                     </h2>
                     <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
                         {more.map((item) => (
@@ -460,7 +352,7 @@ export default function PostShow({ post, comments, more, liked, saved, followedA
                         <img
                             src={post.media[lightboxIndex].url}
                             alt=""
-                            className="max-h-[82vh] max-w-[90vw] object-contain select-none"
+                            className={`max-h-[82vh] max-w-[90vw] object-contain select-none ${blurred ? 'blur-2xl' : ''}`}
                         />
                         {post.media.length > 1 && (
                             <button
