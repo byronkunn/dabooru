@@ -213,24 +213,57 @@ function BottomNav({ menuOpen, setMenuOpen }) {
         { label: 'Log in', icon: 'chat', href: route('login'), matches: ['login'] },
         { label: 'Join', icon: 'plus', href: route('register'), matches: ['register'] },
     ];
+    // Studios and uploads have their own group below, so they are not repeated here
+    const groupedLabels = user ? ['Creator Studio'] : [];
     const overflowItems = NAV
         .filter((item) => (!item.auth || user) && !items.some((dockItem) => dockItem.label === item.label))
+        .filter((item) => !groupedLabels.includes(item.label))
         .map((item) => ({ ...item, href: route(item.href) }));
     const menuItems = user ? [
         { label: 'Profile', href: route('profile.show', user.username) },
         ...overflowItems,
     ] : [
-        ...overflowItems,
+        { label: 'Browse', href: route('gallery') },
+        { label: 'Artists', href: route('artists.index') },
+        { label: 'Comics', href: route('comics.index') },
+        { label: 'Tags & wiki', href: route('knowledge.index') },
         { label: 'Log in', href: route('login') },
         { label: 'Create account', href: route('register') },
     ];
-    const menuGroups = user ? [{
-        label: 'Account', items: [
-            { label: 'Settings', href: route('settings.edit') },
-            { label: 'Blocked users', href: route('blocks.index') },
-            ...adminLinks(user).slice(0, 1).map((item) => ({ label: 'Admin panel', href: route(item.href) })),
-        ],
-    }] : [];
+    // The avatar menu is the only place a phone can reach everything the five
+    // bottom dock slots cannot show. Groups are ordered by how often a reader
+    // needs them; anything not in the dock belongs here.
+    const menuGroups = user ? [
+        {
+            label: 'Your stuff',
+            items: [
+                { label: 'Notifications', href: route('notifications.index'), badge: auth?.unread_notifications },
+                { label: 'Following', href: route('following'), matches: ['following'] },
+                { label: 'Saved works', href: route('collections.index') },
+                { label: 'Saved searches', href: route('saved-searches.index') },
+                { label: 'New chapters', href: route('chapters.inbox') },
+                { label: 'Sticker packs', href: route('messages.stickers.index') },
+            ],
+        },
+        {
+            label: 'Artist tools',
+            items: [
+                { label: 'Creator Studio', href: route('studio.index') },
+                { label: 'Upload work', href: route('upload.create') },
+                { label: 'New comic chapter', href: route('comics.chapters.create') },
+            ],
+        },
+        {
+            label: 'Account',
+            items: [
+                { label: 'Settings', href: route('settings.edit') },
+                { label: 'Your reports', href: route('reports.index') },
+                { label: 'Muted tags', href: `${route('settings.edit')}#mutes` },
+                { label: 'Blocked users', href: route('blocks.index') },
+                ...adminLinks(user).slice(0, 1).map((item) => ({ label: 'Admin panel', href: route(item.href) })),
+            ],
+        },
+    ] : [];
 
     return (
         <>
@@ -295,8 +328,9 @@ function BottomNav({ menuOpen, setMenuOpen }) {
                                 </summary>
                                 <div className="border-t border-ink-line px-2 py-1">
                                     {group.items.map((item) => (
-                                        <Link key={item.label} href={item.href} onClick={() => setMenuOpen(false)} className="flex min-h-11 items-center rounded-lg px-3 py-2 text-sm hover:bg-ink-raised">
-                                            {item.label}
+                                        <Link key={item.label} href={item.href} onClick={() => setMenuOpen(false)} className="flex min-h-11 items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm hover:bg-ink-raised">
+                                            <span>{item.label}</span>
+                                            {item.badge > 0 && <span className="rounded-full bg-ink-pink px-2 text-xs font-bold text-white">{item.badge > 99 ? '99+' : item.badge}</span>}
                                         </Link>
                                     ))}
                                     {group.label === 'Account' && <Link href={route('logout')} method="post" as="button" onClick={() => setMenuOpen(false)} className="flex min-h-11 w-full items-center rounded-lg px-3 py-2 text-left text-sm text-ink-muted hover:bg-ink-raised">Log out</Link>}
