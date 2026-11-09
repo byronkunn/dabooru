@@ -16,3 +16,8 @@ test('autocomplete only replaces the unfinished final token', () => {
     assert.equal(selectSearchSuggestion('tag:"line art" rin', { kind: 'artist', hint: '@rin_senpai' }), 'tag:"line art" by:"rin_senpai" ');
     assert.equal(selectSearchSuggestion('mount', { kind: 'work', label: 'Mountain quiet' }), '"Mountain quiet" ');
 });
+
+
+test('selecting an excluded tag keeps the exclusion operator', () => {
+    assert.equal(selectSearchSuggestion('mountain -tag:lan', { kind: 'tag', tag: 'landscape' }), 'mountain -tag:"landscape" ');
+});

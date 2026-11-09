@@ -46,7 +46,7 @@ export default function SearchBox({ initial = '', value, onChange, onSearch, sco
         setRows([]);
         setActive(-1);
         setError('');
-        if (!open || fragment.length < 2) { setLoading(false); return; }
+        if (!open || (fragment.length < 2 && (scope !== 'gallery' || term.trim() !== ''))) { setLoading(false); return; }
         const controller = new AbortController();
         setLoading(true);
         const timer = setTimeout(async () => {
@@ -58,6 +58,7 @@ export default function SearchBox({ initial = '', value, onChange, onSearch, sco
                 const data = await response.json();
                 setRows([
                     ...(data.tags ?? []).map((row) => ({ ...row, kind: 'tag' })),
+                    ...(data.trending ?? []).map((row) => ({ ...row, kind: 'tag' })),
                     ...(data.people ?? []).map((row) => ({ ...row, kind: 'artist' })),
                     ...(data.external_artists ?? []).map((row) => ({ ...row, kind: 'external_artist' })),
                     ...(data.works ?? []).map((row) => ({ ...row, kind: 'work' })),
@@ -93,7 +94,7 @@ export default function SearchBox({ initial = '', value, onChange, onSearch, sco
                 <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-ink-line bg-ink-raised px-3 text-ink-muted focus-within:border-ink-brand">
                     <Icon name="search" className="h-4 w-4 shrink-0" />
                     <input ref={input} name="q" value={term} autoFocus={autoFocus} aria-label={label}
-                        role="combobox" aria-autocomplete="list" aria-expanded={open && fragment.length >= 2} aria-controls={listId}
+                        role="combobox" aria-autocomplete="list" aria-expanded={open && (fragment.length >= 2 || (scope === 'gallery' && term.trim() === ''))} aria-controls={listId}
                         aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
                         autoComplete="off" placeholder={scope === 'gallery' ? 'Search words, #tags, by:artist…' : `${label}…`}
                         maxLength={scope === 'gallery' ? undefined : 160}
@@ -113,13 +114,13 @@ export default function SearchBox({ initial = '', value, onChange, onSearch, sco
                 </div>
                 <button type="submit" className="btn-primary shrink-0">Go</button>
             </form>
-            {open && fragment.length >= 2 && <div id={listId} role="listbox" aria-label="Search suggestions"
+            {open && (fragment.length >= 2 || (scope === 'gallery' && term.trim() === '')) && <div id={listId} role="listbox" aria-label="Search suggestions"
                 className="absolute inset-x-0 top-[calc(100%+6px)] z-50 max-h-[45vh] overflow-auto rounded-xl border border-ink-line bg-ink-surface p-2 shadow-xl">
                 {error ? <p role="alert" className="p-2 text-sm text-ink-muted">{error}</p>
                     : loading ? <p role="status" className="p-2 text-sm text-ink-muted">Loading suggestions…</p>
                         : rows.length === 0 ? <p className="p-2 text-sm text-ink-muted">{fragment.length < 2 ? 'Add words or tags, then click Go when ready.' : 'No suggestions. Click Go to search your query.'}</p>
                             : rows.map((row, index) => <button type="button" key={`${row.kind}-${row.url}`} id={`${listId}-${index}`}
-                                role="option" aria-selected={index === active} onClick={() => select(row)}
+                                role="option" aria-selected={index === active} onMouseDown={(event) => event.preventDefault()} onClick={() => select(row)}
                                 className={`block w-full rounded-lg p-2 text-left text-sm hover:bg-ink-raised ${active === index ? 'bg-ink-raised' : ''}`}>
                                 <span className="block font-semibold">{row.label}</span>
                                 <span className="block text-xs text-ink-muted">{row.hint} · Add to search</span>
