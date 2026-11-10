@@ -31,6 +31,7 @@ class ModerationLogController extends Controller
                 'target_id' => $action->target_id,
                 'reason' => $action->reason,
                 'role_change' => $action->action === 'change_staff_roles' ? $action->meta : null,
+                'message_context' => str_starts_with($action->action, 'search_messages') || str_starts_with($action->action, 'view_messages') || str_starts_with($action->action, 'view_message_attachment') || str_starts_with($action->action, 'remove_message') ? $action->meta : null,
                 'moderator' => $action->moderator?->username,
                 'when' => $action->created_at->toIso8601String(),
             ]),

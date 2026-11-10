@@ -35,6 +35,7 @@ export default function AdminLog({ actions, filters, actionOptions, totalActions
                             <p className="text-xs text-ink-faint">{action.moderator ? `@${action.moderator}` : 'System'} · <time dateTime={action.when}>{new Date(action.when).toLocaleString()}</time></p>
                             {action.reason && <p>{action.reason}</p>}
                             {action.role_change && <p className="text-ink-muted">{roleLabel(action.role_change.before)} → {roleLabel(action.role_change.after)}</p>}
+                            {action.message_context && <p className="text-xs text-ink-muted">{action.message_context.conversation_id ? `Conversation #${action.message_context.conversation_id} · ` : ''}{action.message_context.participants?.length ? `Participants: ${action.message_context.participants.map((name) => `@${name}`).join(', ')} · ` : ''}{action.message_context.messages_shown != null ? `${action.message_context.messages_shown} messages shown · ` : ''}{action.message_context.attachment_count != null ? `${action.message_context.attachment_count} attachments · ` : ''}{action.message_context.media_bytes != null ? `${(action.message_context.media_bytes / 1024 ** 2).toFixed(2)} MB · ` : ''}{action.message_context.had_attachment ? 'Included attachment' : ''}{action.message_context.query_used ? ' · Search used' : ''}</p>}
                         </li>
                     ))}
                 </ol> : <p className="py-10 text-center text-sm text-ink-muted">No actions match these filters.</p>}

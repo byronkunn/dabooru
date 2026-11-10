@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\DmcaController as AdminDmcaController;
+use App\Http\Controllers\Admin\MessageController as AdminMessageController;
 use App\Http\Controllers\Admin\ModerationLogController;
 use App\Http\Controllers\Admin\PostController as AdminPostController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
@@ -288,6 +289,10 @@ Route::middleware('auth')->group(function () {
             Route::post('/works/{post}/restore', [AdminPostController::class, 'restore'])->whereNumber('post')->name('works.restore');
         });
         Route::middleware('admin')->group(function () {
+            Route::get('/messages', [AdminMessageController::class, 'index'])->name('messages');
+            Route::get('/messages/{conversation}', [AdminMessageController::class, 'show'])->whereNumber('conversation')->name('messages.show');
+            Route::get('/messages/message/{message}/attachment', [AdminMessageController::class, 'attachment'])->whereNumber('message')->name('messages.attachment');
+            Route::delete('/messages/message/{message}', [AdminMessageController::class, 'destroy'])->whereNumber('message')->name('messages.destroy');
             Route::get('/tips', [\App\Http\Controllers\Admin\TipSettingsController::class, 'edit'])->name('tips');
             Route::patch('/tips', [\App\Http\Controllers\Admin\TipSettingsController::class, 'update'])->name('tips.update');
             Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
