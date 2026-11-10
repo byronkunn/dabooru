@@ -42,8 +42,18 @@ class StudioAnalytics
             'saves' => $query->orderByDesc('period_saves'),
             'likes' => $query->orderByDesc('period_likes'),
             'ratings' => $query->orderByDesc('star_ratings_avg_stars')->orderByDesc('star_ratings_count'),
-            'engagement' => $query->orderByRaw('(period_likes + period_saves + period_comments) DESC'),
-            'growth' => $query->orderByRaw('(recent_likes - previous_likes) DESC'),
+            // PostgreSQL only permits a SELECT alias as a bare ORDER BY value,
+            // not as part of an expression. Repeat the correlated counts here
+            // so both rankings work on PostgreSQL as well as SQLite.
+            'engagement' => $query->orderByRaw('(
+                (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.id AND likes.created_at BETWEEN ? AND ?)
+                + (SELECT COUNT(*) FROM bookmarks WHERE bookmarks.post_id = posts.id AND bookmarks.created_at BETWEEN ? AND ?)
+                + (SELECT COUNT(*) FROM comments WHERE comments.post_id = posts.id AND comments.deleted_at IS NULL AND comments.created_at BETWEEN ? AND ?)
+            ) DESC', [$start, $end, $start, $end, $start, $end]),
+            'growth' => $query->orderByRaw('(
+                (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.id AND likes.created_at BETWEEN ? AND ?)
+                - (SELECT COUNT(*) FROM likes WHERE likes.post_id = posts.id AND likes.created_at >= ? AND likes.created_at < ?)
+            ) DESC', [$end->copy()->subDay(), $end, $end->copy()->subDays(2), $end->copy()->subDay()]),
             default => $query->orderByDesc('created_at'),
         };
         return $query->orderByDesc('id');
