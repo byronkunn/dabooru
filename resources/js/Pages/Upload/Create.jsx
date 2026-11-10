@@ -102,7 +102,7 @@ form.post(route('upload.store'), { forceFormData: true });
                                 : `Drop ${active.label.toLowerCase()} files or browse`}
                         </p>
                         <p className="mt-1 text-[12.5px]">
-                            up to {limits.image_mb}MB each · comic pages up to {limits.comic_page_mb}MB
+                            up to {type === 'video' ? limits.video_mb : limits.image_mb}MB each · comic pages up to {limits.comic_page_mb}MB
                         </p>
                         {!videoUploadsEnabled && <p className="mt-1 text-[12px]">Video uploads are temporarily unavailable.</p>}
                     </div>
