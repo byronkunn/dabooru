@@ -18,6 +18,8 @@ or reporting rules apply; get qualified advice for the jurisdictions you serve.
 - [x] Laravel health route `/up` is available.
 - [x] Public gallery uploads use S3-compatible storage; direct-message attachments
       use private local storage.
+- [x] New public video uploads are disabled by default until transcoding and video
+      metadata removal are ready; existing posts remain available.
 
 ## Must complete before wider public launch
 
@@ -35,9 +37,9 @@ or reporting rules apply; get qualified advice for the jurisdictions you serve.
 - [ ] Assign daily coverage for urgent reports and write an escalation procedure.
       Test the admin report queue, evidence access, removal flow, DMCA submissions,
       and moderation audit records.
-- [ ] Decide whether to allow video uploads before transcoding and metadata removal
-      are available. If enabled, document the current size, processing, and privacy
-      limitations for artists.
+- [ ] Keep `UPLOAD_VIDEO_ENABLED=false` until a transcode pipeline removes metadata,
+      generates playback derivatives, and marks uploads ready. Review existing videos
+      separately for metadata exposure.
 - [ ] Review and remove sample or placeholder content that should not appear to users.
 - [ ] Confirm the Hostinger plan renewal and billing details.
 - [ ] Run a release review against PostgreSQL before each deployment; the previous

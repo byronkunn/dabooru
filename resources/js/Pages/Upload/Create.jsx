@@ -6,7 +6,7 @@ import { useRef, useState } from 'react';
 
 const FORMATS = [
     { key: 'image', label: 'Image', icon: '▣', accept: 'image/*', multiple: false },
-    { key: 'gif', label: 'GIF', icon: '▤', accept: 'image/gif,video/mp4,video/webm', multiple: false },
+    { key: 'gif', label: 'GIF', icon: '▤', accept: 'image/gif', multiple: false },
     { key: 'video', label: 'Video', icon: '▶', accept: 'video/mp4,video/quicktime,video/webm', multiple: false },
     { key: 'album', label: 'Album', icon: '▦', accept: 'image/*', multiple: true },
     { key: 'comic', label: 'Comic', icon: '▥', accept: 'image/*', multiple: true },
@@ -18,7 +18,8 @@ const RATINGS = [
     { key: 'explicit', label: 'Explicit · 18+' },
 ];
 
-export default function UploadCreate({ limits }) {
+export default function UploadCreate({ limits, videoUploadsEnabled = false }) {
+    const formats = videoUploadsEnabled ? FORMATS : FORMATS.filter((format) => format.key !== 'video');
     const [type, setType] = useState('image');
     const [previews, setPreviews] = useState([]);
     const inputRef = useRef(null);
@@ -35,7 +36,7 @@ export default function UploadCreate({ limits }) {
         draft: false,
     });
 
-    const active = FORMATS.find((f) => f.key === type);
+    const active = formats.find((f) => f.key === type);
 
     const onPick = (e) => {
         const files = Array.from(e.target.files ?? []);
@@ -101,8 +102,9 @@ form.post(route('upload.store'), { forceFormData: true });
                                 : `Drop ${active.label.toLowerCase()} files or browse`}
                         </p>
                         <p className="mt-1 text-[12.5px]">
-                            up to {limits.image_mb}MB each · video up to {limits.video_mb}MB · comic pages up to {limits.comic_page_mb}MB
+                            up to {limits.image_mb}MB each · comic pages up to {limits.comic_page_mb}MB
                         </p>
+                        {!videoUploadsEnabled && <p className="mt-1 text-[12px]">Video uploads are temporarily unavailable.</p>}
                     </div>
                 </label>
                 {form.errors.files && <p className="field-hint text-ink-expl">{form.errors.files}</p>}
@@ -124,7 +126,7 @@ form.post(route('upload.store'), { forceFormData: true });
 
                 <h2 className="mb-2.5 mt-5 text-sm font-semibold">Format</h2>
                 <div className="flex flex-wrap gap-2">
-                    {FORMATS.map((f) => (
+                    {formats.map((f) => (
                         <button
                             key={f.key}
                             type="button"

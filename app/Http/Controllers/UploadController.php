@@ -18,7 +18,7 @@ class UploadController extends Controller
 {
     public const RULES = [
         'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp,avif', 'max:40960'],
-        'gif' => ['required', 'file', 'mimes:gif,mp4,webm', 'max:40960'],
+        'gif' => ['required', 'file', 'mimes:gif', 'max:40960'],
         'video' => ['required', 'file', 'mimes:mp4,mov,webm', 'max:512000'],
         'album' => ['required', 'array', 'min:2', 'max:20'],
         'album.*' => ['image', 'mimes:jpg,jpeg,png,webp,avif', 'max:40960'],
@@ -35,13 +35,14 @@ class UploadController extends Controller
                 'video_mb' => 500,
                 'comic_page_mb' => 15,
             ],
+            'videoUploadsEnabled' => config('uploads.video_uploads_enabled'),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'type' => ['required', 'in:image,gif,video,album'],
+            'type' => ['required', 'in:'.(config('uploads.video_uploads_enabled') ? 'image,gif,video,album' : 'image,gif,album')],
             'title' => ['nullable', 'string', 'max:160'],
             'caption' => ['nullable', 'string', 'max:1000'],
             'tags' => ['nullable', 'string', 'max:2050'],
