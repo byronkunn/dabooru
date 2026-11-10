@@ -54,6 +54,7 @@ export function Icon({ name, className = 'w-5 h-5' }) {
         heart: <path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z" />,
         comment: <path d="M4 5h16v11H5.5L4 18.5V5z" />,
         save: <path d="M6 4h12v17l-6-4-6 4V4z" />,
+        qr: <><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3z" /><path d="M6 6h1m10 0h1m-12 11h1m7-5h2v2m3-2h2v2m-7 2v3m4-2h3" /></>,
         share: (
             <>
                 <path d="M4 12v7h16v-7" />

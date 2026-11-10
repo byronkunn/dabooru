@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Support\StaffAccess;
 use App\Support\TipAddresses;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -17,6 +19,23 @@ class TipController extends Controller
     {
         $owner = $this->owner();
         $viewer = $request->user();
+        $spot = Cache::remember('tip-crypto-usd-prices', now()->addMinutes(5), function () {
+            try {
+                $response = Http::timeout(4)->get('https://api.coingecko.com/api/v3/simple/price', [
+                    'ids' => 'monero,bitcoin,ethereum,solana',
+                    'vs_currencies' => 'usd',
+                ])->throw()->json();
+
+                return [
+                    'prices' => collect(['monero', 'bitcoin', 'ethereum', 'solana'])
+                        ->mapWithKeys(fn ($coin) => [$coin => data_get($response, $coin.'.usd')])
+                        ->filter(fn ($price) => is_numeric($price) && $price > 0)->all(),
+                    'updatedAt' => now()->toIso8601String(),
+                ];
+            } catch (\Throwable) {
+                return ['prices' => [], 'updatedAt' => null];
+            }
+        });
 
         return Inertia::render('Tip/Index', [
             // every visitor gets the full address: a tip page without the address
@@ -24,6 +43,8 @@ class TipController extends Controller
             'networks' => TipAddresses::publicList($owner, true),
             'ownerName' => $owner?->name ?? 'the site owner',
             'isOwner' => StaffAccess::owner($viewer ?? new User),
+            'prices' => $spot['prices'] ?? [],
+            'priceUpdatedAt' => $spot['updatedAt'] ?? null,
         ]);
     }
 
