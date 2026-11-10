@@ -1,0 +1,18 @@
+[Unit]
+Description=Dabooru video processing queue worker
+After=network.target postgresql@18-main.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/dabooru
+ExecStart=/usr/bin/php artisan queue:work --queue=media --tries=1 --max-time=7200 --sleep=2 --timeout=5400
+ExecReload=/usr/bin/php artisan queue:restart
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=60
+
+[Install]
+WantedBy=multi-user.target

@@ -239,6 +239,11 @@ class StudioController extends Controller
                 $tags = Tag::parse($data['tags']);
                 $post->update(['title' => $data['title'], 'caption' => $data['caption'], 'rating' => $data['rating'], 'draft_tags' => $tags]);
                 if ($data['publish']) {
+                    abort_unless(
+                        $post->media()->whereHas('media', fn ($media) => $media->where('status', '!=', 'ready'))->doesntExist(),
+                        422,
+                        'This work cannot be published until all media is ready.'
+                    );
                     $post->forceFill(['is_draft' => false, 'draft_tags' => null, 'created_at' => now()])->save();
                     Tag::syncFor($post, $tags);
                 }

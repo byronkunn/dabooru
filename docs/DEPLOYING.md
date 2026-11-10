@@ -1,7 +1,7 @@
 # Deploying Dabooru on the Hostinger VPS
 
 The production site runs from `/var/www/dabooru` on Ubuntu, with Caddy, PHP-FPM,
-PostgreSQL, a systemd queue worker, and a systemd scheduler timer. The Render and
+PostgreSQL, a systemd queue worker, a dedicated media worker, and a systemd scheduler timer. The Render and
 Railway files in this repository are optional examples; they do not describe the
 live Hostinger server.
 
@@ -23,6 +23,7 @@ php artisan db:seed --class=AdultTagsSeeder --force
 php artisan optimize
 php artisan queue:restart
 sudo systemctl restart dabooru-queue.service
+sudo systemctl restart dabooru-media-worker.service
 ```
 
 `npm ci` needs the checked-in lockfile and should run only when frontend
@@ -34,7 +35,7 @@ After deployment, check:
 
 ```sh
 curl -fsS https://booruhub.tech/up
-systemctl is-active caddy php8.5-fpm postgresql@18-main dabooru-queue.service dabooru-scheduler.timer
+systemctl is-active caddy php8.5-fpm postgresql@18-main dabooru-queue.service dabooru-media-worker.service dabooru-scheduler.timer
 systemctl list-timers dabooru-scheduler.timer --no-pager
 ```
 
@@ -48,6 +49,11 @@ contents or credentials into a ticket or chat.
 - Caddy serves the web app; PHP-FPM runs PHP 8.5.
 - PostgreSQL binds to `127.0.0.1` and `::1` only.
 - `dabooru-queue.service` runs as `www-data` and is configured to restart.
+- `dabooru-media-worker.service` runs only the `media` queue as `www-data` with a
+  90-minute job timeout; keep `DB_QUEUE_RETRY_AFTER` above 5,400 seconds.
+- Install FFmpeg and FFprobe (`ffmpeg` package) before enabling `UPLOAD_VIDEO_ENABLED`.
+  Video uploads first stay private, then publish only after H.264/AAC MP4 output is
+  created, checked, and stored. Processing removes source metadata and chapters.
 - `dabooru-scheduler.timer` runs `php artisan schedule:run` each minute as `www-data`.
 - UFW defaults to deny incoming traffic. HTTP/HTTPS are allowed from Cloudflare IP
   ranges; SSH remains reachable on port 22. Recheck this after firewall changes and

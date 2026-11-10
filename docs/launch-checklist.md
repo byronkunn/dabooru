@@ -10,6 +10,8 @@ or reporting rules apply; get qualified advice for the jurisdictions you serve.
 - [x] PostgreSQL is local-only on loopback.
 - [x] Caddy and PHP-FPM are running.
 - [x] Queue worker is supervised by systemd as `www-data` with automatic restart.
+- [ ] Install FFmpeg and FFprobe and supervise a dedicated `media` queue worker with
+      a 5,400-second timeout and `DB_QUEUE_RETRY_AFTER` greater than that timeout.
 - [x] Scheduler timer runs Laravel tasks once per minute; recent runs succeeded.
 - [x] UFW defaults to deny incoming traffic. Public HTTP/HTTPS reach the origin from
       Cloudflare ranges; global direct HTTP/HTTPS rules have been removed.
@@ -18,8 +20,9 @@ or reporting rules apply; get qualified advice for the jurisdictions you serve.
 - [x] Laravel health route `/up` is available.
 - [x] Public gallery uploads use S3-compatible storage; direct-message attachments
       use private local storage.
-- [x] New public video uploads are disabled by default until transcoding and video
-      metadata removal are ready; existing posts remain available.
+- [ ] Enable new public video uploads only after FFmpeg and the media worker are
+      active. New uploads stay private until metadata-stripped MP4 processing succeeds;
+      existing videos are unchanged.
 
 ## Must complete before wider public launch
 
@@ -37,9 +40,7 @@ or reporting rules apply; get qualified advice for the jurisdictions you serve.
 - [ ] Assign daily coverage for urgent reports and write an escalation procedure.
       Test the admin report queue, evidence access, removal flow, DMCA submissions,
       and moderation audit records.
-- [ ] Keep `UPLOAD_VIDEO_ENABLED=false` until a transcode pipeline removes metadata,
-      generates playback derivatives, and marks uploads ready. Review existing videos
-      separately for metadata exposure.
+- [ ] Review existing videos separately for metadata exposure.
 - [ ] Review and remove sample or placeholder content that should not appear to users.
 - [ ] Confirm the Hostinger plan renewal and billing details.
 - [ ] Run a release review against PostgreSQL before each deployment; the previous

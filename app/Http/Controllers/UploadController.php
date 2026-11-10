@@ -7,6 +7,7 @@ use App\Models\Post;
 use App\Models\Tag;
 use App\Models\PostMedia;
 use App\Support\ImageProcessor;
+use App\Jobs\ProcessVideoUpload;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -68,12 +69,15 @@ class UploadController extends Controller
         $sourceUrl = $isOriginal ? null : $request->input('source_url');
 
         $draft = $request->boolean('draft');
-        $post = DB::transaction(function () use ($request, $type, $files, $tags, $isOriginal, $artistName, $sourceUrl, $draft) {
+        // A public video is first represented as a private draft. It becomes
+        // visible only after the queued transcode has completed successfully.
+        $processingVideo = $type === 'video';
+        $post = DB::transaction(function () use ($request, $type, $files, $tags, $isOriginal, $artistName, $sourceUrl, $draft, $processingVideo) {
             $post = Post::create([
                 'user_id' => $request->user()->id,
                 'type' => $type,
-                'is_draft' => $draft,
-                'draft_tags' => $draft ? $tags : null,
+                'is_draft' => $draft || $processingVideo,
+                'draft_tags' => ($draft || $processingVideo) ? $tags : null,
                 'rating' => $request->input('rating'),
                 'is_original' => $isOriginal,
                 'artist_name' => $artistName,
@@ -82,13 +86,16 @@ class UploadController extends Controller
                 'caption' => $request->input('caption'),
             ]);
 
-            if (! $draft) {
+            if (! $draft && ! $processingVideo) {
                 Tag::syncFor($post, $tags);
             }
 
             foreach (array_values($files) as $i => $file) {
-                $media = $this->storeMedia($request->user(), $file, $type, $draft);
+                $media = $this->storeMedia($request->user(), $file, $type, $draft || $processingVideo);
                 PostMedia::create(['post_id' => $post->id, 'media_id' => $media->id, 'position' => $i]);
+                if ($processingVideo) {
+                    ProcessVideoUpload::dispatch($media->id, $post->id, ! $draft)->afterCommit();
+                }
             }
 
             return $post;
@@ -96,6 +103,10 @@ class UploadController extends Controller
 
         if ($draft) {
             return redirect()->route('studio.index')->with('success', 'Private draft saved.');
+        }
+
+        if ($processingVideo && ! $draft) {
+            return redirect()->route('studio.index')->with('success', 'Video uploaded. It will appear publicly after processing.');
         }
 
         return redirect()
