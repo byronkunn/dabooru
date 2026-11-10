@@ -21,6 +21,8 @@ class UserResource extends JsonResource
             'username' => $this->username,
             'avatar' => $this->avatarUrl(),
             'banner' => $this->bannerUrl(),
+            'avatarSource' => $request->user()?->is($this->resource) ? route('settings.profile.image.source', 'avatar', false) : null,
+            'bannerSource' => $request->user()?->is($this->resource) ? route('settings.profile.image.source', 'banner', false) : null,
             'bio' => $this->bio,
             'location' => $this->location,
             'website' => $this->website,

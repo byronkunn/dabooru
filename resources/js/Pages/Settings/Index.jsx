@@ -3,6 +3,7 @@ import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 import { Icon } from '@/Components/Icons';
 import { useEffect, useState } from 'react';
 import { Errors } from '@/Components/KnowledgeUi';
+import ProfileImageDialog from '@/Components/ProfileImageDialog';
 
 const SECTIONS = [
     ['account', 'Your account', 'Account information, password, and account deletion.', 'user'],
@@ -108,7 +109,7 @@ function MutedTags({ tags, suggestions, onAdd, onRemove, busy }) {
     );
 }
 
-export default function SettingsIndex({ user, settings, messagingPrivacy, mutedTags = [], mutedTagSuggestions = [], demoAccounts = [] }) {
+export default function SettingsIndex({ user, settings, messagingPrivacy, mutedTags = [], mutedTagSuggestions = [], demoAccounts = [], imageLimits = {} }) {
     const muteForm = useForm({ tag: '' });
     const profileForm = useForm(`SettingsProfile:${user.id}`, {
         name: user.name,
@@ -117,16 +118,12 @@ export default function SettingsIndex({ user, settings, messagingPrivacy, mutedT
         location: user.location ?? '',
         website: user.website ?? '',
         ai_disclosure: user.ai_disclosure ?? 'none',
-        avatar: null,
-        banner: null,
-        remove_avatar: false,
-        remove_banner: false,
-    }).dontRemember('avatar', 'banner', 'remove_avatar', 'remove_banner');
+    });
     const settingsForm = useForm({ settings });
     const privacyForm = useForm(messagingPrivacy);
     const emailForm = useForm({ email: user.email, current_password: '' });
     const verificationForm = useForm({});
-    const [imageInputKey, setImageInputKey] = useState(0);
+    const [editingImage, setEditingImage] = useState(null);
     useEffect(() => {
         settingsForm.setData('settings', settings);
     }, [settings]);
@@ -186,8 +183,6 @@ export default function SettingsIndex({ user, settings, messagingPrivacy, mutedT
         profileForm.post(route('settings.profile'), {
             preserveScroll: true, forceFormData: true,
             onSuccess: () => {
-                profileForm.reset('avatar', 'banner', 'remove_avatar', 'remove_banner');
-                setImageInputKey((key) => key + 1);
                 selectSection('profile');
             },
             onError: () => selectSection('profile'),
@@ -271,23 +266,15 @@ export default function SettingsIndex({ user, settings, messagingPrivacy, mutedT
                                 </div>
                             </div>
                             <div className="grid gap-3.5 sm:grid-cols-2">
-                                <div>
-                                    <label htmlFor="avatar" className="field-label">Avatar (up to 5 MB)</label>
-                                    <img src={user.avatar} alt="Current avatar" className="mb-2 h-16 w-16 rounded-full object-cover" />
-                                    <input key={`avatar-${imageInputKey}`} id="avatar" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => {
-                                        profileForm.setData('avatar', e.target.files[0] ?? null);
-                                        profileForm.setData('remove_avatar', false);
-                                    }} className="field-input py-2 text-[13px]" />
-                                    <label className="mt-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={profileForm.data.remove_avatar} disabled={Boolean(profileForm.data.avatar)} onChange={(e) => profileForm.setData('remove_avatar', e.target.checked)} /> Use default avatar</label>
+                                <div className="rounded-xl border border-ink-line p-3">
+                                    <p className="field-label">Profile avatar</p>
+                                    <img src={user.avatar} alt="Current avatar" className="mb-3 h-20 w-20 rounded-full object-cover" />
+                                    <button type="button" onClick={() => setEditingImage('avatar')} className="btn-ghost min-h-11">Edit avatar</button>
                                 </div>
-                                <div>
-                                    <label htmlFor="banner" className="field-label">Banner (up to 10 MB)</label>
-                                    {user.banner && <img src={user.banner} alt="Current banner" className="mb-2 h-20 w-full rounded-lg object-cover" />}
-                                    <input key={`banner-${imageInputKey}`} id="banner" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => {
-                                        profileForm.setData('banner', e.target.files[0] ?? null);
-                                        profileForm.setData('remove_banner', false);
-                                    }} className="field-input py-2 text-[13px]" />
-                                    <label className="mt-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={profileForm.data.remove_banner} disabled={Boolean(profileForm.data.banner)} onChange={(e) => profileForm.setData('remove_banner', e.target.checked)} /> Remove banner</label>
+                                <div className="rounded-xl border border-ink-line p-3">
+                                    <p className="field-label">Profile banner</p>
+                                    {user.banner ? <img src={user.banner} alt="Current banner" className="mb-3 aspect-[3/1] w-full rounded-lg object-cover" /> : <div className="mb-3 aspect-[3/1] w-full rounded-lg bg-gradient-to-br from-[#3a2740] via-[#1d1a24] to-[#3b2a1c]" />}
+                                    <button type="button" onClick={() => setEditingImage('banner')} className="btn-ghost min-h-11">Edit banner</button>
                                 </div>
                             </div>
                             <Errors errors={Object.fromEntries(Object.entries(profileForm.errors).filter(([key]) => !['name', 'username'].includes(key)))} />
@@ -538,6 +525,16 @@ export default function SettingsIndex({ user, settings, messagingPrivacy, mutedT
                     </section>
                 </div>
             </div>
+            {editingImage && <ProfileImageDialog
+                key={editingImage}
+                type={editingImage}
+                current={user[`${editingImage}Source`]}
+                canRemove={Boolean(user[`${editingImage}Source`])}
+                avatarDisplay={user.avatar}
+                bannerDisplay={user.banner}
+                maxMb={editingImage === 'avatar' ? imageLimits.avatar_mb : imageLimits.banner_mb}
+                onClose={() => setEditingImage(null)}
+            />}
         </AppLayout>
     );
 }

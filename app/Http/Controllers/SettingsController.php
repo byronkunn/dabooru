@@ -7,10 +7,13 @@ use App\Models\Post;
 use App\Models\Setting;
 use App\Models\User;
 use App\Support\ChatAccess;
+use App\Support\ProfileImageProcessor;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -42,6 +45,12 @@ class SettingsController extends Controller
                 'ai_disclosure' => $user->ai_disclosure ?? 'none',
                 'avatar' => $user->avatarUrl(),
                 'banner' => $user->bannerUrl(),
+                'avatarSource' => $user->profileImageSourceUrl('avatar'),
+                'bannerSource' => $user->profileImageSourceUrl('banner'),
+            ],
+            'imageLimits' => [
+                'avatar_mb' => config('profile-images.avatar_max_mb'),
+                'banner_mb' => config('profile-images.banner_max_mb'),
             ],
             'settings' => array_merge(self::DEFAULTS, $this->stored($user->id), ['show_explicit' => (bool) $user->show_explicit]),
             'mutedTags' => \App\Support\CollectionLibrary::mutedFor($user),
@@ -92,26 +101,20 @@ class SettingsController extends Controller
             'location' => ['nullable', 'string', 'max:80'],
             'website' => ['nullable', 'url:http,https', 'max:120'],
             'ai_disclosure' => ['sometimes', 'required', Rule::in(['none', 'ai_artist', 'ai_works', 'both'])],
-            'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'banner' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.((int) config('profile-images.avatar_max_mb', 5) * 1024)],
+            'banner' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.((int) config('profile-images.banner_max_mb', 10) * 1024)],
             'remove_avatar' => ['sometimes', 'boolean'],
             'remove_banner' => ['sometimes', 'boolean'],
         ]);
 
         $user = $request->user();
-
-        if ($request->hasFile('avatar')) {
-            $data['avatar_path'] = $request->file('avatar')->store("avatars/{$user->id}", config('filesystems.upload_disk', 'public'));
-        }
-        if ($request->hasFile('banner')) {
-            $data['banner_path'] = $request->file('banner')->store("banners/{$user->id}", config('filesystems.upload_disk', 'public'));
-        }
         foreach (['avatar', 'banner'] as $type) {
-            if ($request->boolean('remove_'.$type) && ! $request->hasFile($type)) {
-                $data[$type.'_path'] = null;
+            if ($request->hasFile($type)) {
+                $this->saveProfileImageFile($user, $type, $request->file($type));
+            } elseif ($request->boolean('remove_'.$type)) {
+                $this->removeProfileImage($user, $type);
             }
         }
-
         unset($data['avatar'], $data['banner'], $data['remove_avatar'], $data['remove_banner']);
         $user->update($data);
 
@@ -120,15 +123,140 @@ class SettingsController extends Controller
 
     public function updateImage(Request $request, string $type): RedirectResponse
     {
-        $request->validate([
-            $type => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.($type === 'avatar' ? 5120 : 10240)],
-        ]);
-
         $user = $request->user();
-        $path = $request->file($type)->store("{$type}s/{$user->id}", config('filesystems.upload_disk', 'public'));
-        $user->update([$type.'_path' => $path]);
+        $maxUploadMb = (int) config('profile-images.'.$type.'_max_mb', $type === 'avatar' ? 5 : 10);
+        $data = $request->validate([
+            $type => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.($maxUploadMb * 1024)],
+            'crop' => ['required_without:remove', 'array:x,y,width,height'],
+            'crop.x' => ['required_with:crop', 'numeric', 'min:0', 'max:1'],
+            'crop.y' => ['required_with:crop', 'numeric', 'min:0', 'max:1'],
+            'crop.width' => ['required_with:crop', 'numeric', 'gt:0', 'max:1'],
+            'crop.height' => ['required_with:crop', 'numeric', 'gt:0', 'max:1'],
+            'remove' => ['sometimes', 'boolean'],
+        ]);
+        $displayDisk = config('filesystems.upload_disk', 'public');
+        $oldSource = $user->{$type.'_source_path'};
+        $oldDisplay = $user->{$type.'_path'};
+
+        if ($request->boolean('remove')) {
+            $this->removeProfileImage($user, $type);
+
+            return back()->with('success', ucfirst($type).' removed.');
+        }
+
+        $sourceFile = $request->file($type);
+        if (! $sourceFile && ! $oldSource && ! $oldDisplay) {
+            return back()->withErrors([$type => 'Choose an image first.']);
+        }
+
+        $sourcePath = $oldSource;
+        $newSource = false;
+        if ($sourceFile) {
+            $sourcePath = $sourceFile->store("profile-images/{$user->id}/originals", 'local');
+            $newSource = true;
+        } elseif (! $sourcePath) {
+            $sourcePath = "profile-images/{$user->id}/originals/".bin2hex(random_bytes(12)).'.jpg';
+            if (! Storage::disk('local')->put($sourcePath, Storage::disk($displayDisk)->get($oldDisplay))) {
+                throw new \RuntimeException('Could not preserve the existing profile image.');
+            }
+            $newSource = true;
+        }
+
+        $temporaryPath = null;
+        try {
+            if ($sourceFile) {
+                $imagePath = $sourceFile->getRealPath();
+            } else {
+                $temporaryPath = tempnam(sys_get_temp_dir(), 'profile-image-');
+                file_put_contents($temporaryPath, Storage::disk('local')->get($sourcePath));
+                $imagePath = $temporaryPath;
+            }
+
+            $cropped = ProfileImageProcessor::crop($imagePath, $type, $data['crop']);
+            $displayPath = "{$type}s/{$user->id}/cropped/".bin2hex(random_bytes(12)).'.'.$cropped['extension'];
+            if (! Storage::disk($displayDisk)->put($displayPath, $cropped['bytes'], ['visibility' => 'public'])) {
+                throw new \RuntimeException('Could not store the edited profile image.');
+            }
+        } catch (\Throwable $exception) {
+            if ($newSource) {
+                Storage::disk('local')->delete($sourcePath);
+            }
+            throw $exception;
+        } finally {
+            if ($temporaryPath && is_file($temporaryPath)) {
+                @unlink($temporaryPath);
+            }
+        }
+
+        $user->forceFill([$type.'_source_path' => $sourcePath, $type.'_path' => $displayPath])->save();
+        if ($oldSource && $oldSource !== $sourcePath) {
+            Storage::disk('local')->delete($oldSource);
+        }
+        if ($oldDisplay && $oldDisplay !== $displayPath && ! Str::startsWith($oldDisplay, ['http://', 'https://', '/'])) {
+            Storage::disk($displayDisk)->delete($oldDisplay);
+        }
 
         return back()->with('success', ucfirst($type).' updated.');
+    }
+
+    public function imageSource(Request $request, string $type)
+    {
+        $user = $request->user();
+        $sourcePath = $user->{$type.'_source_path'};
+        $disk = 'local';
+        if (! $sourcePath) {
+            $sourcePath = $user->{$type.'_path'};
+            $disk = config('filesystems.upload_disk', 'public');
+        }
+        abort_unless($sourcePath && ! Str::startsWith($sourcePath, ['http://', 'https://', '/'])
+            && Storage::disk($disk)->exists($sourcePath), 404);
+
+        return Storage::disk($disk)->response($sourcePath, null, ['Cache-Control' => 'private, no-store']);
+    }
+
+    private function saveProfileImageFile(User $user, string $type, \Illuminate\Http\UploadedFile $file): void
+    {
+        $sourcePath = $file->store("profile-images/{$user->id}/originals", 'local');
+        $dimensions = getimagesize($file->getRealPath());
+        $ratio = $type === 'avatar' ? 1 : 3;
+        $sourceRatio = $dimensions[0] / $dimensions[1];
+        $crop = $sourceRatio > $ratio
+            ? ['x' => (1 - ($ratio / $sourceRatio)) / 2, 'y' => 0, 'width' => $ratio / $sourceRatio, 'height' => 1]
+            : ['x' => 0, 'y' => (1 - ($sourceRatio / $ratio)) / 2, 'width' => 1, 'height' => $sourceRatio / $ratio];
+        try {
+            $cropped = ProfileImageProcessor::crop($file->getRealPath(), $type, $crop);
+            $disk = config('filesystems.upload_disk', 'public');
+            $displayPath = "{$type}s/{$user->id}/cropped/".bin2hex(random_bytes(12)).'.'.$cropped['extension'];
+            if (! Storage::disk($disk)->put($displayPath, $cropped['bytes'], ['visibility' => 'public'])) {
+                throw new \RuntimeException('Could not store the edited profile image.');
+            }
+        } catch (\Throwable $exception) {
+            Storage::disk('local')->delete($sourcePath);
+            throw $exception;
+        }
+
+        $oldSource = $user->{$type.'_source_path'};
+        $oldDisplay = $user->{$type.'_path'};
+        $user->forceFill([$type.'_source_path' => $sourcePath, $type.'_path' => $displayPath])->save();
+        if ($oldSource) {
+            Storage::disk('local')->delete($oldSource);
+        }
+        if ($oldDisplay && ! Str::startsWith($oldDisplay, ['http://', 'https://', '/'])) {
+            Storage::disk(config('filesystems.upload_disk', 'public'))->delete($oldDisplay);
+        }
+    }
+
+    private function removeProfileImage(User $user, string $type): void
+    {
+        $oldSource = $user->{$type.'_source_path'};
+        $oldDisplay = $user->{$type.'_path'};
+        $user->forceFill([$type.'_source_path' => null, $type.'_path' => null])->save();
+        if ($oldSource) {
+            Storage::disk('local')->delete($oldSource);
+        }
+        if ($oldDisplay && ! Str::startsWith($oldDisplay, ['http://', 'https://', '/'])) {
+            Storage::disk(config('filesystems.upload_disk', 'public'))->delete($oldDisplay);
+        }
     }
 
     public function update(Request $request): RedirectResponse

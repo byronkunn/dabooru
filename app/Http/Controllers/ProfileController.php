@@ -74,6 +74,10 @@ class ProfileController extends Controller
 
         return Inertia::render('Profile/Show', [
             'profile' => (new UserResource($profile))->resolve(),
+            'imageLimits' => [
+                'avatar_mb' => config('profile-images.avatar_max_mb'),
+                'banner_mb' => config('profile-images.banner_max_mb'),
+            ],
             'posts' => PostResource::collection($posts)->resolve(),
             'comics' => $profile->comics()
                 ->withCount('chapters')

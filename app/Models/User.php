@@ -23,7 +23,9 @@ class User extends Authenticatable
         'email',
         'password',
         'avatar_path',
+        'avatar_source_path',
         'banner_path',
+        'banner_source_path',
         'bio',
         'location',
         'website',
@@ -117,6 +119,15 @@ class User extends Authenticatable
     public function bannerUrl(): ?string
     {
         return $this->banner_path ? $this->storedUrl($this->banner_path) : null;
+    }
+
+    public function profileImageSourceUrl(string $type): ?string
+    {
+        if (! in_array($type, ['avatar', 'banner'], true)) {
+            return null;
+        }
+
+        return $this->{$type.'_path'} ? route('settings.profile.image.source', $type, false) : null;
     }
 
     private function storedUrl(string $path): string

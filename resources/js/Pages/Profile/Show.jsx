@@ -11,7 +11,7 @@ import ProfileActions from '@/Components/ProfileActions';
 import { compact } from '@/Lib/format';
 import { useState } from 'react';
 
-export default function ProfileShow({ profile, posts, comics, collections = [], stickerPacks = [], tab, isOwner, isFollowing, relationship, hasStickerPacks = false }) {
+export default function ProfileShow({ profile, posts, comics, collections = [], stickerPacks = [], tab, isOwner, isFollowing, relationship, hasStickerPacks = false, imageLimits = {} }) {
     const { auth } = usePage().props;
     const [connections, setConnections] = useState(null);
     const [editingImage, setEditingImage] = useState(null);
@@ -49,7 +49,7 @@ export default function ProfileShow({ profile, posts, comics, collections = [], 
                 </div>
             </div>
 
-            <div className="relative h-[140px] overflow-hidden bg-gradient-to-br from-[#3a2740] via-[#1d1a24] to-[#3b2a1c] md:h-[200px]">
+            <div className="relative aspect-[3/1] w-full overflow-hidden bg-gradient-to-br from-[#3a2740] via-[#1d1a24] to-[#3b2a1c]">
                 {profile.banner && <img src={profile.banner} alt="" className="h-full w-full object-cover" />}
                 <div className="absolute inset-0 bg-[radial-gradient(600px_200px_at_20%_0%,rgba(232,176,75,0.22),transparent_70%)]" />
                 {isOwner && (
@@ -59,8 +59,8 @@ export default function ProfileShow({ profile, posts, comics, collections = [], 
                 )}
             </div>
 
-            <div className="relative -mt-11 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-end gap-3 px-3.5 pb-3.5 md:-mt-14 md:gap-3.5 md:px-5">
-                <div className="relative h-[88px] w-[88px] md:h-32 md:w-32">
+            <div className="relative -mt-10 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-end gap-3 px-3.5 pb-3.5 md:-mt-[68px] md:gap-3.5 md:px-5">
+                <div className="relative h-20 w-20 md:h-[136px] md:w-[136px]">
                     <img src={profile.avatar} alt="" className="h-full w-full rounded-full border-4 border-ink-bg bg-[#222] object-cover" />
                     {isOwner && (
                         <button type="button" onClick={() => setEditingImage('avatar')} aria-label="Edit profile photo" className="absolute inset-0 m-auto grid h-11 w-11 place-items-center rounded-full bg-black/60 text-white transition hover:bg-black/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
@@ -68,7 +68,7 @@ export default function ProfileShow({ profile, posts, comics, collections = [], 
                         </button>
                     )}
                 </div>
-                <div className="min-w-0 pt-11 md:pt-14">
+                <div className="min-w-0 pt-10 md:pt-[68px]">
                     <h1 className="break-words text-[19px] font-extrabold leading-tight tracking-[-0.02em] md:text-[22px]">{profile.name}</h1>
                     <p className="mt-1 break-all text-sm text-ink-muted">@{profile.username}</p>
                 </div>
@@ -194,7 +194,16 @@ export default function ProfileShow({ profile, posts, comics, collections = [], 
                 <ProfileConnectionsDialog key={`${profile.username}-${connections}`} username={profile.username} type={connections} onClose={() => setConnections(null)} />
             )}
             {isOwner && editingImage && (
-                <ProfileImageDialog key={editingImage} type={editingImage} current={profile[editingImage]} onClose={() => setEditingImage(null)} />
+                <ProfileImageDialog
+                    key={editingImage}
+                    type={editingImage}
+                    current={profile[`${editingImage}Source`]}
+                    canRemove={Boolean(profile[`${editingImage}Source`])}
+                    avatarDisplay={profile.avatar}
+                    bannerDisplay={profile.banner}
+                    maxMb={editingImage === 'avatar' ? imageLimits.avatar_mb : imageLimits.banner_mb}
+                    onClose={() => setEditingImage(null)}
+                />
             )}
         </AppLayout>
     );

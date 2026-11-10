@@ -244,6 +244,8 @@ Route::middleware('auth')->group(function () {
     // settings
     Route::get('/settings', [SettingsController::class, 'edit'])->name('settings.edit');
     Route::post('/settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.profile');
+    Route::get('/settings/profile/image/{type}/source', [SettingsController::class, 'imageSource'])
+        ->where('type', 'avatar|banner')->name('settings.profile.image.source');
     Route::post('/settings/profile/image/{type}', [SettingsController::class, 'updateImage'])
         ->where('type', 'avatar|banner')->name('settings.profile.image');
     Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
