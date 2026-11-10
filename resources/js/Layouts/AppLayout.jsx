@@ -90,7 +90,7 @@ const NAV = [
     { label: 'Create', href: 'create', icon: 'plus', matches: CREATE, auth: true },
     { label: 'Creator Studio', shortLabel: 'Studio', href: 'studio.index', icon: 'upload', matches: ['studio*'], auth: true },
     { label: 'Inbox', href: 'messages.index', icon: 'chat', matches: INBOX, auth: true },
-    { label: 'Tip', href: 'tip', icon: 'heart', matches: ['tip'] },
+    { label: 'Tip', href: 'tip', icon: 'tipJar', matches: ['tip'] },
     { label: 'Report a bug', shortLabel: 'Bug', href: 'bug.index', icon: 'flag', matches: ['bug*'] },
     { label: 'Library', href: 'collections.index', icon: 'save', matches: LIBRARY, auth: true, rememberGroup: 'library-sections', rememberTabs: [['Collections', 'collections.index'], ['Saved Searches', 'saved-searches.index']] },
 ];

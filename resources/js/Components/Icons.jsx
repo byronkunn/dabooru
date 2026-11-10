@@ -52,6 +52,7 @@ export function Icon({ name, className = 'w-5 h-5' }) {
             </>
         ),
         heart: <path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z" />,
+        tipJar: <><path d="M5 6h14v3H5z" /><path d="M7 9v8.5A3.5 3.5 0 0 0 10.5 21h3a3.5 3.5 0 0 0 3.5-3.5V9M9 4.5h6M10 4.5V6m4-1.5V6" /><path d="M12 17s-2.3-1.4-2.3-3a1.4 1.4 0 0 1 2.3-.9 1.4 1.4 0 0 1 2.3.9c0 1.6-2.3 3-2.3 3z" /></>,
         comment: <path d="M4 5h16v11H5.5L4 18.5V5z" />,
         save: <path d="M6 4h12v17l-6-4-6 4V4z" />,
         qr: <><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3z" /><path d="M6 6h1m10 0h1m-12 11h1m7-5h2v2m3-2h2v2m-7 2v3m4-2h3" /></>,
