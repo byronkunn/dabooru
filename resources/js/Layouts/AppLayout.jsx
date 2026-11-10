@@ -531,7 +531,7 @@ export default function AppLayout({ children, rightRail = true, bare = false, ad
                 {!bare && !admin && <DemoSwitcher />}
                 {footer && (
                     <LegalFooter
-                        className={`${rightRail ? 'lg:col-span-2 xl:col-span-3' : 'lg:col-span-2'} col-span-1 pb-24 md:pb-4`}
+                        className="col-span-1 pb-24 md:pb-4 lg:col-start-2 lg:col-span-1"
                     />
                 )}
             </div>
