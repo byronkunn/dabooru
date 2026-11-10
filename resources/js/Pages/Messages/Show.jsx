@@ -3,7 +3,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import usePageVisibility from './usePageVisibility';
-import AppLayout, { LegalFooter } from '@/Layouts/AppLayout';
+import AppLayout from '@/Layouts/AppLayout';
 import FullscreenMedia from '@/Components/FullscreenMedia';
 import { Icon } from '@/Components/Icons';
 import ReportDialog from '@/Components/ReportDialog';
@@ -448,7 +448,6 @@ function Thread({ conversation: chat, conversations, filters, quickReplies }) {
                     </p>}
                 </section>
             </div>
-            <LegalFooter compact className="bg-ink-bg/95 lg:pl-[min(300px,24%)]" />
             {settings && <ChatSettings conversation={chat} onClose={() => setSettings(false)} />}
             {action && <MessageDialog action={action.type} message={action.item} conversations={conversations} conversation={chat} onClose={() => setAction(null)} />}
                         {lightbox !== null && gallery.length > 0 && (

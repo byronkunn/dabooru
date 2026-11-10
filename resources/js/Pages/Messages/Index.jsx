@@ -1,7 +1,7 @@
 import { Head, usePoll } from '@inertiajs/react';
 import { useEffect, useRef } from 'react';
 import usePageVisibility from './usePageVisibility';
-import AppLayout, { LegalFooter } from '@/Layouts/AppLayout';
+import AppLayout from '@/Layouts/AppLayout';
 import { Icon } from '@/Components/Icons';
 import Inbox from './Inbox';
 
@@ -27,7 +27,6 @@ export default function MessagesIndex(props) {
                     </div>
                 </div>
             </div>
-            <LegalFooter compact className="bg-ink-bg/95 lg:pl-[min(300px,24%)]" />
         </AppLayout>
     );
 }
