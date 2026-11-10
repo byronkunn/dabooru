@@ -97,15 +97,22 @@ class HandleInertiaRequests extends Middleware
         ];
         $robots = in_array($route, $indexableRoutes, true) ? 'index, follow' : 'noindex, nofollow';
         $descriptions = [
-            'gallery' => 'Browse artwork, albums, GIFs and video shared by independent artists on Dabooru.',
-            'discover' => 'Discover artists and community favorites from the Dabooru art community.',
-            'artists.index' => 'Explore the Dabooru artist directory and find creators to follow.',
-            'comics.index' => 'Read independent comics and illustrated stories published by artists on Dabooru.',
-            'knowledge.index' => 'Browse community maintained tags and art references on Dabooru.',
-            'legal.terms' => 'Read the terms that govern use of Dabooru.',
-            'legal.privacy' => 'Learn how Dabooru handles account and usage information.',
-            'legal.policy' => 'Read Dabooru’s community rules and content policy.',
-            'dmca' => 'Review copyright and DMCA information or submit a notice to Dabooru.',
+            'gallery' => 'Browse artwork, albums, GIFs and video shared by independent artists on BooruHub.',
+            'discover' => 'Discover artists and community favorites from the BooruHub art community.',
+            'artists.index' => 'Explore the BooruHub artist directory and find creators to follow.',
+            'comics.index' => 'Read independent comics and illustrated stories published by artists on BooruHub.',
+            'knowledge.index' => 'Browse community maintained tags and art references on BooruHub.',
+            'legal.terms' => 'Read the terms that govern use of BooruHub.',
+            'legal.privacy' => 'Learn how BooruHub handles account and usage information.',
+            'legal.policy' => 'Read BooruHub’s community rules and content policy.',
+            'dmca' => 'Review copyright and DMCA information or submit a notice to BooruHub.',
+        ];
+        $seoTitles = [
+            'gallery' => config('app.name').' — Art, Comics & Artist Community',
+            'discover' => 'Discover Art & Artists | '.config('app.name'),
+            'artists.index' => 'Artist Directory | '.config('app.name'),
+            'comics.index' => 'Independent Comics | '.config('app.name'),
+            'knowledge.index' => 'Community Tags & Art Wiki | '.config('app.name'),
         ];
 
         if ($route === 'posts.show' && $post instanceof \App\Models\Post) {
@@ -116,6 +123,7 @@ class HandleInertiaRequests extends Middleware
             return [
                 'type' => 'article',
                 'title' => $title,
+                'seo_title' => $title.' | '.config('app.name'),
                 'description' => $explicit
                     ? 'Explicit work on '.config('app.name').'. Open the link to view it.'
                     : \Illuminate\Support\Str::limit((string) ($post->caption ?: $title), 160),
@@ -134,6 +142,7 @@ class HandleInertiaRequests extends Middleware
                 return [
                     'type' => 'profile',
                     'title' => $profile->name.' (@'.$profile->username.')',
+                    'seo_title' => $profile->name.' (@'.$profile->username.') | '.config('app.name'),
                     'description' => \Illuminate\Support\Str::limit((string) ($profile->bio ?: 'Artwork on '.config('app.name')), 160),
                     'url' => route('profile.show', $profile->username),
                     'image' => $profile->avatarUrl(),
@@ -155,6 +164,9 @@ class HandleInertiaRequests extends Middleware
                 return [
                     'type' => 'book',
                     'title' => $comic->title,
+                    'seo_title' => $chapter
+                        ? $comic->title.' — Chapter '.$chapter->number.' | '.config('app.name')
+                        : $comic->title.' | '.config('app.name'),
                     'description' => \Illuminate\Support\Str::limit((string) ($comic->description ?: 'A comic on '.config('app.name')), 160),
                     'url' => $chapter
                         ? route('comics.read', [$comic->slug, $chapter->number])
@@ -168,6 +180,7 @@ class HandleInertiaRequests extends Middleware
 
         return [
             'robots' => $robots,
+            'seo_title' => $seoTitles[$route] ?? config('app.name').' — Art, Comics & Artist Community',
             'description' => $descriptions[$route] ?? config('app.name').' — a gallery and social home for artists who draw what they draw.',
         ];
     }

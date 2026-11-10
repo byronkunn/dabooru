@@ -66,11 +66,11 @@ export function AdminMobileRail({ open, onClose }) {
                 }`}
             >
                 <div className="mb-4 flex items-center gap-2.5 px-2">
-                    <Link href={route(links[0]?.href ?? 'admin.reports')} aria-label="Dabooru admin" className="flex items-center gap-2.5 font-extrabold tracking-[-0.02em]">
+                    <Link href={route(links[0]?.href ?? 'admin.reports')} aria-label="BooruHub admin" className="flex items-center gap-2.5 font-extrabold tracking-[-0.02em]">
                         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[9px] bg-gradient-to-br from-ink-brand to-ink-pink text-[15px] font-black text-[#1a1017]">
                             D
                         </span>
-                        <span className="text-[17px]">Dabooru admin</span>
+                        <span className="text-[17px]">BooruHub admin</span>
                     </Link>
                     <button type="button" onClick={onClose} aria-label="Close navigation" className="btn-icon-flat ml-auto">
                         <Icon name="close" />

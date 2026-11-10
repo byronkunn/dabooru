@@ -1,6 +1,6 @@
-# Dabooru
+# BooruHub
 
-**Dabooru** is a gallery-first social site for artists who post mature work: images, GIFs,
+**BooruHub** is a gallery-first social site for artists who post mature work: images, GIFs,
 videos, albums and comics in one place instead of split across two accounts. Every work
 carries an explicit **SFW / Suggestive / Explicit** rating, the site sits behind an 18+ age
 gate, and a viewer who hasn't opted in never sees explicit content.

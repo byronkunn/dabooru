@@ -1,4 +1,4 @@
-# Deploying Dabooru on the Hostinger VPS
+# Deploying BooruHub on the Hostinger VPS
 
 The production site runs from `/var/www/dabooru` on Ubuntu, with Caddy, PHP-FPM,
 PostgreSQL, a systemd queue worker, a dedicated media worker, and a systemd scheduler timer. The Render and

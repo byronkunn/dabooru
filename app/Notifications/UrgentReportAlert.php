@@ -26,7 +26,7 @@ class UrgentReportAlert extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Dabooru: urgent report awaiting review')
+            ->subject('BooruHub: urgent report awaiting review')
             ->line('An urgent report has been added to the moderation queue.')
             ->action('Review report', route('admin.reports', ['report' => $this->reportId]));
     }

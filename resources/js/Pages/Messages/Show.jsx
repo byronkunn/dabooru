@@ -133,7 +133,7 @@ function MessageBubble({ message, chat, onOpen, onReply, onReport, onAction, mes
                 <img src={message.post.sticker} alt={message.post.title} loading="lazy" className="h-32 max-w-full object-contain" />
                 <span className="text-xs text-ink-brand">View sticker pack</span>
             </Link> : message.post && <Link href={message.post.url} className="mt-1 block break-words rounded-lg border border-ink-line px-3 py-2 text-sm text-ink-brand hover:underline">
-                <span className="block text-xs text-ink-muted">Dabooru work</span>
+                <span className="block text-xs text-ink-muted">BooruHub work</span>
                 {message.post.title}
             </Link>}
             {message.interactive && message.interactive.type === 'buttons' ? (

@@ -5,7 +5,7 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Dabooru';
+const appName = import.meta.env.VITE_APP_NAME || 'BooruHub';
 
 /**
  * Carry over preferences saved under the old brand's storage keys.

@@ -115,7 +115,7 @@ class MessagePayload
         return $message?->body ?? $message?->interactive['title'] ?? match (true) {
             (bool) $message?->sticker_pack_id => 'Sent a sticker',
             (bool) $message?->media_id => 'Sent an attachment',
-            (bool) $message?->shared_post_id => 'Shared an Dabooru work',
+            (bool) $message?->shared_post_id => 'Shared an BooruHub work',
             default => '',
         };
     }
@@ -136,7 +136,7 @@ class MessagePayload
             return null;
         }
 
-        $card = ['title' => $post->title ?: 'Dabooru work', 'url' => route('posts.show', $post, false)];
+        $card = ['title' => $post->title ?: 'BooruHub work', 'url' => route('posts.show', $post, false)];
         $pack = $message->stickerPack;
         if ($pack && $post->user_id === $pack->user_id && $post->rating === 'sfw' && $post->is_original && $post->type === 'image') {
             return $card + [

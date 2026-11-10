@@ -435,8 +435,8 @@ class MessageController extends Controller
             'Content-Type' => $mime, 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff',
         ]);
         if ($media->kind === 'file') {
-            $name = $message->attachment_name ?: 'Dabooru attachment';
-            $fallback = str_replace(['%', '/', '\\'], '_', Str::ascii($name)) ?: 'Dabooru attachment';
+            $name = $message->attachment_name ?: 'BooruHub attachment';
+            $fallback = str_replace(['%', '/', '\\'], '_', Str::ascii($name)) ?: 'BooruHub attachment';
             $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_ATTACHMENT, $name, $fallback);
         }
 

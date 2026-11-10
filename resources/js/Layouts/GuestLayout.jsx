@@ -10,7 +10,7 @@ export default function GuestLayout({ children, art = null }) {
                     ))}
                 </div>
                 <div className="relative z-10 max-w-[420px]">
-                    <p className="text-[34px] font-black tracking-[-0.03em]">Dabooru</p>
+                    <p className="text-[34px] font-black tracking-[-0.03em]">BooruHub</p>
                     <p className="mt-3 text-base leading-relaxed text-[#d9cfe0]">
                         A gallery and social home for artists who draw what they draw. Post images, GIFs, video, albums and comics.
                         Mark your own work SFW or explicit.
@@ -21,7 +21,7 @@ export default function GuestLayout({ children, art = null }) {
             <div className="grid place-items-center px-4 py-7 sm:px-6">
                 <div className="w-full max-w-[400px]">
                     <Link href={route('gallery')} className="mb-1.5 block text-[30px] font-black tracking-[-0.03em]">
-                        Dabooru
+                        BooruHub
                     </Link>
                     {children}
                 </div>

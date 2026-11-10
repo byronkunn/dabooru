@@ -1,4 +1,4 @@
-# Render blueprint for Dabooru.
+# Render blueprint for BooruHub.
 #
 # Three services share one Postgres database:
 #   dabooru          web (serves HTTP)
@@ -59,7 +59,7 @@ services:
       - key: APP_KEY
         sync: false
       - key: APP_NAME
-        value: Dabooru
+        value: BooruHub
       - key: DATABASE_URL
         fromDatabase:
           name: dabooru-db
@@ -109,7 +109,7 @@ services:
       - key: APP_KEY
         sync: false
       - key: APP_NAME
-        value: Dabooru
+        value: BooruHub
       - key: DATABASE_URL
         fromDatabase:
           name: dabooru-db
@@ -142,7 +142,7 @@ services:
       - key: APP_KEY
         sync: false
       - key: APP_NAME
-        value: Dabooru
+        value: BooruHub
       - key: DATABASE_URL
         fromDatabase:
           name: dabooru-db

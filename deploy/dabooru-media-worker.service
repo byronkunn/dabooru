@@ -1,5 +1,5 @@
 [Unit]
-Description=Dabooru video processing queue worker
+Description=BooruHub video processing queue worker
 After=network.target postgresql@18-main.service
 
 [Service]

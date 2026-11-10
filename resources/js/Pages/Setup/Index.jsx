@@ -32,7 +32,7 @@ export default function SetupIndex({ suggestedTags, suggestedArtists, showExplic
             <AppLayout rightRail={false}>
                 <Head title="Welcome" />
                 <div className="mx-auto max-w-[560px] px-4 py-16 text-center">
-                    <h1 className="text-xl font-bold">Welcome to Dabooru</h1>
+                    <h1 className="text-xl font-bold">Welcome to BooruHub</h1>
                     <p className="mt-2 text-[13.5px] text-ink-muted">
                         There is not much to choose from yet. Start browsing and your feed will build itself.
                     </p>

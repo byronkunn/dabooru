@@ -102,11 +102,11 @@ function Rail({ admin = false }) {
 
     return (
         <aside aria-label={admin ? 'Admin navigation' : 'Site navigation'} className="sticky top-0 z-20 hidden h-screen flex-col gap-1 overflow-y-auto border-r border-ink-line bg-ink-bg px-2.5 pb-3.5 pt-5 lg:flex lg:px-3.5">
-            <Link href={route(admin ? staffLinks[0]?.href ?? 'gallery' : 'gallery')} aria-label={admin ? 'Dabooru admin' : 'Dabooru'} className="mb-4 flex items-center gap-2.5 px-2 font-extrabold tracking-[-0.02em] xl:text-xl">
+            <Link href={route(admin ? staffLinks[0]?.href ?? 'gallery' : 'gallery')} aria-label={admin ? 'BooruHub admin' : 'BooruHub'} className="mb-4 flex items-center gap-2.5 px-2 font-extrabold tracking-[-0.02em] xl:text-xl">
                 <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[9px] bg-gradient-to-br from-ink-brand to-ink-pink text-[15px] font-black text-[#1a1017]">
                     D
                 </span>
-                <span className="hidden xl:inline">{admin ? 'Dabooru admin' : 'Dabooru'}</span>
+                <span className="hidden xl:inline">{admin ? 'BooruHub admin' : 'BooruHub'}</span>
             </Link>
 
             {(admin ? staffLinks : NAV).map((item) => {
