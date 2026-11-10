@@ -544,6 +544,7 @@ export function TopBar({ title, subtitle, back = null, backLabel = 'Back', onBac
     const { props } = usePage();
     const navigation = useContext(NavigationToggleContext);
     const [hidden, setHidden] = useState(false);
+    const unreadNotifications = props.auth?.unread_notifications ?? 0;
 
     useEffect(() => {
         if (!hideOnScroll) {
@@ -588,6 +589,17 @@ export function TopBar({ title, subtitle, back = null, backLabel = 'Back', onBac
                 </h1>
                 <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2">
                     {actions && <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">{actions}</div>}
+                    {props.auth?.user && !navigation && <Link
+                        href={route('notifications.index')}
+                        aria-label={unreadNotifications > 0 ? `Notifications, ${unreadNotifications} unread` : 'Notifications'}
+                        title="Notifications"
+                        className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink-muted hover:bg-ink-raised hover:text-ink-text"
+                    >
+                        <Icon name="bell" className="h-5 w-5" />
+                        {unreadNotifications > 0 && <span className="absolute right-0 top-0 min-w-[17px] rounded-full bg-ink-pink px-1 text-center text-[10px] font-extrabold leading-[17px] text-white">
+                            {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                        </span>}
+                    </Link>}
                     {siteActions && search && <div className="hidden w-[min(36vw,300px)] lg:block">
                         <SearchBox scope={searchScope} initial={searchScope === 'comics' ? props.searchQuery ?? '' : searchScope === 'knowledge' ? props.filters?.q ?? '' : ''} />
                     </div>}
