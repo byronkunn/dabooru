@@ -3,11 +3,12 @@ import { Head, Link, router } from '@inertiajs/react';
 import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 import { Icon } from '@/Components/Icons';
 
-const ICONS = { like: '♥', comment: '💬', follow: '＋', chapter: '📖', urgent_report: '⚑' };
+const ICONS = { like: '♥', comment: '💬', follow: '＋', new_work: '✦', chapter: '📖', urgent_report: '⚑', report_update: '⚑' };
 const TEXT = {
     like: 'liked your work',
     comment: 'commented on your work',
     follow: 'started following you',
+    new_work: 'published new work',
     chapter: 'published a new chapter',
 };
 
@@ -71,6 +72,10 @@ export default function NotificationsIndex({ notifications, tab }) {
                             ) : <span>Community</span>}{' '}
                             {n.type === 'urgent_report' ? (
                                 <Link href={route('admin.reports', { report: n.data.report_id })} className="font-bold text-ink-expl hover:underline">Urgent report awaiting review</Link>
+                            ) : n.type === 'report_update' ? (
+                                <Link href={route('reports.index')} className="text-ink-brand hover:underline">
+                                    Your report was reviewed: {n.data.outcome === 'actioned' ? 'action taken' : 'no action needed'}.
+                                </Link>
                             ) : n.type === 'knowledge' ? (
                                 <Link href={n.data.url} className="text-ink-brand hover:underline">{n.data.message}</Link>
                             ) : n.type === 'comment' && n.data?.reply ? 'replied to your comment' : (TEXT[n.type] ?? n.type)}

@@ -20,7 +20,7 @@ class ScheduledStudioPlans
 {
     public static function deliverDue(): array
     {
-        $result = ['published' => 0, 'failed' => 0];
+        $result = ['published' => 0, 'waiting' => 0, 'failed' => 0];
         $ids = StudioPlan::where('stage', 'scheduled')->where('delivery_status', 'pending')
             ->where('publish_at', '<=', now()->utc())->orderBy('publish_at')->orderBy('id')->limit(100)->pluck('id');
 
@@ -31,6 +31,12 @@ class ScheduledStudioPlans
                 if (! $plan || $plan->stage !== 'scheduled' || $plan->delivery_status !== 'pending'
                     || ! $plan->publish_at || $plan->publish_at->isFuture()) {
                     return null;
+                }
+                // Video drafts can finish transcoding after their scheduled time.
+                // Keep the schedule pending while processing instead of turning it
+                // into a failed release that the artist has to reschedule manually.
+                if (self::waitingForMedia($plan)) {
+                    return 'waiting';
                 }
                 try {
                     // A savepoint rolls publication back while retaining the plan lock for failure recording.
@@ -108,6 +114,16 @@ class ScheduledStudioPlans
             self::require(! preg_match('~^(?:https?://|/)~i', $item->path) && ! str_contains($item->path, '..')
                 && Storage::disk($item->disk)->exists($item->path), 'A draft upload file is missing or unsafe.');
         }
+    }
+
+    private static function waitingForMedia(StudioPlan $plan): bool
+    {
+        $mediaIds = $plan->post_id
+            ? DB::table('post_media')->where('post_id', $plan->post_id)->pluck('media_id')
+            : DB::table('comic_pages')->where('comic_chapter_id', $plan->comic_chapter_id)->pluck('media_id');
+
+        return $mediaIds->isNotEmpty()
+            && Media::whereIn('id', $mediaIds)->where('status', 'processing')->exists();
     }
 
     private static function require(bool $condition, string $message): void

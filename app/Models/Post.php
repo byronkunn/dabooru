@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class Post extends Model
 {
@@ -36,6 +37,56 @@ class Post extends Model
     protected static function booted(): void
     {
         static::addGlobalScope('published', fn (Builder $query) => $query->where('posts.is_draft', false));
+        static::created(function (Post $post): void {
+            if (! $post->is_draft) {
+                self::notifyFollowersAfterCommit($post);
+            }
+        });
+        static::updated(function (Post $post): void {
+            if ($post->wasChanged('is_draft') && ! $post->is_draft) {
+                self::notifyFollowersAfterCommit($post);
+            }
+        });
+    }
+
+    /** Notify opted-in followers only after a work is genuinely public. */
+    private static function notifyFollowersAfterCommit(Post $post): void
+    {
+        DB::afterCommit(function () use ($post): void {
+            rescue(function () use ($post): void {
+                $post->refresh();
+                if ($post->is_draft || $post->moderation_hidden_at || ! $post->user_id) {
+                    return;
+                }
+
+                $followers = DB::table('follows')
+                    ->join('users as follower_users', 'follower_users.id', '=', 'follows.follower_id')
+                    ->leftJoin('settings as notification_setting', function ($join) {
+                        $join->on('notification_setting.user_id', '=', 'follows.follower_id')
+                            ->where('notification_setting.key', '=', 'notification_new_work');
+                    })
+                    ->where('follows.following_id', $post->user_id)
+                    ->where(fn ($query) => $query->whereNull('notification_setting.value')->orWhere('notification_setting.value', '1'))
+                    ->whereNotIn('follows.follower_id', Block::counterpartIds($post->user_id))
+                    ->when($post->rating === 'explicit', fn ($query) => $query->where('follower_users.show_explicit', true))
+                    ->orderBy('follows.follower_id')
+                    ->pluck('follows.follower_id');
+
+                foreach ($followers->chunk(500) as $batch) {
+                    $now = now();
+                    DB::table('notifications_app')->insert($batch->map(fn ($userId) => [
+                        'user_id' => $userId,
+                        'actor_id' => $post->user_id,
+                        'type' => 'new_work',
+                        'subject_type' => self::class,
+                        'subject_id' => $post->id,
+                        'data' => json_encode(['post_id' => $post->id]),
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ])->all());
+                }
+            });
+        });
     }
 
     public function creditedArtist(): BelongsTo

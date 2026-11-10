@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\MessageController;
 use App\Models\Comment;
+use App\Models\AppNotification;
 use App\Models\Conversation;
 use App\Models\Media;
 use App\Models\Message;
@@ -241,6 +242,15 @@ class ReportController extends Controller
             'status' => $status, 'handled_by' => $actor->id, 'resolved_at' => now(),
             'message_evidence' => null, 'evidence_media_id' => null, 'message_context' => null,
         ])->save();
+        if ($report->reporter_id) {
+            AppNotification::create([
+                'user_id' => $report->reporter_id,
+                'type' => 'report_update',
+                'subject_type' => Report::class,
+                'subject_id' => $report->id,
+                'data' => ['report_id' => $report->id, 'outcome' => $status],
+            ]);
+        }
         MessageAttachments::purgeAfterCommit($evidenceMedia);
         ModerationAction::record($actor, $action, $report->reportable_type, $report->reportable_id, $report->id, $reason);
     }

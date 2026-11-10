@@ -47,6 +47,10 @@ form.patch(
                         {preview?.is_video ? <video src={preview.url} controls preload="none" className="aspect-square w-full object-contain" />
                             : preview && <a href={preview.url} target="_blank" rel="noreferrer"><img src={preview.thumb || preview.url} loading="lazy" alt={`Preview ${index + 1}`} className="aspect-square w-full rounded object-cover" /></a>}
                         <p className="mt-1 text-xs text-ink-muted">Item {index + 1}</p>
+                        {preview?.status && <p className={`mt-1 text-xs ${preview.status === 'failed' ? 'text-red-300' : 'text-ink-muted'}`}>
+                            {preview.status === 'ready' ? 'Ready to publish' : preview.status === 'processing' ? 'Processing video…' : 'Needs attention'}
+                        </p>}
+                        {preview?.status === 'failed' && <p className="mt-1 text-xs text-red-200">This upload could not be processed. Keep the draft private and upload a replacement.</p>}
                         {canReorder && <div className="mt-1 flex flex-wrap gap-1">
                             <button type="button" className="btn-ghost px-2 text-xs" disabled={index === 0} onClick={() => move(index, -1)} aria-label={`Move item ${index + 1} earlier`}>↑</button>
                             <button type="button" className="btn-ghost px-2 text-xs" disabled={index === form.data.order.length - 1} onClick={() => move(index, 1)} aria-label={`Move item ${index + 1} later`}>↓</button>
@@ -252,6 +256,10 @@ export default function Studio({ studioFilters, works = [], chapters = [], claim
                             <p className="break-words font-bold">{item.title || 'Untitled'} <span className="text-xs font-normal text-ink-muted">· {item.is_draft ? 'Private draft' : item.type}</span></p>
                             {!item.is_draft && <Link className="link-brand text-sm" href={route('posts.show', item.id)}>Open work</Link>}
                         </div>
+                        {item.is_draft && item.mediaStatus?.length > 0 && <p className={`text-sm ${item.mediaStatus.some((status) => status === 'failed' || status === 'missing') ? 'text-red-300' : 'text-ink-muted'}`}>
+                            Uploads: {item.mediaStatus.some((status) => status === 'failed' || status === 'missing') ? 'needs attention' : item.mediaStatus.includes('processing') ? 'processing' : 'ready'}
+                            {item.mediaStatus.includes('processing') && ' · scheduled publication will wait for processing to finish'}
+                        </p>}
                         {!item.is_draft && <p className="text-sm text-ink-muted">{item.views.toLocaleString()} views · {item.bookmarks_count.toLocaleString()} saves</p>}
                         {(item.is_draft || item.type === 'album') && <details>
                             <summary className="cursor-pointer text-sm text-ink-brand">{item.is_draft ? 'Edit and preview draft' : 'Reorder album'}</summary>

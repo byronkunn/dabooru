@@ -108,7 +108,7 @@ export default function StudioPlanner({ filters = {}, plans = [], planStage = nu
                 {(plan.post_id || plan.comic_chapter_id) && <div><dt className="inline font-medium">Linked: </dt><dd className="inline">{plan.post_id ? `Work #${plan.post_id}` : `Chapter #${plan.comic_chapter_id}`}</dd></div>}
                 {plan.timezone && <div><dt className="inline font-medium">Saved timezone: </dt><dd className="inline break-words">{plan.timezone}</dd></div>}
             </dl>
-            {plan.delivery_status === 'pending' && <p className="mt-2 text-sm">Waiting for scheduled publication.</p>}
+            {plan.delivery_status === 'pending' && <p className="mt-2 text-sm">Scheduled for publication. If an upload is still processing at that time, it will publish once ready.</p>}
             {plan.delivery_status === 'published' && <p className="mt-2 text-sm">Linked draft published successfully.</p>}
             {plan.delivery_status === 'failed' && <p role="alert" className="mt-2 break-words text-sm text-red-300">Publication failed: {plan.delivery_error || 'Review the draft and reschedule.'}</p>}
             <div className="mt-3 flex flex-wrap gap-2">

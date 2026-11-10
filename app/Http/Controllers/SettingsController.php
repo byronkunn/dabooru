@@ -22,6 +22,7 @@ class SettingsController extends Controller
         'notification_likes' => true,
         'notification_comments' => true,
         'notification_follows' => true,
+        'notification_new_work' => true,
     ];
 
     public function edit(Request $request): Response

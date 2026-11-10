@@ -22,6 +22,7 @@ const TOGGLES = {
         ['notification_likes', 'Likes', null],
         ['notification_comments', 'Comments', null],
         ['notification_follows', 'New followers', null],
+        ['notification_new_work', 'New work from artists I follow', 'Adds a notification when an artist you follow publishes. Explicit work follows your content visibility setting.'],
     ],
 };
 

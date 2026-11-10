@@ -23,9 +23,9 @@ class NotificationController extends Controller
             $query->where('type', '!=', 'urgent_report');
         }
 
-        $query->when($tab !== 'all', function ($q) use ($tab) {
-            $q->where('type', rtrim($tab, 's'));
-        });
+        $query->when($tab === 'likes', fn ($q) => $q->where('type', 'like'))
+            ->when($tab === 'comments', fn ($q) => $q->where('type', 'comment'))
+            ->when($tab === 'follows', fn ($q) => $q->whereIn('type', ['follow', 'new_work']));
 
         return Inertia::render('Notifications/Index', [
             'notifications' => $query->take(50)->get()->map(fn (AppNotification $n) => [

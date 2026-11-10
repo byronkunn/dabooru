@@ -60,6 +60,7 @@ class StudioController extends Controller
                 'id', 'title', 'caption', 'rating', 'type', 'is_draft', 'views', 'bookmarks_count',
             ]) + [
                 'tags' => $post->is_draft ? implode(', ', $post->draft_tags ?? []) : '',
+                'mediaStatus' => $post->media->map(fn ($item) => $item->media?->status ?? 'missing')->all(),
                 'media' => $post->is_draft || $post->type === 'album'
                     ? $post->media->map(fn ($item) => $this->mediaItem($item)) : [],
             ]);
