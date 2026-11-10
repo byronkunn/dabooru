@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Comic;
+use App\Models\ComicChapter;
 use App\Models\Post;
+use App\Models\User;
 use Illuminate\Http\Response;
 
 class SitemapController extends Controller
@@ -41,14 +43,45 @@ class SitemapController extends Controller
                 ];
             });
 
-        Comic::whereHas('chapters', fn ($q) => $q->whereNotNull('published_at'))
+        User::verified()
+            ->whereHas('posts', fn ($query) => $query->visibleTo(null)->visibleRating(false)->where('is_draft', false))
+            ->orderBy('username')
+            ->limit(5000)
+            ->get(['username', 'updated_at'])
+            ->each(function (User $artist) use (&$urls) {
+                $urls[] = [
+                    'loc' => route('profile.show', $artist->username),
+                    'lastmod' => $artist->updated_at?->toAtomString(),
+                    'priority' => '0.6',
+                ];
+            });
+
+        Comic::visibleTo(null)
+            ->whereHas('chapters', fn ($q) => $q->whereNotNull('published_at')->where('published_at', '<=', now())->where('rating', '!=', 'explicit'))
             ->where('rating', '!=', 'explicit')
+            ->orderByDesc('updated_at')
+            ->limit(5000)
             ->get(['slug', 'updated_at'])
             ->each(function (Comic $comic) use (&$urls) {
                 $urls[] = [
                     'loc' => route('comics.show', $comic->slug),
                     'lastmod' => $comic->updated_at?->toAtomString(),
                     'priority' => '0.6',
+                ];
+            });
+
+        ComicChapter::published()->visibleAfterModeration()
+            ->where('rating', '!=', 'explicit')
+            ->whereHas('comic', fn ($query) => $query->visibleTo(null)->where('rating', '!=', 'explicit'))
+            ->with('comic:id,slug')
+            ->orderByDesc('updated_at')
+            ->limit(5000)
+            ->get(['id', 'comic_id', 'number', 'updated_at'])
+            ->each(function (ComicChapter $chapter) use (&$urls) {
+                $urls[] = [
+                    'loc' => route('comics.read', [$chapter->comic->slug, $chapter->number]),
+                    'lastmod' => $chapter->updated_at?->toAtomString(),
+                    'priority' => '0.5',
                 ];
             });
 

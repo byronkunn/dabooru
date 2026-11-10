@@ -15,6 +15,8 @@
             $siteName = config('app.name', 'Dabooru');
         @endphp
         <meta name="description" content="{{ $share['description'] ?? $siteName.' — a gallery and social home for artists who draw what they draw.' }}">
+        <meta name="robots" content="{{ $share['robots'] ?? 'noindex, nofollow' }}">
+        <link rel="canonical" href="{{ $share['url'] ?? url()->current() }}">
         <meta property="og:site_name" content="{{ $siteName }}">
         <meta property="og:type" content="{{ $share['type'] ?? 'website' }}">
         <meta property="og:title" content="{{ $share['title'] ?? $siteName }}">
@@ -31,7 +33,9 @@
         <meta name="twitter:description" content="{{ $share['description'] ?? 'Post images, GIFs, video, albums and comics.' }}">
 
         {{-- Adult content: platforms and search engines should know before previewing. --}}
-        <meta name="rating" content="{{ $share['rating'] ?? 'adult' }}">
+        @if (($share['rating'] ?? null) === 'adult')
+            <meta name="rating" content="adult">
+        @endif
 
         <!-- Scripts -->
         @routes

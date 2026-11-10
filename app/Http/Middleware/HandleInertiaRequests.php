@@ -90,6 +90,23 @@ class HandleInertiaRequests extends Middleware
     {
         $route = $request->route()?->getName();
         $post = $request->route()?->parameter('post');
+        $indexableRoutes = [
+            'gallery', 'discover', 'artists.index', 'artists.show', 'profile.show',
+            'comics.index', 'comics.show', 'comics.read', 'knowledge.index',
+            'knowledge.show', 'legal.terms', 'legal.privacy', 'legal.policy', 'dmca',
+        ];
+        $robots = in_array($route, $indexableRoutes, true) ? 'index, follow' : 'noindex, nofollow';
+        $descriptions = [
+            'gallery' => 'Browse artwork, albums, GIFs and video shared by independent artists on Dabooru.',
+            'discover' => 'Discover artists and community favorites from the Dabooru art community.',
+            'artists.index' => 'Explore the Dabooru artist directory and find creators to follow.',
+            'comics.index' => 'Read independent comics and illustrated stories published by artists on Dabooru.',
+            'knowledge.index' => 'Browse community maintained tags and art references on Dabooru.',
+            'legal.terms' => 'Read the terms that govern use of Dabooru.',
+            'legal.privacy' => 'Learn how Dabooru handles account and usage information.',
+            'legal.policy' => 'Read Dabooru’s community rules and content policy.',
+            'dmca' => 'Review copyright and DMCA information or submit a notice to Dabooru.',
+        ];
 
         if ($route === 'posts.show' && $post instanceof \App\Models\Post) {
             $media = $post->media->first()?->media;
@@ -105,6 +122,8 @@ class HandleInertiaRequests extends Middleware
                 'url' => route('posts.show', $post),
                 'image' => ! $explicit && $media ? $media->url() : null,
                 'rating' => $explicit ? 'adult' : 'safe',
+                'robots' => ! $explicit && ! $post->is_draft && ! $post->moderation_hidden_at
+                    ? 'index, follow' : 'noindex, nofollow',
             ];
         }
 
@@ -118,6 +137,7 @@ class HandleInertiaRequests extends Middleware
                     'description' => \Illuminate\Support\Str::limit((string) ($profile->bio ?: 'Artwork on '.config('app.name')), 160),
                     'url' => route('profile.show', $profile->username),
                     'image' => $profile->avatarUrl(),
+                    'robots' => $profile->isBanned() ? 'noindex, nofollow' : $robots,
                 ];
             }
         }
@@ -127,17 +147,29 @@ class HandleInertiaRequests extends Middleware
             $slug = request()->route()->parameter('comic');
             $comic = is_string($slug) ? \App\Models\Comic::where('slug', $slug)->first() : $slug;
             if ($comic instanceof \App\Models\Comic) {
+                $chapterNumber = $request->route()->parameter('number');
+                $chapter = $chapterNumber === null ? null : $comic->chapters()
+                    ->where('number', $chapterNumber)->first();
+                $chapterExplicit = $chapter?->rating === 'explicit';
+
                 return [
                     'type' => 'book',
                     'title' => $comic->title,
                     'description' => \Illuminate\Support\Str::limit((string) ($comic->description ?: 'A comic on '.config('app.name')), 160),
-                    'url' => route('comics.show', $comic->slug),
+                    'url' => $chapter
+                        ? route('comics.read', [$comic->slug, $chapter->number])
+                        : route('comics.show', $comic->slug),
                     'image' => $comic->cover()?->url(),
+                    'rating' => $comic->rating === 'explicit' || $chapterExplicit ? 'adult' : 'safe',
+                    'robots' => $comic->rating === 'explicit' || $chapterExplicit ? 'noindex, nofollow' : $robots,
                 ];
             }
         }
 
-        return [];
+        return [
+            'robots' => $robots,
+            'description' => $descriptions[$route] ?? config('app.name').' — a gallery and social home for artists who draw what they draw.',
+        ];
     }
 
     private function discoveryRail(Request $request, ?User $viewer): array

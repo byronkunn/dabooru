@@ -32,6 +32,20 @@ class EnsureAgeConfirmed
             return $next($request);
         }
 
+        // Search visibility is useful for public pages, including explicit work
+        // that carries adult rating metadata. Verify the crawler by DNS rather
+        // than trusting a spoofable User-Agent header.
+        $indexableRoutes = [
+            'gallery', 'discover', 'posts.show', 'artists.index', 'artists.show', 'profile.show',
+            'comics.index', 'comics.show', 'comics.read', 'knowledge.index',
+            'knowledge.show', 'legal.terms', 'legal.privacy', 'legal.policy', 'dmca',
+        ];
+        if ($request->isMethod('GET')
+            && in_array($request->route()?->getName(), $indexableRoutes, true)
+            && \App\Support\VerifiedGooglebot::check($request->userAgent(), $request->ip())) {
+            return $next($request);
+        }
+
         // The gate and the auth pages are always reachable, logged out or not.
         if ($request->is(
             'age-gate*', 'login', 'register', 'forgot-password*', 'reset-password*',
