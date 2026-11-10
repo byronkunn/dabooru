@@ -7,6 +7,15 @@ export default defineConfig({
         target: 'es2020',
         minify: 'esbuild',
         cssMinify: 'esbuild',
+        rollupOptions: {
+            output: {
+                // Change the URL namespace so edge caches don't reuse old
+                // four-hour entries after the production cache policy changes.
+                assetFileNames: 'assets/[name]-[hash]-v2[extname]',
+                entryFileNames: 'assets/[name]-[hash]-v2.js',
+                chunkFileNames: 'assets/[name]-[hash]-v2.js',
+            },
+        },
     },
     plugins: [
         laravel({
