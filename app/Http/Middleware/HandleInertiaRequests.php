@@ -97,10 +97,10 @@ class HandleInertiaRequests extends Middleware
         ];
         $robots = in_array($route, $indexableRoutes, true) ? 'index, follow' : 'noindex, nofollow';
         $descriptions = [
-            'gallery' => 'Browse artwork, albums, GIFs and video shared by independent artists on BooruHub.',
-            'discover' => 'Discover artists and community favorites from the BooruHub art community.',
-            'artists.index' => 'Explore the BooruHub artist directory and find creators to follow.',
-            'comics.index' => 'Read independent comics and illustrated stories published by artists on BooruHub.',
+            'gallery' => 'Discover hentai and NSFW art, comics, GIFs and video alongside SFW work from independent artists on BooruHub, an 18+ artist community.',
+            'discover' => 'Find artists and explore hentai, NSFW and SFW artwork, comics and community favorites on BooruHub.',
+            'artists.index' => 'Explore the BooruHub artist directory and find creators publishing original art, hentai and comics.',
+            'comics.index' => 'Read independent comics, including NSFW and SFW illustrated stories published by artists on BooruHub.',
             'knowledge.index' => 'Browse community maintained tags and art references on BooruHub.',
             'legal.terms' => 'Read the terms that govern use of BooruHub.',
             'legal.privacy' => 'Learn how BooruHub handles account and usage information.',
@@ -108,10 +108,10 @@ class HandleInertiaRequests extends Middleware
             'dmca' => 'Review copyright and DMCA information or submit a notice to BooruHub.',
         ];
         $seoTitles = [
-            'gallery' => config('app.name').' — Art, Comics & Artist Community',
-            'discover' => 'Discover Art & Artists | '.config('app.name'),
-            'artists.index' => 'Artist Directory | '.config('app.name'),
-            'comics.index' => 'Independent Comics | '.config('app.name'),
+            'gallery' => config('app.name').' — Hentai Art, NSFW Comics & Artists',
+            'discover' => 'Discover Hentai Art & Artists | '.config('app.name'),
+            'artists.index' => 'Artist Directory — NSFW & Hentai Artists | '.config('app.name'),
+            'comics.index' => 'NSFW & Independent Comics | '.config('app.name'),
             'knowledge.index' => 'Community Tags & Art Wiki | '.config('app.name'),
         ];
 
@@ -180,7 +180,7 @@ class HandleInertiaRequests extends Middleware
 
         return [
             'robots' => $robots,
-            'seo_title' => $seoTitles[$route] ?? config('app.name').' — Art, Comics & Artist Community',
+            'seo_title' => $seoTitles[$route] ?? config('app.name').' — Hentai Art, NSFW Comics & Artists',
             'description' => $descriptions[$route] ?? config('app.name').' — a gallery and social home for artists who draw what they draw.',
         ];
     }
