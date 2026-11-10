@@ -53,7 +53,7 @@ export default function ProfileShow({ profile, posts, comics, collections = [], 
                 {profile.banner && <img src={profile.banner} alt="" className="h-full w-full object-cover" />}
                 <div className="absolute inset-0 bg-[radial-gradient(600px_200px_at_20%_0%,rgba(232,176,75,0.22),transparent_70%)]" />
                 {isOwner && (
-                    <button type="button" onClick={() => setEditingImage('banner')} aria-label="Edit banner image" className="absolute left-1/2 top-1/2 grid h-11 w-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-black/60 text-white transition hover:bg-black/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
+                    <button type="button" onClick={() => setEditingImage('banner')} aria-label="Edit banner image" className="absolute right-4 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-black/35 text-white/80 backdrop-blur-[2px] transition hover:bg-black/55 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
                         <Icon name="camera" />
                     </button>
                 )}
