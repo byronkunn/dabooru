@@ -53,8 +53,8 @@ export default function ProfileShow({ profile, posts, comics, collections = [], 
                 {profile.banner && <img src={profile.banner} alt="" className="h-full w-full object-cover" />}
                 <div className="absolute inset-0 bg-[radial-gradient(600px_200px_at_20%_0%,rgba(232,176,75,0.22),transparent_70%)]" />
                 {isOwner && (
-                    <button type="button" onClick={() => setEditingImage('banner')} aria-label="Edit banner image" className="absolute right-4 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-black/35 text-white/80 backdrop-blur-[2px] transition hover:bg-black/55 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
-                        <Icon name="camera" />
+                    <button type="button" onClick={() => setEditingImage('banner')} aria-label="Edit banner image" className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-black/30 text-white/75 backdrop-blur-[2px] transition hover:bg-black/55 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
+                        <Icon name="camera" className="h-5 w-5" />
                     </button>
                 )}
             </div>
@@ -63,8 +63,8 @@ export default function ProfileShow({ profile, posts, comics, collections = [], 
                 <div className="relative h-20 w-20 md:h-[136px] md:w-[136px]">
                     <img src={profile.avatar} alt="" className="h-full w-full rounded-full border-4 border-ink-bg bg-[#222] object-cover" />
                     {isOwner && (
-                        <button type="button" onClick={() => setEditingImage('avatar')} aria-label="Edit profile photo" className="absolute inset-0 m-auto grid h-11 w-11 place-items-center rounded-full bg-black/60 text-white transition hover:bg-black/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
-                            <Icon name="camera" />
+                        <button type="button" onClick={() => setEditingImage('avatar')} aria-label="Edit profile photo" className="absolute right-1.5 top-1.5 grid h-8 w-8 place-items-center rounded-full bg-black/35 text-white/80 backdrop-blur-[2px] transition hover:bg-black/60 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
+                            <Icon name="camera" className="h-4 w-4" />
                         </button>
                     )}
                 </div>
