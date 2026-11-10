@@ -1,5 +1,5 @@
 import { Link, useForm, usePage } from '@inertiajs/react';
-import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
+import { Dialog, DialogPanel, DialogTitle, Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Icon } from '@/Components/Icons';
 import SearchBox from '@/Components/SearchBox';
@@ -95,6 +95,16 @@ const NAV = [
     { label: 'Library', href: 'collections.index', icon: 'save', matches: LIBRARY, auth: true, rememberGroup: 'library-sections', rememberTabs: [['Collections', 'collections.index'], ['Saved Searches', 'saved-searches.index']] },
 ];
 
+function accountShortcuts(user) {
+    return [
+        { label: 'View profile', href: route('profile.show', user.username), icon: 'user' },
+        { label: 'Edit profile', href: `${route('settings.edit')}#profile`, icon: 'camera' },
+        { label: 'Saved works', href: route('collections.index'), icon: 'save' },
+        { label: 'Creator Studio', href: route('studio.index'), icon: 'upload' },
+        { label: 'Settings', href: route('settings.edit'), icon: 'settings' },
+    ];
+}
+
 function Rail({ admin = false }) {
     const { auth } = usePage().props;
     const user = auth?.user;
@@ -162,22 +172,57 @@ function Rail({ admin = false }) {
 
             <div className="mt-auto">
                 {!admin && <DemoSwitcher inline />}
-                {admin && user ? (
-                    <div className="flex items-center gap-2.5 rounded-xl p-2" title={`Signed in as @${user.username}`}>
-                        <img src={user.avatar} alt="" className="h-[38px] w-[38px] shrink-0 rounded-full object-cover" />
-                        <span className="hidden min-w-0 xl:block">
-                            <span className="block truncate text-sm font-bold">{user.name}</span>
-                            <span className="block text-[12.5px] text-ink-muted capitalize">{user.is_admin ? 'Administrator' : user.staff_permissions?.join(', ')}</span>
-                        </span>
-                    </div>
-                ) : user ? (
-                    <Link href={route('profile.show', user.username)} className="flex items-center gap-2.5 rounded-xl p-2 hover:bg-ink-raised">
-                        <img src={user.avatar} alt="" className="h-[38px] w-[38px] shrink-0 rounded-full object-cover" />
-                        <span className="hidden min-w-0 xl:block">
-                            <span className="block truncate text-sm font-bold">{user.name}</span>
-                            <span className="block truncate text-[12.5px] text-ink-muted">@{user.username}</span>
-                        </span>
-                    </Link>
+                {user ? (
+                    <Menu>
+                        <MenuButton
+                            type="button"
+                            aria-label="Open account menu"
+                            title={`Account menu for @${user.username}`}
+                            className="flex min-h-11 w-full items-center gap-2.5 rounded-xl p-2 text-left hover:bg-ink-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink-brand"
+                        >
+                            <img src={user.avatar} alt="" className="h-[38px] w-[38px] shrink-0 rounded-full object-cover" />
+                            <span className="hidden min-w-0 flex-1 xl:block">
+                                <span className="block truncate text-sm font-bold">{user.name}</span>
+                                <span className="block truncate text-[12.5px] text-ink-muted">{admin ? (user.is_admin ? 'Administrator' : user.staff_permissions?.join(', ')) : `@${user.username}`}</span>
+                            </span>
+                            <Icon name="more" className="hidden h-4 w-4 shrink-0 text-ink-muted xl:block" />
+                        </MenuButton>
+                        <MenuItems
+                            anchor={{ to: 'top start', gap: 8, padding: 8 }}
+                            portal
+                            transition
+                            className="z-[80] w-[min(288px,calc(100vw-1rem))] origin-bottom-left rounded-2xl border border-ink-line bg-ink-surface p-2 text-ink-text shadow-2xl outline-none transition duration-100 ease-out data-[closed]:translate-y-1 data-[closed]:opacity-0"
+                        >
+                            <div className="flex items-center gap-3 border-b border-ink-line px-2.5 pb-3 pt-1">
+                                <img src={user.avatar} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" />
+                                <div className="min-w-0">
+                                    <p className="truncate text-sm font-bold">{user.name}</p>
+                                    <p className="truncate text-xs text-ink-muted">@{user.username}</p>
+                                </div>
+                            </div>
+                            <div className="py-1">
+                                {accountShortcuts(user).map((item) => (
+                                    <MenuItem key={item.label}>
+                                        {({ focus }) => (
+                                            <Link href={item.href} className={`flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium ${focus ? 'bg-ink-raised text-ink-text' : 'text-ink-muted'}`}>
+                                                <Icon name={item.icon} className="h-[18px] w-[18px] shrink-0" />
+                                                <span>{item.label}</span>
+                                            </Link>
+                                        )}
+                                    </MenuItem>
+                                ))}
+                            </div>
+                            <div className="border-t border-ink-line pt-1">
+                                <MenuItem>
+                                    {({ focus }) => (
+                                        <Link href={route('logout')} method="post" as="button" className={`flex min-h-11 w-full items-center rounded-xl px-3 py-2 text-left text-sm font-semibold ${focus ? 'bg-ink-raised text-[#ff98a9]' : 'text-[#ff98a9]'}`}>
+                                            Log out
+                                        </Link>
+                                    )}
+                                </MenuItem>
+                            </div>
+                        </MenuItems>
+                    </Menu>
                 ) : (
                     <Link href={route('register')} className="btn-ghost w-full text-[13px]">
                         Create account
@@ -272,6 +317,7 @@ function BottomNav({ menuOpen, setMenuOpen }) {
         {
             label: 'Account',
             items: [
+                { label: 'Edit profile', href: `${route('settings.edit')}#profile` },
                 { label: 'Settings', href: route('settings.edit') },
                 { label: 'Your reports', href: route('reports.index') },
                 { label: 'Muted tags', href: `${route('settings.edit')}#mutes` },
