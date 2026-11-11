@@ -196,11 +196,11 @@ img[data-seed] {
 
 /* Fall back to the stable viewport unit on browsers without dynamic viewport support. */
 .message-window {
-    height: calc(100vh - 110px);
+    height: calc(100vh - 52px);
 }
 @supports (height: 100dvh) {
     .message-window {
-        height: calc(100dvh - 110px);
+        height: calc(100dvh - 52px - env(safe-area-inset-bottom));
     }
 }
 @media (min-width: 1024px) {

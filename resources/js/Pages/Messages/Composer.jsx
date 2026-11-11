@@ -156,7 +156,7 @@ export default function Composer({ conversation, reply, onClearReply, quickRepli
 
     return (
         <>
-            <form onSubmit={send} className="shrink-0 space-y-2 border-t border-ink-line p-3">
+            <form onSubmit={send} className="shrink-0 space-y-2 border-t border-ink-line px-3 pt-3 pb-1 md:p-3">
                 {reply && <div className="flex items-center gap-2 rounded-lg bg-ink-raised px-3 py-2 text-xs">
                     <span className="min-w-0 flex-1 truncate">Replying to {reply.sender} · {reply.body || 'Attachment'}</span>
                     <button type="button" className="btn-icon-flat h-8 w-8" onClick={onClearReply} aria-label="Cancel reply"><Icon name="close" /></button>
