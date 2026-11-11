@@ -215,6 +215,7 @@ export default function ProfileImageDialog({ type, current, canRemove = false, a
 
     const canSave = source && imageSize.width > 0 && stageSize.width > 0 && !loadError && !form.processing;
     const fieldError = form.errors[type] || form.errors.crop || form.errors['crop.x'] || form.errors['crop.y'] || form.errors['crop.width'] || form.errors['crop.height'];
+    const hasCropAdjustments = zoom !== 1 || pan.x !== 0 || pan.y !== 0;
 
     return (
         <Dialog open onClose={() => !form.processing && onClose()} className="fixed inset-0 z-[80]">
@@ -228,6 +229,7 @@ export default function ProfileImageDialog({ type, current, canRemove = false, a
                         </div>
 
                         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-3 sm:p-5">
+                            {type === 'avatar' && <p className="text-center text-sm text-ink-muted">Choose a photo, position it in the circle, then save.</p>}
                             <CropStage
                                 src={source}
                                 type={type}
@@ -241,25 +243,27 @@ export default function ProfileImageDialog({ type, current, canRemove = false, a
                                 interactive
                                 className={type === 'avatar' ? 'mx-auto w-[min(72vw,300px)]' : 'w-full'}
                             />
-                            <div className="flex items-center gap-2">
-                                <button type="button" onClick={() => setZoom((value) => clamp(value - 0.1, 1, 3))} aria-label="Zoom out" className="btn-icon-flat h-11 w-11 shrink-0">−</button>
-                                <input
-                                    type="range"
-                                    min="1"
-                                    max="3"
-                                    step="0.01"
-                                    value={zoom}
-                                    onChange={(event) => setZoom(Number(event.target.value))}
-                                    aria-label="Image zoom"
-                                    className="w-full accent-ink-brand"
-                                />
-                                <button type="button" onClick={() => setZoom((value) => clamp(value + 0.1, 1, 3))} aria-label="Zoom in" className="btn-icon-flat h-11 w-11 shrink-0">+</button>
-                            </div>
-                            <p className="text-center text-xs text-ink-muted">Zoom {zoom.toFixed(1)}× · Drag with a finger or mouse; pinch to zoom on touchscreens.</p>
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                <button type="button" onClick={reset} className="btn-ghost min-h-11">Reset position</button>
-                                <button type="button" onClick={() => input.current?.click()} className="btn-ghost min-h-11"><Icon name="camera" /> Choose image</button>
-                            </div>
+                            {type === 'avatar' ? <div className="mx-auto w-full max-w-sm space-y-3">
+                                <button type="button" onClick={() => input.current?.click()} className="btn-ghost min-h-11 w-full justify-center"><Icon name="camera" /> Choose image</button>
+                                <label className="block text-sm">Zoom <span className="float-right text-ink-muted">{zoom.toFixed(1)}×</span>
+                                    <input type="range" min="1" max="3" step="0.01" value={zoom} onChange={(event) => setZoom(Number(event.target.value))} aria-label="Image zoom" className="mt-2 w-full accent-ink-brand" />
+                                </label>
+                                <div className="flex items-center justify-between gap-2 text-xs text-ink-muted">
+                                    <span>Drag the photo to adjust the crop.</span>
+                                    {hasCropAdjustments && <button type="button" onClick={reset} className="font-semibold text-ink-brand">Reset</button>}
+                                </div>
+                            </div> : <>
+                                <div className="flex items-center gap-2">
+                                    <button type="button" onClick={() => setZoom((value) => clamp(value - 0.1, 1, 3))} aria-label="Zoom out" className="btn-icon-flat h-11 w-11 shrink-0">−</button>
+                                    <input type="range" min="1" max="3" step="0.01" value={zoom} onChange={(event) => setZoom(Number(event.target.value))} aria-label="Image zoom" className="w-full accent-ink-brand" />
+                                    <button type="button" onClick={() => setZoom((value) => clamp(value + 0.1, 1, 3))} aria-label="Zoom in" className="btn-icon-flat h-11 w-11 shrink-0">+</button>
+                                </div>
+                                <p className="text-center text-xs text-ink-muted">Zoom {zoom.toFixed(1)}× · Drag to reposition; pinch to zoom on touchscreens.</p>
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <button type="button" onClick={reset} className="btn-ghost min-h-11">Reset position</button>
+                                    <button type="button" onClick={() => input.current?.click()} className="btn-ghost min-h-11"><Icon name="camera" /> Choose image</button>
+                                </div>
+                            </>}
                             <input
                                 ref={input}
                                 type="file"
@@ -270,7 +274,7 @@ export default function ProfileImageDialog({ type, current, canRemove = false, a
                                 className="sr-only"
                             />
 
-                            <div className="border-t border-ink-line pt-4">
+                            {type === 'banner' && <div className="border-t border-ink-line pt-4">
                                 <div className="mb-3 flex items-center justify-between gap-2">
                                     <h3 className="text-sm font-semibold">Profile preview</h3>
                                     {type === 'banner' && <div className="flex rounded-full border border-ink-line p-0.5" role="group" aria-label="Preview size">
@@ -278,16 +282,16 @@ export default function ProfileImageDialog({ type, current, canRemove = false, a
                                     </div>}
                                 </div>
                                 <ProfilePreview mode={type === 'avatar' ? 'mobile' : previewMode} type={type} src={source} avatarDisplay={avatarDisplay} bannerDisplay={bannerDisplay} zoom={zoom} pan={pan} />
-                            </div>
+                            </div>}
 
-                            <p className="text-center text-xs text-ink-muted">JPG, PNG, or WebP. Avatar up to 5 MB; banner up to 10 MB. The original stays private so you can edit the crop again later.</p>
+                            <p className="text-center text-xs text-ink-muted">JPG, PNG, or WebP · {type === 'avatar' ? 'up to 5 MB' : 'up to 10 MB'}</p>
                             {form.progress && <p role="status" className="text-center text-sm text-ink-muted">Saving image {form.progress.percentage}%</p>}
                             {loadError && <p role="alert" className="text-sm text-red-400">This image could not be opened. Choose another image.</p>}
                             {fieldError && <p role="alert" className="text-sm text-red-400">{fieldError}</p>}
                         </div>
                         <div className="flex shrink-0 items-center justify-between gap-2 border-t border-ink-line bg-ink-surface p-3 sm:p-4" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
                             {canRemove ? <button type="button" onClick={remove} disabled={form.processing} className="min-h-11 px-2 text-sm font-semibold text-ink-expl hover:underline">Remove</button>
-                                : <button type="button" onClick={onClose} disabled={form.processing} className="btn-ghost min-h-11">Cancel</button>}
+                                : type !== 'avatar' && <button type="button" onClick={onClose} disabled={form.processing} className="btn-ghost min-h-11">Cancel</button>}
                             <button type="submit" disabled={!canSave} className="btn-primary min-h-11 min-w-28 px-4">
                                 {form.processing ? 'Saving…' : 'Save'}
                             </button>
