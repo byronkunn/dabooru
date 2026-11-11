@@ -96,6 +96,8 @@ export default function StudioDashboard({ filters, analytics = null, performance
                 <section className="panel">
                     <h2 className="font-bold">Audience and traffic</h2>
                     <p className="mt-2 text-sm">{analytics.uniqueMembers} distinct signed-in viewers in this period. Guests are not counted as unique people.</p>
+                    <p className="mt-1 text-sm">{analytics.guestSessions} guest browser sessions in this period. A guest may use more than one session; older guest views are excluded from this estimate.</p>
+                    <p className="mt-1 text-xs text-ink-muted">Video plays count once per viewer per video per day. Comic reading progress is shown in the Comics section.</p>
                     <p className="mt-1 text-xs text-ink-muted">Sources are first referring pages for each daily work view; external hostnames and viewer identities are never exposed.</p>
                     <ul className="mt-3 space-y-2">{analytics.sources.map((source) => <li key={source.source} className="flex justify-between gap-2 text-sm capitalize"><span>{source.source}</span><span>{source.views} views</span></li>)}</ul>
                     {!analytics.sources.length && <p className="mt-2 text-sm text-ink-muted">No recorded traffic in this period.</p>}

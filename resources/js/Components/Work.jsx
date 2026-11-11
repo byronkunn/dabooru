@@ -10,7 +10,7 @@ import SaveWorkActions from '@/Components/SaveWorkActions';
 import { copyText } from '@/Lib/clipboard';
 
 /* ------------------------------------------------------------------ media */
-export function MediaViewer({ media, blurred, onReveal, className = '' }) {
+export function MediaViewer({ media, blurred, onReveal, onPlay, className = '' }) {
     if (!media) return null;
 
     if (media.kind === 'video') {
@@ -21,6 +21,7 @@ export function MediaViewer({ media, blurred, onReveal, className = '' }) {
                     controls
                     playsInline
                     preload="metadata"
+                    onPlay={onPlay}
                     className={`max-h-[70vh] w-full bg-black object-contain ${blurred ? 'blur-2xl' : ''}`}
                     onError={(e) => {
                         // some sample clips are h264 profiles the browser can't

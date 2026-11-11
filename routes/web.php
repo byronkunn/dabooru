@@ -68,6 +68,7 @@ Route::get('/work-media/{media}/{variant}', [StudioMediaController::class, 'show
 Route::get('/', [GalleryController::class, 'index'])->name('gallery');
 Route::get('/discover', [DiscoverController::class, 'index'])->name('discover');
 Route::get('/p/{post}', [PostController::class, 'show'])->name('posts.show');
+Route::post('/p/{post}/view', [PostController::class, 'track'])->middleware('throttle:120,1')->name('posts.track');
 Route::get('/artists', [ArtistController::class, 'index'])->name('artists.index');
 Route::get('/artists/works', [ArtistController::class, 'show'])->name('artists.show');
 Route::get('/u/{username}', [ProfileController::class, 'show'])->name('profile.show');

@@ -11,6 +11,8 @@ use App\Models\PostView;
 use App\Models\SavedCollection;
 use App\Support\KnowledgeService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -22,7 +24,6 @@ class PostController extends Controller
         abort_if($viewer && $post->user_id && Block::existsBetween($viewer->id, $post->user_id), 404);
 
         $post->load(['user', 'media.media', 'chapter.comic', 'tags', 'creditedArtist:id,username,name,banned_at,email_verified_at']);
-        $this->recordView($request, $post);
 
         // readers can choose newest first or the thread with the most replies on top
         $commentSort = in_array($request->query('comment_sort'), ['newest', 'top'], true)
@@ -63,6 +64,10 @@ class PostController extends Controller
 
         return Inertia::render('Posts/Show', [
             'post' => (new PostResource($post))->resolve(),
+            'viewToken' => Crypt::encryptString(json_encode([
+                'post' => (int) $post->id,
+                'issued' => now()->timestamp, 'source' => \App\Support\StudioTracking::source($request),
+            ])),
             'tagEditing' => [
                 'version' => KnowledgeService::version($post),
                 'canContribute' => $viewer && KnowledgeService::canContribute($viewer),
@@ -97,25 +102,37 @@ class PostController extends Controller
         ]);
     }
 
-    private function recordView(Request $request, Post $post): void
+    public function track(Request $request, Post $post): \Illuminate\Http\JsonResponse
     {
+        $data = $request->validate(['token' => ['required', 'string', 'max:4096'], 'event' => ['required', 'in:view,play']]);
+        try {
+            $token = json_decode(Crypt::decryptString($data['token']), true, 8, JSON_THROW_ON_ERROR);
+        } catch (\Throwable $e) {
+            return response()->json(['recorded' => false], 422);
+        }
+        $issued = $token['issued'] ?? 0;
+        abort_unless(is_int($issued) && ($token['post'] ?? null) === (int) $post->id
+            && $issued <= now()->timestamp && $issued >= now()->subHours(12)->timestamp, 422);
+        if (($data['event'] === 'view' && now()->timestamp - $issued < 2)
+            || ($request->user() && $request->user()->id === $post->user_id)
+            || ($request->user() && $post->user_id && Block::existsBetween($request->user()->id, $post->user_id))
+            || $post->moderation_hidden_at || ($post->rating === 'explicit' && ! $request->user()?->show_explicit)
+            || preg_match('/bot|crawler|spider|headless|preview|slurp/i', $request->userAgent() ?? '')
+            || ($data['event'] === 'play' && $post->type !== 'video')) {
+            return response()->json(['recorded' => false]);
+        }
         $key = $request->user()
             ? 'u'.$request->user()->id
-            : 'a'.substr(hash_hmac('sha256', $request->ip().'|'.now()->toDateString(), config('app.key')), 0, 32);
+            : 's'.substr(hash_hmac('sha256', $request->session()->getId(), config('app.key')), 0, 63);
 
-        // insertOrIgnore makes the unique (post, viewer, day) index the lock,
-        // so two concurrent requests can't both count the same view.
-        $inserted = PostView::insertOrIgnore([
-            'post_id' => $post->id,
-            'viewer_key' => $key,
-            'source' => \App\Support\StudioTracking::source($request),
-            'viewed_on' => now()->toDateString(),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        if ($inserted) {
-            $post->increment('views');
-        }
+        $recorded = DB::transaction(function () use ($post, $key, $token, $data) {
+            $row = ['post_id' => $post->id, 'viewer_key' => $key, 'viewed_on' => now()->toDateString(), 'created_at' => now(), 'updated_at' => now()];
+            if ($data['event'] === 'play') return DB::table('video_plays')->insertOrIgnore($row);
+            $row['source'] = in_array($token['source'] ?? '', ['direct', 'external', 'discover', 'following', 'tags', 'gallery', 'profile', 'comics', 'other'], true) ? $token['source'] : 'direct';
+            $inserted = PostView::insertOrIgnore($row);
+            if ($inserted) $post->increment('views');
+            return $inserted;
+        });
+        return response()->json(['recorded' => (bool) $recorded]);
     }
 }

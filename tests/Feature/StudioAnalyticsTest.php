@@ -107,14 +107,19 @@ class StudioAnalyticsTest extends TestCase
 
     public function test_post_sources_store_categories_not_external_hosts_and_deduplicate_daily_views(): void
     {
+        $this->withCredentials();
         [$owner, $reader] = User::factory()->count(2)->create();
         $post = $this->work($owner);
-        $this->actingAs($reader)->withHeader('referer', url('/discover'))->get(route('posts.show', $post))->assertOk();
-        $this->withHeader('referer', 'https://private.example/sensitive?q=secret')->get(route('posts.show', $post))->assertOk();
+        $token = $this->actingAs($reader)->withHeader('referer', url('/discover'))->get(route('posts.show', $post))->assertOk()->viewData('page')['props']['viewToken'];
+        $this->travel(2)->seconds();
+        $this->postJson(route('posts.track', $post), ['token' => $token, 'event' => 'view'])->assertOk();
+        $this->postJson(route('posts.track', $post), ['token' => $token, 'event' => 'view'])->assertOk();
         $this->assertDatabaseCount('post_views', 1);
         $this->assertDatabaseHas('post_views', ['post_id' => $post->id, 'source' => 'discover']);
         $this->travel(1)->days();
-        $this->get(route('posts.show', $post))->assertOk();
+        $token = $this->withHeader('referer', 'https://private.example/sensitive?q=secret')->get(route('posts.show', $post))->assertOk()->viewData('page')['props']['viewToken'];
+        $this->travel(2)->seconds();
+        $this->postJson(route('posts.track', $post), ['token' => $token, 'event' => 'view'])->assertOk();
         $this->assertDatabaseHas('post_views', ['source' => 'external']);
         $this->assertDatabaseCount('post_views', 2);
     }

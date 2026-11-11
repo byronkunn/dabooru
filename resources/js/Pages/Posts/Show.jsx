@@ -6,7 +6,7 @@ import { ArtistName, BlurGate, MediaViewer, WorkCell } from '@/Components/Work';
 import { Icon } from '@/Components/Icons';
 import { compact } from '@/Lib/format';
 import { copyText } from '@/Lib/clipboard';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ReportDialog from '@/Components/ReportDialog';
 import PostStarRating from '@/Components/PostStarRating';
 import FullscreenMedia from '@/Components/FullscreenMedia';
@@ -17,7 +17,7 @@ import { shouldBlurMedia } from '@/Lib/mediaVisibility';
 import PostComments from '@/Components/PostComments';
 import SaveWorkActions from '@/Components/SaveWorkActions';
 
-export default function PostShow({ post, comments, canComment, commentPagination, commentSort = 'newest', more, moreFromUploader = [], similar = [], forYou = [], liked, saved, followedAuthor, creditClaim, starRating, tagEditing }) {
+export default function PostShow({ post, viewToken, comments, canComment, commentPagination, commentSort = 'newest', more, moreFromUploader = [], similar = [], forYou = [], liked, saved, followedAuthor, creditClaim, starRating, tagEditing }) {
     const { auth } = usePage().props;
     const [revealed, setRevealed] = useState(false);
     const [isLiked, setLiked] = useState(liked);
@@ -25,8 +25,40 @@ export default function PostShow({ post, comments, canComment, commentPagination
     const [lightboxIndex, setLightboxIndex] = useState(null);
     const [copied, setCopied] = useState(false);
     const creditForm = useForm({ evidence: '' });
-
+    const playSent = useRef(false);
     const blurred = shouldBlurMedia(post.rating, auth?.user?.show_explicit, revealed);
+
+    useEffect(() => {
+        playSent.current = false;
+        if (!viewToken || blurred) return;
+        let remaining = 2000;
+        let started = 0;
+        let timer;
+        let sent = false;
+        const visibility = () => {
+            if (document.visibilityState === 'visible' && !sent) {
+                started = performance.now();
+                timer = setTimeout(() => {
+                    sent = true;
+                    window.axios.post(route('posts.track', post.id), { token: viewToken, event: 'view' }).catch(() => {});
+                }, remaining);
+            } else if (timer) {
+                clearTimeout(timer);
+                timer = null;
+                remaining = Math.max(0, remaining - (performance.now() - started));
+            }
+        };
+        document.addEventListener('visibilitychange', visibility);
+        visibility();
+        return () => { clearTimeout(timer); document.removeEventListener('visibilitychange', visibility); };
+    }, [post.id, viewToken, blurred]);
+
+    const trackPlay = () => {
+        if (!viewToken || blurred || playSent.current) return;
+        playSent.current = true;
+        window.axios.post(route('posts.track', post.id), { token: viewToken, event: 'play' }).catch(() => {});
+    };
+
     const isVideo = post.media?.[0]?.kind === 'video';
 
     const copyLink = async () => {
@@ -93,7 +125,7 @@ export default function PostShow({ post, comments, canComment, commentPagination
                                 <MediaViewer media={post.media[0]} blurred={false} className={blurred ? 'blur-2xl' : ''} />
                             </button>
                         ) : (
-                            <MediaViewer media={post.media[0]} blurred={blurred} onReveal={() => setRevealed(true)} />
+                            <MediaViewer media={post.media[0]} blurred={blurred} onReveal={() => setRevealed(true)} onPlay={trackPlay} />
                         )}
                         {blurred && post.media[0].kind === 'image' && <BlurGate label="Explicit content" onReveal={() => setRevealed(true)} />}
                     </div>

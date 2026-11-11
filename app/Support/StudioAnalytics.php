@@ -90,6 +90,7 @@ class StudioAnalytics
         $dates = collect(range(0, $days - 1))->map(fn ($i) => $start->copy()->addDays($i)->toDateString());
         $definitions = [
             'views' => ['Daily work views', 'post_views', 'viewed_on'],
+            'videoPlays' => ['Daily video plays', 'video_plays', 'viewed_on'],
             'likes' => ['Likes', 'likes', 'created_at'],
             'saves' => ['Saves', 'bookmarks', 'created_at'],
             'comments' => ['Comments', 'comments', 'created_at'],
@@ -119,6 +120,7 @@ class StudioAnalytics
         $viewQuery = DB::table('post_views')->whereIn('post_id', $ids)->whereBetween('viewed_on', [$start->toDateString(), $end->toDateString()]);
         $sources = (clone $viewQuery)->selectRaw('source, COUNT(*) as views')->groupBy('source')->orderByDesc('views')->get();
         $members = (clone $viewQuery)->where('viewer_key', 'like', 'u%')->distinct()->count('viewer_key');
+        $guestSessions = (clone $viewQuery)->where('viewer_key', 'like', 's%')->distinct()->count('viewer_key');
         $lifetime = (clone $works)->selectRaw('COUNT(*) as works, COALESCE(SUM(views),0) as views, COALESCE(SUM(likes_count),0) as likes, COALESCE(SUM(comments_count),0) as comments')->first();
         $lifetimeSaves = DB::table('bookmarks')->whereIn('post_id', $ids)->count();
         $rating = DB::table('post_ratings')->whereIn('post_id', $ids)->avg('stars');
@@ -146,7 +148,7 @@ class StudioAnalytics
             'lifetime' => ['works' => (int) $lifetime->works, 'views' => (int) $lifetime->views, 'likes' => (int) $lifetime->likes,
                 'comments' => (int) $lifetime->comments, 'saves' => $lifetimeSaves, 'rating' => $rating === null ? null : round($rating, 1),
                 'followers' => $user->followers()->count()],
-            'sources' => $sources, 'uniqueMembers' => $members, 'breakdowns' => $breakdowns, 'postingHours' => $hours,
+            'sources' => $sources, 'uniqueMembers' => $members, 'guestSessions' => $guestSessions, 'breakdowns' => $breakdowns, 'postingHours' => $hours,
             'postingSuggestion' => $suggestion, 'timezone' => config('app.timezone'),
             'trackingSince' => DB::table('studio_tracking')->value('started_at'),
             'topPosts' => self::ranked($works, $start, $end, 'engagement')->limit(6)->get()->map(self::card(...)),
