@@ -256,7 +256,7 @@ function BottomNav({ menuOpen, setMenuOpen }) {
         { label: 'Comics', icon: 'book', href: route('comics.index'), matches: ['comics.index', 'comics.show', 'comics.read'] },
         { label: 'Create', icon: 'plus', href: route('create'), matches: CREATE },
         { label: 'Inbox', icon: 'chat', href: route('messages.index'), matches: INBOX, badge: unread },
-        { label: 'You', icon: 'user', menu: true, matches: ['profile*', 'settings*', ...LIBRARY] },
+        { label: 'You', icon: 'user', menu: true, matches: ['profile*', 'settings*'] },
     ] : [
         { label: 'Browse', icon: 'gallery', href: route('gallery'), matches: BROWSE },
         { label: 'Artists', icon: 'user', href: route('artists.index'), matches: ['artists*'] },
@@ -264,75 +264,21 @@ function BottomNav({ menuOpen, setMenuOpen }) {
         { label: 'Log in', icon: 'chat', href: route('login'), matches: ['login'] },
         { label: 'Join', icon: 'plus', href: route('register'), matches: ['register'] },
     ];
-    // Studios and uploads have their own group below, so they are not repeated here
-    const groupedLabels = user ? ['Creator Studio'] : [];
-    const overflowItems = NAV
-        .filter((item) => (!item.auth || user) && !items.some((dockItem) => dockItem.label === item.label))
-        .filter((item) => !groupedLabels.includes(item.label))
-        .map((item) => ({ ...item, href: route(item.href) }));
-    const menuItems = user ? [
-        { label: 'Profile', href: route('profile.show', user.username) },
-        ...overflowItems,
+    const accountItems = user ? [
+        { label: 'Notifications', href: route('notifications.index'), icon: 'bell', badge: auth?.unread_notifications },
+        { label: 'Library', href: route('collections.index'), icon: 'save' },
+        { label: 'Settings', href: route('settings.edit'), icon: 'settings' },
+        { label: 'Log out', href: route('logout'), icon: 'logout', method: 'post' },
     ] : [
-        { label: 'Browse', href: route('gallery') },
-        { label: 'Artists', href: route('artists.index') },
-        { label: 'Comics', href: route('comics.index') },
-        { label: 'Tags & wiki', href: route('knowledge.index') },
-        { label: 'Log in', href: route('login') },
-        { label: 'Create account', href: route('register') },
+        { label: 'Log in', href: route('login'), icon: 'user' },
+        { label: 'Create account', href: route('register'), icon: 'plus' },
     ];
-    // The avatar menu is the only place a phone can reach everything the five
-    // bottom dock slots cannot show. Groups are ordered by how often a reader
-    // needs them; anything not in the dock belongs here.
-    const menuGroups = user ? [
-        {
-            label: 'Your stuff',
-            items: [
-                { label: 'Notifications', href: route('notifications.index'), badge: auth?.unread_notifications },
-                { label: 'Following', href: route('following'), matches: ['following'] },
-                { label: 'Saved works', href: route('collections.index') },
-                { label: 'Saved searches', href: route('saved-searches.index') },
-                { label: 'New chapters', href: route('chapters.inbox') },
-                { label: 'Sticker packs', href: route('messages.stickers.index') },
-            ],
-        },
-        {
-            label: 'Artist tools',
-            items: [
-                { label: 'Creator Studio', href: route('studio.index') },
-                { label: 'Upload work', href: route('upload.create') },
-                { label: 'New comic chapter', href: route('comics.chapters.create') },
-            ],
-        },
-        {
-            label: 'Help',
-            items: [
-                { label: 'Tip the site', href: route('tip') },
-                { label: 'Report a bug', href: route('bug.index') },
-                { label: 'Copyright / DMCA', href: route('dmca') },
-                { label: 'Terms', href: route('legal.terms') },
-                { label: 'Privacy', href: route('legal.privacy') },
-            ],
-        },
-        {
-            label: 'Account',
-            items: [
-                { label: 'Edit profile', href: `${route('settings.edit')}#profile` },
-                { label: 'Settings', href: route('settings.edit') },
-                { label: 'Your reports', href: route('reports.index') },
-                { label: 'Muted tags', href: `${route('settings.edit')}#mutes` },
-                { label: 'Blocked users', href: route('blocks.index') },
-                ...adminLinks(user).slice(0, 1).map((item) => ({ label: 'Admin panel', href: route(item.href) })),
-            ],
-        },
-    ] : [];
 
     return (
         <>
         <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-ink-line bg-ink-bg/95 pb-safe backdrop-blur lg:hidden" aria-label="Main">
             {items.map((item) => {
-                const active = [...item.matches, ...(item.menu ? overflowItems.flatMap((destination) => destination.matches) : [])]
-                    .some((match) => route().current(match));
+                const active = item.matches.some((match) => route().current(match));
                 const className = `relative flex min-h-[52px] flex-col items-center justify-center gap-0.5 py-1.5 text-[10.5px] ${active ? 'text-ink-brand' : 'text-ink-muted'}`;
                 if (item.menu) {
                     return (
@@ -370,35 +316,19 @@ function BottomNav({ menuOpen, setMenuOpen }) {
                     <div className="mb-3 flex items-center gap-3">
                         {user && <img src={user.avatar} alt="" className="h-10 w-10 rounded-full object-cover" />}
                         <div className="min-w-0 flex-1">
-                            <DialogTitle className="truncate font-bold">{user?.name ?? 'User menu'}</DialogTitle>
+                            <DialogTitle className="truncate font-bold">{user?.name ?? 'Account'}</DialogTitle>
                             {user && <p className="truncate text-sm text-ink-muted">@{user.username}</p>}
                         </div>
                         <button type="button" onClick={() => setMenuOpen(false)} className="btn-ghost min-h-11 px-3">Close</button>
                     </div>
-                    <nav aria-label="User destinations" className="flex flex-col gap-1">
-                        {menuItems.map((item) => (
-                            <Link key={item.label} href={item.href} aria-current={item.matches?.some((match) => route().current(match)) ? 'page' : undefined} onClick={() => setMenuOpen(false)} className="flex min-h-11 items-center justify-between gap-3 rounded-xl px-3 py-2 hover:bg-ink-raised">
-                                <span>{item.label}</span>
-                                {item.badge > 0 && <span className="rounded-full bg-ink-pink px-2 text-xs font-bold text-white">{item.badge > 99 ? '99+' : item.badge}</span>}
-                            </Link>
-                        ))}
-                        {menuGroups.map((group) => (
-                            <details key={group.label} className="group rounded-xl border border-ink-line">
-                                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3 py-2 font-semibold hover:bg-ink-raised [&::-webkit-details-marker]:hidden">
-                                    {group.label}
-                                    <Icon name="back" className="h-4 w-4 -rotate-90 text-ink-muted group-open:rotate-90" />
-                                </summary>
-                                <div className="border-t border-ink-line px-2 py-1">
-                                    {group.items.map((item) => (
-                                        <Link key={item.label} href={item.href} onClick={() => setMenuOpen(false)} className="flex min-h-11 items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm hover:bg-ink-raised">
-                                            <span>{item.label}</span>
-                                            {item.badge > 0 && <span className="rounded-full bg-ink-pink px-2 text-xs font-bold text-white">{item.badge > 99 ? '99+' : item.badge}</span>}
-                                        </Link>
-                                    ))}
-                                    {group.label === 'Account' && <Link href={route('logout')} method="post" as="button" onClick={() => setMenuOpen(false)} className="flex min-h-11 w-full items-center rounded-lg px-3 py-2 text-left text-sm text-ink-muted hover:bg-ink-raised">Log out</Link>}
-                                </div>
-                            </details>
-                        ))}
+                    {user && <Link href={route('profile.show', user.username)} onClick={() => setMenuOpen(false)} className="mb-3 flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink-brand px-3 py-2 text-sm font-bold text-[#180f18]">
+                        <Icon name="user" className="h-[18px] w-[18px]" /> View profile
+                    </Link>}
+                    <nav aria-label="Account" className="flex flex-col gap-1">
+                        {accountItems.map((item) => <Link key={item.label} href={item.href} method={item.method} as={item.method ? 'button' : undefined} onClick={() => setMenuOpen(false)} className="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm hover:bg-ink-raised">
+                            <span className="flex items-center gap-3"><Icon name={item.icon} className="h-[18px] w-[18px] shrink-0 text-ink-muted" />{item.label}</span>
+                            {item.badge > 0 && <span className="rounded-full bg-ink-pink px-2 text-xs font-bold text-white">{item.badge > 99 ? '99+' : item.badge}</span>}
+                        </Link>)}
                     </nav>
                 </DialogPanel>
             </div>

@@ -75,6 +75,7 @@ export function Icon({ name, className = 'w-5 h-5' }) {
             </>
         ),
         back: <path d="M15 5l-7 7 7 7" />,
+        logout: <><path d="M10 17l-5-5 5-5M5 12h11" /><path d="M13 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5" /></>,
         close: <path d="M6 6l12 12M18 6L6 18" />,
         // funnel — the sort/filter control
         filter: <path d="M3 4.5h18l-7 8.2v6.3l-4 2.5v-8.8L3 4.5z" />,
