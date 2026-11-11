@@ -46,6 +46,8 @@ class UploadController extends Controller
             'type' => ['required', 'in:'.(config('uploads.video_uploads_enabled') ? 'image,gif,video,album' : 'image,gif,album')],
             'title' => ['nullable', 'string', 'max:160'],
             'caption' => ['nullable', 'string', 'max:1000'],
+            'ai_tool' => ['nullable', 'string', 'max:120', 'required_with:ai_tool_type'],
+            'ai_tool_type' => ['nullable', 'in:local,service', 'required_with:ai_tool'],
             'tags' => ['nullable', 'string', 'max:2050'],
             'rating' => ['required', 'in:sfw,suggestive,explicit'],
             'draft' => ['sometimes', 'boolean'],
@@ -84,6 +86,8 @@ class UploadController extends Controller
                 'source_url' => $sourceUrl,
                 'title' => $request->input('title'),
                 'caption' => $request->input('caption'),
+                'ai_tool' => $request->input('ai_tool'),
+                'ai_tool_type' => $request->input('ai_tool_type'),
             ]);
 
             if (! $draft && ! $processingVideo) {

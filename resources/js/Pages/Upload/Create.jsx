@@ -1,4 +1,5 @@
 import TagField from '@/Components/TagField';
+import AiToolField from '@/Components/AiToolField';
 import { Head, Link, useForm } from '@inertiajs/react';
 import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 import { Icon } from '@/Components/Icons';
@@ -27,6 +28,8 @@ export default function UploadCreate({ limits, videoUploadsEnabled = false }) {
         type: 'image',
         title: '',
         caption: '',
+        ai_tool: '',
+        ai_tool_type: '',
         tags: '',
         rating: 'sfw',
         is_original: true,
@@ -163,6 +166,7 @@ form.post(route('upload.store'), { forceFormData: true });
                         </div>
 
                         <div className="mt-3.5"><TagField form={form} /></div>
+                        <div className="mt-4"><AiToolField form={form} /></div>
 
                         {/* Artist attribution section */}
                         <div className="mt-5 rounded-2xl border border-ink-line bg-ink-raised/50 p-4">

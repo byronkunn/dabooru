@@ -40,6 +40,8 @@ class ContentController extends Controller
                 'source_url' => $post->source_url,
                 'title' => $post->title,
                 'caption' => $post->caption,
+                'ai_tool' => $post->ai_tool,
+                'ai_tool_type' => $post->ai_tool_type,
                 'tags' => $post->tags()->pluck('name')->all(),
                 'tag_version' => $post->tag_version,
                 'media' => $post->media()->with('media')->get()->map(fn ($pm) => [
@@ -59,6 +61,8 @@ class ContentController extends Controller
         $data = $request->validate([
             'title' => ['nullable', 'string', 'max:160'],
             'caption' => ['nullable', 'string', 'max:1000'],
+            'ai_tool' => ['nullable', 'string', 'max:120', 'required_with:ai_tool_type'],
+            'ai_tool_type' => ['nullable', 'in:local,service', 'required_with:ai_tool'],
             'tags' => ['sometimes', 'nullable', 'string', 'max:2050'],
             'base_tag_version' => ['sometimes', 'integer', 'min:0'],
             'rating' => ['required', 'in:sfw,suggestive,explicit'],

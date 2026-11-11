@@ -18,7 +18,7 @@ class Post extends Model
 
     protected $fillable = [
         'user_id', 'type', 'rating', 'is_original', 'artist_name', 'source_url',
-        'title', 'caption', 'is_draft', 'draft_tags', 'views', 'likes_count', 'comments_count', 'comic_chapter_id',
+        'title', 'caption', 'ai_tool', 'ai_tool_type', 'is_draft', 'draft_tags', 'views', 'likes_count', 'comments_count', 'comic_chapter_id',
     ];
 
     protected function casts(): array

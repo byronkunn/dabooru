@@ -1,4 +1,5 @@
 import TagField from '@/Components/TagField';
+import AiToolField from '@/Components/AiToolField';
 import { Head, Link, useForm } from '@inertiajs/react';
 import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 import { useState } from 'react';
@@ -14,6 +15,8 @@ export default function PostEdit({ post }) {
     const form = useForm({
         title: post.title ?? '',
         caption: post.caption ?? '',
+        ai_tool: post.ai_tool ?? '',
+        ai_tool_type: post.ai_tool_type ?? '',
         tags: (post.tags ?? []).join(', '),
         base_tag_version: post.tag_version,
         rating: post.rating,
@@ -62,6 +65,7 @@ export default function PostEdit({ post }) {
                         <p className="field-hint">{form.data.caption.length} / 1000</p>
                     </div>
                     <TagField form={form} maxTags={50} />
+                    <AiToolField form={form} />
 
                     <div className="rounded-2xl border border-ink-line bg-ink-raised/50 p-4">
                         <h2 className="text-sm font-semibold text-ink-text">Artist & Creator</h2>

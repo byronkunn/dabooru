@@ -33,6 +33,27 @@ class UploadTest extends TestCase
         $this->get('/upload')->assertRedirect('/login');
     }
 
+    public function test_ai_tool_is_optional_and_can_be_saved_changed_and_cleared(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user)->post(route('upload.store'), [
+            'type' => 'image', 'rating' => 'sfw', 'files' => FakeImage::upload('ai.png'),
+            'ai_tool' => 'ChatGPT', 'ai_tool_type' => 'service',
+        ])->assertSessionHasNoErrors();
+        $post = Post::firstOrFail();
+        $this->assertSame('ChatGPT', $post->ai_tool);
+        $this->get(route('posts.show', $post))->assertInertia(fn ($page) => $page
+            ->where('post.ai_tool', 'ChatGPT')->where('post.ai_tool_type', 'service'));
+        $this->patch(route('posts.update', $post), ['rating' => 'sfw', 'ai_tool' => 'ComfyUI', 'ai_tool_type' => 'local'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('local', $post->fresh()->ai_tool_type);
+        $this->patch(route('posts.update', $post), ['rating' => 'sfw', 'ai_tool' => '', 'ai_tool_type' => ''])
+            ->assertSessionHasNoErrors();
+        $this->assertNull($post->fresh()->ai_tool);
+        $this->patch(route('posts.update', $post), ['rating' => 'sfw', 'ai_tool' => 'ChatGPT', 'ai_tool_type' => ''])
+            ->assertSessionHasErrors('ai_tool_type');
+    }
+
     public function test_a_user_can_upload_an_image_post(): void
     {
         $user = User::factory()->create();

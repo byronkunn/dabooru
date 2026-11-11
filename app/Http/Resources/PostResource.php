@@ -23,6 +23,8 @@ class PostResource extends JsonResource
             'tags' => $visibleTags->pluck('name')->all(),
             'tagCategories' => $visibleTags->mapWithKeys(fn ($tag) => [$tag->name => $tag->category])->all(),
             'caption' => $this->caption,
+            'ai_tool' => $this->ai_tool,
+            'ai_tool_type' => $this->ai_tool_type,
             'is_original' => (bool) $this->is_original,
             'artist_name' => $this->artist_name,
             'source_url' => $this->source_url,

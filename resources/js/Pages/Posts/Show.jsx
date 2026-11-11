@@ -225,6 +225,7 @@ export default function PostShow({ post, comments, canComment, commentPagination
 
                 {post.title && <h2 className="mt-4 text-xl font-bold tracking-[-0.02em]">{post.title}</h2>}
                 {post.caption && <p className="mt-2 whitespace-pre-wrap text-[15px] leading-relaxed text-[#dfd7e5]">{post.caption}</p>}
+                {post.ai_tool && <p className="mt-2 text-sm text-ink-muted">AI tool: <span className="font-semibold text-ink-text">{post.ai_tool}</span>{post.ai_tool_type && ` · ${post.ai_tool_type === 'local' ? 'Local tool' : 'Online service'}`}</p>}
 
                 <PostTags key={`tags-${post.id}`} post={post} editing={tagEditing} />
 
