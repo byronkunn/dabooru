@@ -267,6 +267,7 @@ function BottomNav({ menuOpen, setMenuOpen }) {
     const accountItems = user ? [
         { label: 'Notifications', href: route('notifications.index'), icon: 'bell', badge: auth?.unread_notifications },
         { label: 'Library', href: route('collections.index'), icon: 'save' },
+        { label: 'Wiki & tags', href: route('knowledge.index'), icon: 'tag' },
         { label: 'Settings', href: route('settings.edit'), icon: 'settings' },
         { label: 'Log out', href: route('logout'), icon: 'logout', method: 'post' },
     ] : [
