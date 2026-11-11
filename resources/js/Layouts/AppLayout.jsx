@@ -264,10 +264,15 @@ function BottomNav({ menuOpen, setMenuOpen }) {
         { label: 'Log in', icon: 'chat', href: route('login'), matches: ['login'] },
         { label: 'Join', icon: 'plus', href: route('register'), matches: ['register'] },
     ];
+    const dockPages = new Set(items.map((item) => item.label));
+    const morePages = NAV
+        .filter((item) => (!item.auth || user) && !dockPages.has(item.label))
+        .map((item) => ({ ...item, href: rememberedNavHref(item) }));
+    if (user && adminLinks(user).length > 0) {
+        morePages.push({ label: 'Admin panel', icon: 'flag', href: route(adminLinks(user)[0].href), matches: ['admin*'] });
+    }
     const accountItems = user ? [
         { label: 'Notifications', href: route('notifications.index'), icon: 'bell', badge: auth?.unread_notifications },
-        { label: 'Library', href: route('collections.index'), icon: 'save' },
-        { label: 'Wiki & tags', href: route('knowledge.index'), icon: 'tag' },
         { label: 'Settings', href: route('settings.edit'), icon: 'settings' },
         { label: 'Log out', href: route('logout'), icon: 'logout', method: 'post' },
     ] : [
@@ -331,6 +336,14 @@ function BottomNav({ menuOpen, setMenuOpen }) {
                             {item.badge > 0 && <span className="rounded-full bg-ink-pink px-2 text-xs font-bold text-white">{item.badge > 99 ? '99+' : item.badge}</span>}
                         </Link>)}
                     </nav>
+                    {morePages.length > 0 && <div className="mt-3 border-t border-ink-line pt-2">
+                        <h3 className="px-3 pb-1 text-xs font-semibold text-ink-faint">More pages</h3>
+                        <nav aria-label="More pages" className="flex flex-col gap-1">
+                            {morePages.map((item) => <Link key={item.label} href={item.href} aria-current={item.matches?.some((match) => route().current(match)) ? 'page' : undefined} onClick={() => setMenuOpen(false)} className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm hover:bg-ink-raised">
+                                <Icon name={item.icon} className="h-[18px] w-[18px] shrink-0 text-ink-muted" />{item.label}
+                            </Link>)}
+                        </nav>
+                    </div>}
                 </DialogPanel>
             </div>
         </Dialog>
