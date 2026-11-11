@@ -44,12 +44,21 @@ export default function KnowledgeIndex({ tags, articles, categories, filters, ca
                 </nav>
                 <section>
                     <h2 className="text-xl font-bold">Tag directory</h2>
-                    {tags.data.length === 0 && <p className="mt-3 text-ink-muted">No visible tags match these filters.</p>}
+                    {tags.data.length === 0 && <div className="mt-3 rounded-xl border border-ink-line p-4 text-sm text-ink-muted">
+                        <p>No visible tags match these filters.</p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            {(filters.q || filters.category || filters.needs_wiki) && <Link href={route('knowledge.index')} className="btn-ghost">Clear filters</Link>}
+                            <Link href={route('knowledge.index', { needs_wiki: 1 })} className="btn-ghost">Browse tags needing a wiki</Link>
+                            <Link href={route('gallery')} className="btn-ghost">Explore artwork</Link>
+                        </div>
+                    </div>}
                     <div className="mt-3 grid gap-2 sm:grid-cols-2">
                         {tags.data.map((tag) => (
                             <div key={tag.id} className="min-w-0 rounded-xl border border-ink-line p-3">
                                 <Link href={route('knowledge.show', { type: 'tag', id: tag.id })} className="break-words font-bold text-ink-brand hover:underline">{tag.name}</Link>
                                 <p className="my-2 text-sm text-ink-muted"><span className={`chip ${categoryColor(tag.category)}`}>{categoryLabel(tag.category)}</span> · {tag.posts_count} visible works{tag.locked ? ' · locked' : ''}</p>
+                                {tag.posts_count === 0 && <p className="mb-2 text-xs text-ink-faint">No works are visible with your current content settings.</p>}
+                                {!tag.wiki && <Link href={route('knowledge.show', { type: 'tag', id: tag.id })} className="mb-2 block text-xs font-semibold text-ink-brand hover:underline">Wiki guide needed · open page to contribute</Link>}
                                 <TagFollowButton tag={tag.name} />
                             </div>
                         ))}
@@ -58,7 +67,7 @@ export default function KnowledgeIndex({ tags, articles, categories, filters, ca
                 </section>
                 <section>
                     <h2 className="text-xl font-bold">Wiki guides</h2>
-                    {articles.data.length === 0 && <p className="mt-3 text-ink-muted">No visible wiki guides match your search.</p>}
+                    {articles.data.length === 0 && <div className="mt-3 rounded-xl border border-ink-line p-4 text-sm text-ink-muted"><p>No visible wiki guides match your search.</p>{canContribute ? <p className="mt-1">Add a definition or usage guide using the Start a page form below.</p> : <p className="mt-1">A verified, unrestricted account can help write community guides.</p>}</div>}
                     {articles.data.map((article) => <Link key={article.id} href={route('knowledge.show', { type: 'wiki', id: article.id })} className="my-2 block text-ink-brand hover:underline">{article.title}{!article.body ? ' (draft)' : ''}</Link>)}
                     <Pagination data={articles} />
                 </section>

@@ -27,6 +27,13 @@ class ArtistController extends Controller
             ->groupBy('artist_name')->orderBy('artist_name')
             ->simplePaginate(30)->withQueryString();
 
+        $popularArtists = $artists->isEmpty() && ! empty($data['q'])
+            ? $this->works($request)->selectRaw('artist_name, COUNT(*) AS works_count')
+                ->groupBy('artist_name')->orderByDesc('works_count')->orderBy('artist_name')->limit(4)->get()
+                ->map(fn ($artist) => ['name' => $artist->artist_name, 'works' => (int) $artist->works_count,
+                    'url' => route('artists.show', ['name' => $artist->artist_name], false)])
+            : collect();
+
         return Inertia::render('Artists/Index', [
             'search' => $data['q'] ?? '',
             'artists' => $artists->getCollection()->map(fn ($artist) => [
@@ -36,6 +43,7 @@ class ArtistController extends Controller
             ]),
             'nextPage' => $artists->nextPageUrl(),
             'previousPage' => $artists->previousPageUrl(),
+            'popularArtists' => $popularArtists,
         ]);
     }
 

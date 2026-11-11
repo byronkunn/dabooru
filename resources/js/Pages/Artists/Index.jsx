@@ -2,7 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout, { TopBar } from '@/Layouts/AppLayout';
 
-export default function ArtistIndex({ artists, search, nextPage, previousPage }) {
+export default function ArtistIndex({ artists, search, nextPage, previousPage, popularArtists = [] }) {
     const [query, setQuery] = useState(search);
     return (
         <AppLayout>
@@ -18,7 +18,14 @@ export default function ArtistIndex({ artists, search, nextPage, previousPage })
                         value={query} onChange={(event) => setQuery(event.target.value)} className="field-input min-w-0 flex-1" />
                     <button className="btn-primary" type="submit">Search</button>
                 </form>
-                {!artists.length && <p className="py-8 text-center text-sm text-ink-muted">No artist credits found.</p>}
+                {!artists.length && (search ? <section className="space-y-4 rounded-xl border border-ink-line p-4 text-center">
+                    <div><h2 className="font-bold">No credits match “{search}”</h2><p className="mt-1 text-sm text-ink-muted">Try another spelling, or browse credited artists with the most works.</p></div>
+                    <Link href={route('artists.index')} className="btn-ghost">Clear search</Link>
+                    {popularArtists.length > 0 && <div className="text-left"><h3 className="mb-2 text-sm font-bold">Popular artist credits</h3><div className="grid gap-2 sm:grid-cols-2">{popularArtists.map((artist) => <Link key={artist.name} href={artist.url} className="rounded-lg border border-ink-line p-3 hover:bg-ink-raised"><span className="block break-words font-semibold">{artist.name}</span><span className="text-xs text-ink-muted">{artist.works} credited works</span></Link>)}</div></div>}
+                </section> : <section className="rounded-xl border border-ink-line p-4 text-center">
+                    <h2 className="font-bold">No artist credits yet</h2><p className="mt-1 text-sm text-ink-muted">Artist pages appear when artwork is uploaded with an artist credit. You can still explore the gallery.</p>
+                    <Link href={route('gallery')} className="btn-ghost mt-3 inline-flex">Browse the gallery</Link>
+                </section>)}
                 <div className="grid gap-3 sm:grid-cols-2">
                     {artists.map((artist) => <Link key={artist.name} href={artist.url} className="min-w-0 rounded-xl border border-ink-line p-4 hover:bg-ink-raised">
                         <h2 className="break-words font-bold">{artist.name}</h2>

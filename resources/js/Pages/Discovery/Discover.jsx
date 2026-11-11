@@ -71,7 +71,19 @@ export default function Discover({ posts, personalized, staffPicks = [], nextPag
                         <WorkCell post={post} />
                     </div>)}
                 </div>
-                {posts.length === 0 && <p className="py-12 text-center text-sm text-ink-muted">No new visible recommendations right now. <Link href={route('gallery')} className="text-ink-brand hover:underline">Browse the gallery</Link></p>}
+                {posts.length === 0 && <section className="rounded-2xl border border-ink-line bg-ink-surface">
+                    <div className="px-4 pt-5 text-center">
+                        <h2 className="text-base font-bold">Nothing new to recommend right now</h2>
+                        <p className="mx-auto mt-1 max-w-md text-sm text-ink-muted">Try the latest uploads or popular works, or follow artists and tags to shape future recommendations.</p>
+                        <div className="mt-4 flex flex-wrap justify-center gap-2">
+                            <Link href={route('gallery', { sort: 'newest', window: 'all' })} className="btn-primary min-h-10 px-4">Browse newest</Link>
+                            <Link href={route('gallery', { sort: 'top', window: 'all' })} className="btn-ghost min-h-10 px-4">Browse popular</Link>
+                            <Link href={route('artists.index')} className="btn-ghost min-h-10 px-4">Find artists</Link>
+                            <Link href={route('knowledge.index')} className="btn-ghost min-h-10 px-4">Explore tags</Link>
+                        </div>
+                        {!auth?.user && <p className="mt-3 pb-4 text-xs text-ink-muted"> <Link href={route('register')} className="text-ink-brand hover:underline">Create an account</Link> to follow artists and tags and get recommendations tailored to you.</p>}
+                    </div>
+                </section>}
                 <AdSlot className="xl:hidden" placement="discover-mobile" compact />
                 <AdminPagination previousPage={previousPage} nextPage={nextPage} />
             </div>

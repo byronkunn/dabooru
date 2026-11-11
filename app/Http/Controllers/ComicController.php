@@ -28,9 +28,17 @@ class ComicController extends Controller
             ->get()
             ->map(fn (Comic $c) => $this->seriesCard($c));
 
+        $featuredComics = $comics->isEmpty() && $term !== ''
+            ? Comic::query()->visibleTo($request->user())->withCount('chapters')
+                ->with(['user', 'coverMedia', 'chapters' => fn ($q) => $q->limit(1)->with(['pages' => fn ($p) => $p->limit(1)->with('media')])])
+                ->visibleRating($request->user()?->show_explicit ?? false)->latest('last_chapter_at')->take(4)->get()
+                ->map(fn (Comic $comic) => $this->seriesCard($comic))
+            : collect();
+
         return Inertia::render('Comics/Index', [
             'comics' => $comics,
             'searchQuery' => $term,
+            'featuredComics' => $featuredComics,
             'continueReading' => $request->user() ? $this->recentReading($request->user()) : [],
         ]);
     }

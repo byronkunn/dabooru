@@ -4,7 +4,7 @@ import { SeriesCard } from '@/Components/Work';
 import AdSlot from '@/Components/AdSlot';
 import SearchBox from '@/Components/SearchBox';
 
-export default function ComicsIndex({ comics, continueReading = [], searchQuery = '' }) {
+export default function ComicsIndex({ comics, continueReading = [], searchQuery = '', featuredComics = [] }) {
     const { auth } = usePage().props;
     return (
         <AppLayout>
@@ -31,10 +31,15 @@ export default function ComicsIndex({ comics, continueReading = [], searchQuery 
                     </section>
                 )}
                 {comics.length === 0 ? (
-                    <div className="grid place-items-center gap-3 py-24 text-center">
-                        <p className="text-sm text-ink-muted">{searchQuery ? 'No comics match your search.' : 'No series yet.'}</p>
-                        <Link href={route('comics.chapters.create')} className="btn-primary">Start a series</Link>
-                    </div>
+                    <section className="space-y-5 rounded-2xl border border-ink-line p-4 text-center md:p-6">
+                        <div><h2 className="font-bold">{searchQuery ? `No series match “${searchQuery}”` : 'No series yet'}</h2><p className="mt-1 text-sm text-ink-muted">{searchQuery ? 'Try a different title or browse recently updated series.' : 'Read community comics, or start a series of your own.'}</p></div>
+                        <div className="flex flex-wrap justify-center gap-2">
+                            {searchQuery && <Link href={route('comics.index')} className="btn-ghost">Clear search</Link>}
+                            {auth.user ? <Link href={route('comics.chapters.create')} className="btn-primary">Start a series</Link> : <Link href={route('login')} className="btn-primary">Log in to create a series</Link>}
+                            <Link href={route('gallery', { format: 'comic' })} className="btn-ghost">Browse comic artwork</Link>
+                        </div>
+                        {featuredComics.length > 0 && <div className="text-left"><h3 className="mb-3 text-sm font-bold">Recently updated series</h3><div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">{featuredComics.map((comic) => <SeriesCard key={comic.id} comic={comic} />)}</div></div>}
+                    </section>
                 ) : (
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 xl:grid-cols-4">
                         {comics.map((c) => (
