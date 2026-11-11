@@ -9,7 +9,7 @@ return new class extends Migration
     {
         DB::transaction(function (): void {
             DB::table('tags')
-                ->whereRaw("position('_' in name) > 0")
+                ->whereRaw("name LIKE ? ESCAPE '!'", ['%!_%'])
                 ->orderBy('id')
                 ->get(['id', 'name'])
                 ->each(function (object $tag): void {

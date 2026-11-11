@@ -17,7 +17,7 @@ import { shouldBlurMedia } from '@/Lib/mediaVisibility';
 import PostComments from '@/Components/PostComments';
 import SaveWorkActions from '@/Components/SaveWorkActions';
 
-export default function PostShow({ post, comments, canComment, commentPagination, commentSort = 'newest', more, liked, saved, followedAuthor, creditClaim, starRating, tagEditing }) {
+export default function PostShow({ post, comments, canComment, commentPagination, commentSort = 'newest', more, moreFromUploader = [], similar = [], forYou = [], liked, saved, followedAuthor, creditClaim, starRating, tagEditing }) {
     const { auth } = usePage().props;
     const [revealed, setRevealed] = useState(false);
     const [isLiked, setLiked] = useState(liked);
@@ -310,6 +310,20 @@ export default function PostShow({ post, comments, canComment, commentPagination
                     </div>
                 </section>
             )}
+
+            {[
+                { title: `More uploaded by ${post.user?.name ?? 'this user'}`, items: moreFromUploader },
+                { title: 'Similar artwork', items: similar },
+                { title: 'You might like', items: forYou, description: 'Based on artists and tags you follow' },
+            ].filter((section) => section.items.length > 0).map((section) => (
+                <section key={section.title} className="mx-auto max-w-[720px] px-3 py-5 md:px-5">
+                    <h2 className="px-1 text-[15px] font-bold">{section.title}</h2>
+                    {section.description && <p className="mt-1 px-1 text-xs text-ink-muted">{section.description}</p>}
+                    <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3">
+                        {section.items.map((item) => <WorkCell key={item.id} post={item} wide />)}
+                    </div>
+                </section>
+            ))}
 
             {lightboxIndex !== null && post.media?.[lightboxIndex] && (
                 <FullscreenMedia

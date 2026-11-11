@@ -36,15 +36,30 @@ class PostController extends Controller
             ->when($commentSort === 'newest', fn ($q) => $q->latest('id'))
             ->simplePaginate(20, ['*'], 'comment_page')->withQueryString();
         $starSummary = $post->starRatings()->selectRaw('COUNT(*) AS votes, AVG(stars) AS average')->first();
-        $more = Post::query()
+        $mutedTags = $viewer ? \App\Support\CollectionLibrary::mutedFor($viewer) : [];
+        $suggestions = fn () => Post::query()
             ->with(['user', 'media.media', 'chapter.comic'])
+            ->visibleTo($viewer)->visibleRating((bool) $viewer?->show_explicit)
+            ->whereNull('posts.moderation_hidden_at')->excludingTags($mutedTags)->whereKeyNot($post->id);
+        $more = ! $post->artist_name && ! $post->user_id ? collect() : $suggestions()
             ->when($post->artist_name, fn ($query) => $query->where('artist_name', $post->artist_name),
                 fn ($query) => $query->where('user_id', $post->user_id))
-            ->visibleTo($viewer)->visibleRating((bool) $viewer?->show_explicit)
-            ->whereKeyNot($post->id)
-            ->latest()
-            ->take(8)
-            ->get();
+            ->latest('id')->take(8)->get();
+        $moreFromUploader = $post->artist_name && $post->user_id
+            ? $suggestions()->where('user_id', $post->user_id)->latest('id')->take(8)->get()
+            : collect();
+        $tagIds = $post->tags->where('is_approved', true)->pluck('id');
+        $similar = $tagIds->isEmpty() ? collect() : $suggestions()
+            ->whereHas('tags', fn ($query) => $query->where('is_approved', true)->whereIn('tags.id', $tagIds))
+            ->withCount(['tags as shared_tags_count' => fn ($query) => $query->where('is_approved', true)->whereIn('tags.id', $tagIds)])
+            ->orderByDesc('shared_tags_count')->latest('id')->take(8)->get();
+        $followingIds = $viewer ? $viewer->following()->pluck('users.id') : collect();
+        $followedTagIds = $viewer ? $viewer->followedTags()->where('tags.is_approved', true)->pluck('tags.id') : collect();
+        $forYou = $followingIds->isEmpty() && $followedTagIds->isEmpty() ? collect() : $suggestions()
+            ->where(fn ($query) => $query->whereIn('user_id', $followingIds)
+                ->orWhereHas('tags', fn ($tags) => $tags->where('is_approved', true)->whereIn('tags.id', $followedTagIds)))
+            ->withCount(['tags as followed_tags_count' => fn ($query) => $query->where('is_approved', true)->whereIn('tags.id', $followedTagIds)])
+            ->orderByDesc('followed_tags_count')->latest('id')->take(8)->get();
 
         return Inertia::render('Posts/Show', [
             'post' => (new PostResource($post))->resolve(),
@@ -64,6 +79,9 @@ class PostController extends Controller
             ],
             'canComment' => CommentController::canComment($request, $post),
             'more' => PostResource::collection($more)->resolve(),
+            'moreFromUploader' => PostResource::collection($moreFromUploader)->resolve(),
+            'similar' => PostResource::collection($similar)->resolve(),
+            'forYou' => PostResource::collection($forYou)->resolve(),
             'liked' => $viewer ? $post->likes()->where('user_id', $viewer->id)->exists() : false,
             'starRating' => [
                 'average' => $starSummary->average === null ? null : round((float) $starSummary->average, 1),
