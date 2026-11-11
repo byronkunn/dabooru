@@ -44,22 +44,22 @@ class PostController extends Controller
         $more = ! $post->artist_name && ! $post->user_id ? collect() : $suggestions()
             ->when($post->artist_name, fn ($query) => $query->where('artist_name', $post->artist_name),
                 fn ($query) => $query->where('user_id', $post->user_id))
-            ->latest('id')->take(8)->get();
+            ->latest('id')->take(6)->get();
         $moreFromUploader = $post->artist_name && $post->user_id
-            ? $suggestions()->where('user_id', $post->user_id)->latest('id')->take(8)->get()
+            ? $suggestions()->where('user_id', $post->user_id)->latest('id')->take(6)->get()
             : collect();
         $tagIds = $post->tags->where('is_approved', true)->pluck('id');
         $similar = $tagIds->isEmpty() ? collect() : $suggestions()
             ->whereHas('tags', fn ($query) => $query->where('is_approved', true)->whereIn('tags.id', $tagIds))
             ->withCount(['tags as shared_tags_count' => fn ($query) => $query->where('is_approved', true)->whereIn('tags.id', $tagIds)])
-            ->orderByDesc('shared_tags_count')->latest('id')->take(8)->get();
+            ->orderByDesc('shared_tags_count')->latest('id')->take(6)->get();
         $followingIds = $viewer ? $viewer->following()->pluck('users.id') : collect();
         $followedTagIds = $viewer ? $viewer->followedTags()->where('tags.is_approved', true)->pluck('tags.id') : collect();
         $forYou = $followingIds->isEmpty() && $followedTagIds->isEmpty() ? collect() : $suggestions()
             ->where(fn ($query) => $query->whereIn('user_id', $followingIds)
                 ->orWhereHas('tags', fn ($tags) => $tags->where('is_approved', true)->whereIn('tags.id', $followedTagIds)))
             ->withCount(['tags as followed_tags_count' => fn ($query) => $query->where('is_approved', true)->whereIn('tags.id', $followedTagIds)])
-            ->orderByDesc('followed_tags_count')->latest('id')->take(8)->get();
+            ->orderByDesc('followed_tags_count')->latest('id')->take(6)->get();
 
         return Inertia::render('Posts/Show', [
             'post' => (new PostResource($post))->resolve(),
