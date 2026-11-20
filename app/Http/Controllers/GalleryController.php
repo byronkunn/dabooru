@@ -65,7 +65,7 @@ class GalleryController extends Controller
     public static function filters(array $input, ?User $user): array
     {
         $format = in_array($input['format'] ?? null, self::FORMATS, true) ? $input['format'] : 'all';
-        $sort = in_array($input['sort'] ?? null, self::SORTS, true) ? $input['sort'] : 'top';
+        $sort = in_array($input['sort'] ?? null, self::SORTS, true) ? $input['sort'] : 'newest';
         $window = in_array($input['window'] ?? null, self::WINDOWS, true) ? $input['window'] : 'week';
 
         $showExplicit = array_key_exists('explicit', $input)

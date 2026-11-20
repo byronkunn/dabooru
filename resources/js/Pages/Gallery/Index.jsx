@@ -149,7 +149,7 @@ export default function GalleryIndex({ posts, page = 1, hasMore, filters: server
                 </label>
                 <GalleryFilterButton onClick={() => setSheetOpen(true)} activeCount={activeCount} expanded={sheetOpen} />
                 <span className="hidden shrink-0 text-[12px] text-ink-muted sm:inline">{windowLabel}</span>
-                {filters.sort !== 'top' && <button type="button" onClick={() => navigate({ sort: 'top' })} className="ml-auto text-[12px] font-semibold text-ink-brand hover:underline">Reset sort</button>}
+                {filters.sort !== 'newest' && <button type="button" onClick={() => navigate({ sort: 'newest' })} className="ml-auto text-[12px] font-semibold text-ink-brand hover:underline">Reset sort</button>}
             </div>
         </>
     );

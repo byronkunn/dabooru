@@ -38,7 +38,7 @@ class GalleryTest extends TestCase
                 ->component('Gallery/Index')
                 ->has('posts', 2)
                 ->where('filters.format', 'all')
-                ->where('filters.sort', 'top')
+                ->where('filters.sort', 'newest')
                 ->where('filters.explicit', false));
     }
 
@@ -142,9 +142,11 @@ class GalleryTest extends TestCase
     {
         ['video' => $video] = $this->seedPosts();
 
-        $this->get('/?sort=newest')
+        $this->get('/')
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->where('posts.0.id', $video->id));
+            ->assertInertia(fn ($page) => $page
+                ->where('filters.sort', 'newest')
+                ->where('posts.0.id', $video->id));
     }
 
     public function test_duration_filter_keeps_only_videos_in_range(): void
@@ -308,7 +310,7 @@ class GalleryTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->where('filters.format', 'all')
-                ->where('filters.sort', 'top')
+                ->where('filters.sort', 'newest')
                 ->where('filters.window', 'week'));
     }
 
