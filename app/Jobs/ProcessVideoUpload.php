@@ -21,7 +21,9 @@ class ProcessVideoUpload implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 1;
+
     public int $timeout = 5400;
+
     public bool $failOnTimeout = true;
 
     public function __construct(public int $mediaId, public int $postId, public bool $publishWhenReady = true)
@@ -94,22 +96,25 @@ class ProcessVideoUpload implements ShouldQueue
                 throw new \RuntimeException('The processed video failed playback validation.');
             }
 
-            $disk = config('filesystems.upload_disk', 'public');
-            $finalPath = 'uploads/'.$media->user_id.'/'.bin2hex(random_bytes(20)).'.mp4';
+            $destinationDisk = $this->publishWhenReady
+                ? config('filesystems.upload_disk', 'public')
+                : 'local';
+            $destinationDirectory = $this->publishWhenReady ? 'uploads' : 'drafts';
+            $finalPath = $destinationDirectory.'/'.$media->user_id.'/'.bin2hex(random_bytes(20)).'.mp4';
             $stream = fopen($output, 'rb');
             try {
-                $stored = Storage::disk($disk)->put($finalPath, $stream, ['ContentType' => 'video/mp4']);
+                $stored = Storage::disk($destinationDisk)->put($finalPath, $stream, ['ContentType' => 'video/mp4']);
             } finally {
                 if (is_resource($stream)) {
                     fclose($stream);
                 }
             }
-            if (! $stored || ! Storage::disk($disk)->exists($finalPath)) {
+            if (! $stored || ! Storage::disk($destinationDisk)->exists($finalPath)) {
                 throw new \RuntimeException('Could not store the processed video.');
             }
 
             try {
-                $oldPath = DB::transaction(function () use ($media, $post, $disk, $finalPath, $outputVideo, $outputDuration, $output) {
+                $oldPath = DB::transaction(function () use ($media, $post, $destinationDisk, $finalPath, $outputVideo, $outputDuration, $output) {
                     $lockedMedia = Media::lockForUpdate()->findOrFail($media->id);
                     $lockedPost = Post::withoutGlobalScope('published')->lockForUpdate()->findOrFail($post->id);
                     if (! $lockedPost->is_draft || $lockedMedia->status !== 'processing') {
@@ -118,7 +123,7 @@ class ProcessVideoUpload implements ShouldQueue
 
                     $oldPath = $lockedMedia->path;
                     $lockedMedia->forceFill([
-                        'disk' => $disk,
+                        'disk' => $destinationDisk,
                         'path' => $finalPath,
                         'thumb_path' => null,
                         'width' => (int) $outputVideo['width'],
@@ -138,12 +143,11 @@ class ProcessVideoUpload implements ShouldQueue
                         ])->save();
                     }
 
-
                     return $oldPath;
                 });
                 Storage::disk('local')->delete($oldPath);
             } catch (Throwable $exception) {
-                Storage::disk($disk)->delete($finalPath);
+                Storage::disk($destinationDisk)->delete($finalPath);
                 throw $exception;
             }
         } finally {
