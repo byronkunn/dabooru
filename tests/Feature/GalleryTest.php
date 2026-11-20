@@ -31,14 +31,22 @@ class GalleryTest extends TestCase
     public function test_gallery_hides_explicit_by_default_for_guests(): void
     {
         ['sfw' => $sfw, 'explicit' => $explicit] = $this->seedPosts();
+        $older = Post::create([
+            'user_id' => $sfw->user_id,
+            'type' => 'image',
+            'rating' => 'sfw',
+            'title' => 'Older upload',
+        ]);
+        $older->forceFill(['created_at' => now()->subDays(45)])->save();
 
         $this->get('/')
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('Gallery/Index')
-                ->has('posts', 2)
+                ->has('posts', 3)
                 ->where('filters.format', 'all')
                 ->where('filters.sort', 'newest')
+                ->where('filters.window', 'all')
                 ->where('filters.explicit', false));
     }
 
@@ -311,7 +319,7 @@ class GalleryTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->where('filters.format', 'all')
                 ->where('filters.sort', 'newest')
-                ->where('filters.window', 'week'));
+                ->where('filters.window', 'all'));
     }
 
     public function test_zero_duration_bounds_mean_no_duration_filter(): void

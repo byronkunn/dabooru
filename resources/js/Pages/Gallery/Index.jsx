@@ -107,7 +107,7 @@ export default function GalleryIndex({ posts, page = 1, hasMore, filters: server
     const chips = galleryFilterChips(filters, formatOptions, windowOptions);
     const activeCount = chips.length;
 
-    const windowLabel = windowOptions.find((w) => w.value === filters.window)?.label ?? 'This week';
+    const windowLabel = windowOptions.find((w) => w.value === filters.window)?.label ?? 'All time';
     const tabs = (
         <>
             <div className="mx-auto w-full max-w-[640px] px-3 pb-2 pt-2 md:px-5 md:pb-3 md:pt-3">

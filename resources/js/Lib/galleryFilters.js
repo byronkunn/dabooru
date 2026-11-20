@@ -1,5 +1,5 @@
 export const clearedGalleryFilters = {
-    window: 'week', format: 'all', tag: '', q: '',
+    window: 'all', format: 'all', tag: '', q: '',
     min_duration: '', max_duration: '', tags: [], exclude_tags: [],
     min_likes: '', min_views: '', min_stars: '',
 };
@@ -31,7 +31,7 @@ export function durationLabel(min, max) {
 export function galleryFilterChips(filters, formatOptions, windowOptions) {
     const chips = [];
     if (filters.format !== 'all') chips.push({ key: 'format', label: formatOptions.find((o) => o.value === filters.format)?.label, patch: { format: 'all' } });
-    if (filters.window !== 'week') chips.push({ key: 'window', label: windowOptions.find((o) => o.value === filters.window)?.label, patch: { window: 'week' } });
+    if (filters.window !== 'all') chips.push({ key: 'window', label: windowOptions.find((o) => o.value === filters.window)?.label, patch: { window: 'all' } });
     if (filters.q) chips.push({ key: 'q', label: `“${filters.q}”`, patch: { q: '' } });
     if (filters.tag) chips.push({ key: 'tag', label: `#${filters.tag}`, patch: { tag: '' } });
     if (filters.min_duration || filters.max_duration) chips.push({ key: 'duration', label: durationLabel(filters.min_duration, filters.max_duration), patch: { min_duration: '', max_duration: '' } });

@@ -66,7 +66,7 @@ class GalleryController extends Controller
     {
         $format = in_array($input['format'] ?? null, self::FORMATS, true) ? $input['format'] : 'all';
         $sort = in_array($input['sort'] ?? null, self::SORTS, true) ? $input['sort'] : 'newest';
-        $window = in_array($input['window'] ?? null, self::WINDOWS, true) ? $input['window'] : 'week';
+        $window = in_array($input['window'] ?? null, self::WINDOWS, true) ? $input['window'] : 'all';
 
         $showExplicit = array_key_exists('explicit', $input)
             ? filter_var($input['explicit'], FILTER_VALIDATE_BOOLEAN)
